@@ -1,0 +1,1466 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, FileText, CheckSquare, Mail, Award, CheckCircle, XCircle, Brain, Download, X } from 'lucide-react';
+import KanbanBoard from '../components/KanbanBoard';
+import AdvancedAnalytics from '../components/AdvancedAnalytics';
+import PredictiveAnalytics from '../components/PredictiveAnalytics';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { toast } from 'react-toastify';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
+
+const StatCard = ({ title, value, subtitle, icon, color, to }) => {
+  const content = (
+    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex items-center gap-4 hover:shadow-md transition-all duration-200 cursor-pointer h-full border-b-2 hover:border-b-primary-500">
+      <div className={`p-4 rounded-xl ${color}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
+        {subtitle && <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  );
+
+  return to ? <Link to={to} className="block">{content}</Link> : content;
+};
+
+const Dashboard = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [expectedMarks, setExpectedMarks] = useState({});
+  const [predictedResult, setPredictedResult] = useState(null);
+  const [predicting, setPredicting] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentStatsLoading, setStudentStatsLoading] = useState(false);
+
+  const [showPwaPromo, setShowPwaPromo] = useState(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) return false;
+    return !localStorage.getItem('dismissed-pwa-promo');
+  });
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        setShowPwaPromo(false);
+      }
+    } else {
+      toast.info(
+        "To install: Click the browser menu or share icon and select 'Add to Home Screen' or 'Install App'.",
+        { autoClose: 7000 }
+      );
+    }
+  };
+
+  const handleDismissPromo = () => {
+    localStorage.setItem('dismissed-pwa-promo', 'true');
+    setShowPwaPromo(false);
+  };
+
+  const fetchStudentDetails = async (studentId) => {
+    setStudentStatsLoading(true);
+    try {
+      const res = await axios.get(`/api/dashboard/student/${studentId}`);
+      setSelectedStudent(res.data);
+    } catch (err) {
+      toast.error('Failed to load student details');
+    } finally {
+      setStudentStatsLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get('/api/dashboard');
+      setStats(res.data);
+    } catch (error) {
+      console.error("Failed to load dashboard stats", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePredictSGPA = async () => {
+    setPredicting(true);
+    try {
+      // Send estimates for ALL subjects (theory + lab); backend handles each type correctly
+      const estimates = (stats.marks || []).map(m => {
+        const isLab = m.Subject?.type === 'lab';
+        const est = expectedMarks[m.subjectId] || {};
+        return {
+          subjectId: m.subjectId,
+          midSem: isLab ? null : (est.midSem !== undefined && est.midSem !== '' ? est.midSem : (m.midSem !== null ? m.midSem : 0)),
+          quiz: est.quiz !== undefined && est.quiz !== '' ? est.quiz : (m.quiz !== null ? m.quiz : 8),
+          assignment: est.assignment !== undefined && est.assignment !== '' ? est.assignment : (m.assignment !== null ? m.assignment : (isLab ? 32 : 8)),
+          expectedEndSem: est.expectedEndSem !== undefined && est.expectedEndSem !== '' ? est.expectedEndSem : 0
+        };
+      });
+
+      const res = await axios.post('/api/grades/predict', { estimates });
+      setPredictedResult(res.data);
+      toast.success('SGPA prediction calculated!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to calculate SGPA prediction');
+    } finally {
+      setPredicting(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, [user]);
+
+  useEffect(() => {
+    if (stats.marks) {
+      const initial = {};
+      stats.marks.forEach(m => {
+        initial[m.subjectId] = {
+          midSem: m.midSem !== null ? m.midSem : '',
+          quiz: m.quiz !== null ? m.quiz : 8,
+          assignment: m.assignment !== null ? m.assignment : 8,
+          expectedEndSem: ''
+        };
+      });
+      setExpectedMarks(initial);
+    }
+  }, [stats.marks]);
+
+  const getBunkCalculations = (attended, total, type) => {
+    if (total === 0) return { status: 'safe', message: 'No classes held yet.' };
+    const percentage = Math.round((attended / total) * 100);
+    const reqPct = type === 'lab' ? 60 : 75;
+    const reqDec = type === 'lab' ? 0.60 : 0.75;
+    
+    if (percentage >= reqPct) {
+      const bunksPossible = Math.floor((attended / reqDec) - total);
+      return {
+        status: 'safe',
+        message: bunksPossible > 0 
+          ? `Safe! You can bunk the next ${bunksPossible} classes.` 
+          : 'On edge! You cannot bunk any classes.'
+      };
+    } else {
+      // (reqDec * (total + X)) = (attended + X)
+      // reqDec*total + reqDec*X = attended + X
+      // reqDec*total - attended = X - reqDec*X = X(1 - reqDec)
+      // X = (reqDec*total - attended) / (1 - reqDec)
+      const classesNeeded = Math.ceil((reqDec * total - attended) / (1 - reqDec));
+      return {
+        status: 'critical',
+        message: `Critical! Attend the next ${classesNeeded} classes consecutively.`
+      };
+    }
+  };
+
+  // Exam Hall Ticket PDF generator
+  const generateAdmitCard = (examType = 'theory') => {
+    const doc = new jsPDF();
+    
+    // Header Style
+    doc.setFillColor(31, 41, 55); // Dark banner
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("KALINGA INSTITUTE OF INDUSTRIAL TECHNOLOGY", 15, 18);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text("Deemed to be University, Bhubaneswar, Odisha, India", 15, 25);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    const titleText = examType === 'theory' 
+      ? "HALL TICKET - END SEMESTER THEORY EXAMINATIONS 2024-25"
+      : "HALL TICKET - END SEMESTER PRACTICAL EXAMINATIONS 2024-25";
+    doc.text(titleText, 15, 34);
+
+    // Student Info
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("STUDENT DETAILS", 15, 52);
+    doc.line(15, 54, 195, 54);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Name: ${user.name}`, 15, 62);
+    doc.text(`Roll Number: ${user.id ? user.id.slice(0, 8).toUpperCase() : 'N/A'}`, 15, 68);
+    doc.text(`Program: ${user.course || 'BCA (Bachelor of Computer Applications)'}`, 15, 74);
+    doc.text(`Academic Session: 2024-2025`, 15, 80);
+
+    // Exam Subjects Table
+    doc.setFont("helvetica", "bold");
+    doc.text(examType === 'theory' ? "REGISTERED THEORY PAPERS" : "REGISTERED PRACTICAL/LAB PAPERS", 15, 95);
+    doc.line(15, 97, 195, 97);
+
+    const headers = [["Paper Code", "Paper Name", "Exam Type", "Invigilator Sign"]];
+    const data = (stats.marks || [])
+      .filter(m => m.Subject)
+      .filter(m => examType === 'theory' ? m.Subject.type === 'theory' : m.Subject.type === 'lab')
+      .map(m => [
+        m.Subject.code || 'N/A',
+        m.Subject.name,
+        m.Subject.type === 'lab' ? 'Practical' : 'Theory',
+        ''
+      ]);
+
+    doc.autoTable({
+      head: headers,
+      body: data,
+      startY: 102,
+      theme: 'grid',
+      headStyles: { fillColor: [31, 41, 55] },
+      styles: { cellPadding: 3, fontSize: 10 }
+    });
+
+    // Important Instructions
+    const finalY = doc.lastAutoTable.finalY + 15;
+    doc.setFont("helvetica", "bold");
+    doc.text("IMPORTANT INSTRUCTIONS FOR CANDIDATES:", 15, finalY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    
+    const instructions = [
+      "1. Candidates must carry this Hall Ticket and their University Identity Card to the examination hall.",
+      "2. Electronic gadgets, smart watches, and mobile phones are strictly prohibited in the exam hall.",
+      "3. Candidates must reach the examination venue at least 30 minutes before the scheduled start time.",
+      "4. No candidate will be allowed to enter the exam hall 15 minutes after the examination has commenced."
+    ];
+    
+    let yOffset = finalY + 6;
+    instructions.forEach(ins => {
+      doc.text(ins, 15, yOffset);
+      yOffset += 6;
+    });
+
+    // Controller Signatures
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Dr. Veena Goswami", 15, yOffset + 20);
+    doc.setFont("helvetica", "normal");
+    doc.text("Head of Department", 15, yOffset + 25);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Controller of Examinations", 130, yOffset + 20);
+    doc.setFont("helvetica", "normal");
+    doc.text("KIIT Deemed to be University", 130, yOffset + 25);
+
+    doc.save(`KIIT_${examType === 'theory' ? 'Theory' : 'Practical'}_HallTicket_${user.name.replace(/\s+/g, '_')}.pdf`);
+  };
+
+  const generateWarningLetter = (defaulter) => {
+    const doc = new jsPDF();
+    
+    // Header Style
+    doc.setFillColor(239, 68, 68); // Red banner
+    doc.rect(0, 0, 210, 35, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("EDUSTACK ACADEMY", 15, 22);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Official Attendance Warning Notice", 15, 28);
+
+    // Metadata
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(11);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 150, 48);
+    doc.text(`Reference No: KIIT/AMS/WARN/${new Date().getFullYear()}/${defaulter.id.slice(0,6).toUpperCase()}`, 15, 48);
+
+    // Recipient Info
+    doc.setFont("helvetica", "bold");
+    doc.text("To the Parent/Guardian of:", 15, 62);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${defaulter.name}`, 15, 68);
+    doc.text(`Class: ${defaulter.className}`, 15, 74);
+    doc.text(`Email: ${defaulter.email}`, 15, 80);
+
+    // Subject
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(220, 38, 38);
+    doc.text("SUBJECT: NOTICE OF ATTENDANCE DEFICITATION (BELOW 75%)", 15, 95);
+
+    // Body
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(50, 50, 50);
+    
+    const bodyText = [
+      `This letter is to formally notify you that your child, ${defaulter.name}, is currently falling short of the required academic attendance threshold of 75% set by the KIIT college board.`,
+      "",
+      `Our records show that ${defaulter.name} has attended ${defaulter.attendedClasses} out of ${defaulter.totalClasses} scheduled lecture days, bringing their current attendance average to a critical ${defaulter.attendancePercentage}%.`,
+      "",
+      "Per the academic regulations framework, students failing to satisfy the minimum 75% criteria will be barred from appearing in the upcoming final semester examinations.",
+      "",
+      "We request your immediate intervention to discuss this matter and ensure regular class attendance going forward. A minimum of 75% attendance must be maintained before the final roster is locked."
+    ];
+
+    let splitText = [];
+    bodyText.forEach(line => {
+      splitText = [...splitText, ...doc.splitTextToSize(line, 180)];
+    });
+    doc.text(splitText, 15, 108);
+
+    // Footer Signatures
+    doc.setFont("helvetica", "bold");
+    doc.text("Dr. Veena Goswami", 15, 230);
+    doc.setFont("helvetica", "normal");
+    doc.text("Head of Department (BCA)", 15, 236);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Hemant Kumar", 130, 230);
+    doc.setFont("helvetica", "normal");
+    doc.text("Class Mentor", 130, 236);
+
+    // Bottom warning stripe
+    doc.setFillColor(239, 68, 68);
+    doc.rect(0, 287, 210, 10, 'F');
+
+    doc.save(`Defaulter_Warning_${defaulter.name.replace(/\s+/g, '_')}.pdf`);
+  };
+
+  const handleSendWarningEmail = async (defaulter) => {
+    let confirmMsg = `Are you sure you want to dispatch an official academic warning notice to the parent of "${defaulter.name}"? This email will detail their current attendance deficit and alert them to the risk of semester exam debarment.`;
+    
+    if (defaulter.gracePeriodEnds && new Date(defaulter.gracePeriodEnds) > new Date()) {
+      confirmMsg += `\n\nNOTE: This student currently has active grace status until ${new Date(defaulter.gracePeriodEnds).toLocaleDateString()}.`;
+    }
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+    const loadingToast = toast.loading("Sending warning notice email to parent...");
+    try {
+      const res = await axios.post(`/api/users/${defaulter.id}/send-warning`, {
+        attendancePercentage: defaulter.attendancePercentage,
+        className: defaulter.className,
+        totalClasses: defaulter.totalClasses,
+        attendedClasses: defaulter.attendedClasses
+      });
+      
+      toast.update(loadingToast, {
+        render: `Notice emailed successfully to ${res.data.recipient}!`,
+        type: "success",
+        isLoading: false,
+        autoClose: 4000
+      });
+
+      if (res.data.testUrl) {
+        toast.info("Opening test mail preview inbox...", { autoClose: 3000 });
+        window.open(res.data.testUrl, '_blank');
+      }
+    } catch (err) {
+      toast.update(loadingToast, {
+        render: err.response?.data?.message || "Failed to send warning email",
+        type: "error",
+        isLoading: false,
+        autoClose: 4000
+      });
+    }
+  };
+
+  if (loading) return (
+    <div className="flex h-64 items-center justify-center gap-3 text-gray-400">
+      <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      Loading dashboard...
+    </div>
+  );
+
+  const isDark = document.documentElement.classList.contains('dark');
+  const tickColor = isDark ? '#94a3b8' : '#475569';
+  const gridColor = isDark ? '#334155' : '#e2e8f0';
+
+  // ── Real Chart Data derived from actual stats ──────────────────────────────
+  // Bar chart: subject-wise attendance across all students from defaulters data
+  // We build a class-level distribution by bucketing students by attendance range
+  const totalStudents = stats.totalStudents || 0;
+  const defaultersCount = (stats.defaulters || []).length;
+  const safeCount = totalStudents - defaultersCount;
+  const criticalCount = (stats.defaulters || []).filter(d => d.theoryPercentage < 60).length;
+  const warningCount = defaultersCount - criticalCount;
+
+  const barData = {
+    labels: ['≥ 75% (Safe)', '60–74% (Warning)', '< 60% (Critical)', 'No Data'],
+    datasets: [{
+      label: 'Students',
+      data: [
+        safeCount,
+        warningCount,
+        criticalCount,
+        0
+      ],
+      backgroundColor: [
+        'rgba(34, 197, 94, 0.85)',
+        'rgba(234, 179, 8, 0.85)',
+        'rgba(239, 68, 68, 0.85)',
+        'rgba(148, 163, 184, 0.5)',
+      ],
+      borderRadius: 8,
+      borderSkipped: false,
+    }]
+  };
+
+  // Pie chart: theory vs lab defaulter breakdown
+  const theoryDefaulters = (stats.defaulters || []).filter(d => d.theoryPercentage < 75).length;
+  const labDefaulters = (stats.defaulters || []).filter(d => d.labPercentage < 60).length;
+  const compliant = Math.max(0, totalStudents - Math.max(theoryDefaulters, labDefaulters));
+
+  const pieData = {
+    labels: ['Attendance OK', 'Theory Defaulter', 'Lab Defaulter'],
+    datasets: [{
+      data: [compliant, theoryDefaulters, labDefaulters],
+      backgroundColor: [
+        'rgba(34, 197, 94, 0.85)',
+        'rgba(239, 68, 68, 0.85)',
+        'rgba(168, 85, 247, 0.85)',
+      ],
+      borderWidth: 2,
+      borderColor: isDark ? '#1e293b' : '#ffffff',
+      hoverOffset: 8,
+    }]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: tickColor, padding: 16, font: { size: 12 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} students` } }
+    },
+    scales: {
+      x: { ticks: { color: tickColor }, grid: { display: false } },
+      y: { ticks: { color: tickColor, precision: 0 }, grid: { color: gridColor }, beginAtZero: true }
+    }
+  };
+
+  const pieOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: tickColor, padding: 16, font: { size: 12 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} students` } }
+    }
+  };
+
+  // Determine Exam Hall Ticket Eligibility:
+  const isTheoryEligible = stats.theoryPercentage >= 75 && stats.theoryTotal > 0;
+  const isPracticalEligible = stats.labPercentage >= 60 && stats.labTotal > 0;
+
+  return (
+    <div className="space-y-6">
+      {showPwaPromo && (
+        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-primary-600 text-white rounded-2xl p-6 shadow-md relative overflow-hidden border border-indigo-400/20">
+          <div className="absolute right-0 bottom-0 translate-x-10 translate-y-10 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
+          <div className="absolute left-1/3 top-0 -translate-y-12 w-32 h-32 bg-indigo-400/20 rounded-full blur-xl animate-pulse" />
+          <button 
+            onClick={handleDismissPromo}
+            className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-all"
+            title="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 pr-6">
+            <div className="flex-shrink-0 p-3 bg-white/10 rounded-xl border border-white/20">
+              <Download className="w-6 h-6 text-white animate-bounce" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-md font-bold text-white mb-0.5">Install Web App</h3>
+              <p className="text-xs text-indigo-100 max-w-xl leading-relaxed">
+                Enjoy offline capabilities, a full-screen desktop/mobile app container, and quick launch icons directly from your screen.
+              </p>
+            </div>
+            <button
+              onClick={handleInstallApp}
+              className="flex-shrink-0 px-4 py-2 bg-white text-indigo-600 hover:bg-indigo-50 text-xs font-bold rounded-xl shadow transition-all hover:scale-[1.02] active:scale-[0.98] mt-2 md:mt-0"
+            >
+              Get standalone app
+            </button>
+          </div>
+        </div>
+      )}
+
+      {user.role !== 'student' ? (
+        <>
+          {/* ── Dashboard Header ─────────────────────────────────────── */}
+          <div className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-6">
+            {/* Decorative circles */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-1/2 w-40 h-40 bg-white/5 rounded-full translate-y-1/2" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">
+                    {user?.role === 'admin' ? '🔐 Admin' : '🎓 Teacher'}
+                  </span>
+                  {user?.College?.name && (
+                    <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">
+                      🏢 {user.College.name}
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-2xl font-bold">Welcome back, {user?.role === 'admin' ? 'Admin' : 'Sir'} 👋</h1>
+                <p className="text-primary-200 text-sm mt-1">
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3 flex-wrap">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <div className="text-2xl font-black">{totalStudents}</div>
+                    <div className="text-[10px] text-primary-200 font-semibold uppercase">Students</div>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <div className="text-2xl font-black text-red-300">{defaultersCount}</div>
+                    <div className="text-[10px] text-primary-200 font-semibold uppercase">Defaulters</div>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <div className="text-2xl font-black text-green-300">
+                      {totalStudents > 0 ? Math.round((safeCount / totalStudents) * 100) : 0}%
+                    </div>
+                    <div className="text-[10px] text-primary-200 font-semibold uppercase">Compliance</div>
+                  </div>
+                </div>
+                
+                {/* Download Reports Actions */}
+                <div className="flex gap-2 justify-end">
+                  {user?.role === 'admin' && (
+                    <button 
+                      onClick={async () => {
+                      const loadingToast = toast.loading("Scanning and sending auto-warnings...");
+                      try {
+                        const res = await axios.post('/api/warnings/trigger');
+                        toast.update(loadingToast, { render: res.data.message, type: "success", isLoading: false, autoClose: 4000 });
+                      } catch(e) { 
+                        toast.update(loadingToast, { render: e.response?.data?.message || "Failed to run auto-warnings", type: "error", isLoading: false, autoClose: 4000 }); 
+                      }
+                    }}
+                    className="bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors backdrop-blur-md border border-white/10"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" /> Auto-Warnings
+                    </button>
+                  )}
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const res = await axios.get('/api/reports/defaulters', { responseType: 'blob' });
+                        const url = window.URL.createObjectURL(new Blob([res.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.setAttribute('download', 'defaulters_report.csv');
+                        document.body.appendChild(link);
+                        link.click();
+                      } catch(e) { toast.error("Download failed"); }
+                    }}
+                    className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors backdrop-blur-md border border-white/10"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Defaulters CSV
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const res = await axios.get('/api/reports/marks', { responseType: 'blob' });
+                        const url = window.URL.createObjectURL(new Blob([res.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.setAttribute('download', 'marks_report.csv');
+                        document.body.appendChild(link);
+                        link.click();
+                      } catch(e) { toast.error("Download failed"); }
+                    }}
+                    className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors backdrop-blur-md border border-white/10"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Marks CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* ── KPI Stat Cards ───────────────────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <StatCard
+              title="Total Students"
+              value={stats.totalStudents || 0}
+              subtitle={`${defaultersCount} defaulters requiring action`}
+              icon={<Users className="text-blue-600" />}
+              color="bg-blue-100 dark:bg-blue-900/30"
+              to="/users"
+            />
+            <StatCard
+              title="Total Teachers"
+              value={stats.totalTeachers || 0}
+              subtitle="Active faculty members"
+              icon={<GraduationCap className="text-purple-600" />}
+              color="bg-purple-100 dark:bg-purple-900/30"
+              to="/users"
+            />
+            <StatCard
+              title="Total Classes"
+              value={stats.totalClasses || 0}
+              subtitle="Registered class sections"
+              icon={<BookOpen className="text-green-600" />}
+              color="bg-green-100 dark:bg-green-900/30"
+              to="/classes"
+            />
+            <StatCard
+              title="Total Subjects"
+              value={stats.totalSubjects || 0}
+              subtitle="Theory + lab subjects"
+              icon={<BookOpen className="text-orange-600" />}
+              color="bg-orange-100 dark:bg-orange-900/30"
+              to="/subjects"
+            />
+          </div>
+
+          {/* ── Charts Section ───────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+            {/* Bar Chart — wider */}
+            <div className="lg:col-span-3 bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Attendance Health Distribution</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Student count by attendance band</p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg">
+                  {totalStudents} Total
+                </span>
+              </div>
+              <Bar options={chartOptions} data={barData} />
+              {/* Mini legend below */}
+              <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                <div className="p-2 bg-green-50 dark:bg-green-900/10 rounded-xl">
+                  <div className="text-lg font-black text-green-600">{safeCount}</div>
+                  <div className="text-[10px] text-gray-400 font-semibold">Safe ≥75%</div>
+                </div>
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/10 rounded-xl">
+                  <div className="text-lg font-black text-amber-500">{warningCount}</div>
+                  <div className="text-[10px] text-gray-400 font-semibold">Warning 60–74%</div>
+                </div>
+                <div className="p-2 bg-red-50 dark:bg-red-900/10 rounded-xl">
+                  <div className="text-lg font-black text-red-600">{criticalCount}</div>
+                  <div className="text-[10px] text-gray-400 font-semibold">Critical &lt;60%</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie Chart — narrower */}
+            <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col">
+              <div className="mb-5">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">Defaulter Breakdown</h3>
+                <p className="text-xs text-gray-400 mt-0.5">By type of attendance violation</p>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="w-52 h-52">
+                  <Pie options={pieOptions} data={pieData} />
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />Compliant</span>
+                  <span className="font-bold text-gray-700 dark:text-gray-200">{compliant} students</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />Theory Defaulter</span>
+                  <span className="font-bold text-gray-700 dark:text-gray-200">{theoryDefaulters} students</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block" />Lab Defaulter</span>
+                  <span className="font-bold text-gray-700 dark:text-gray-200">{labDefaulters} students</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Defaulter Warning Console ───────────────────────── */}
+          {stats.defaulters && stats.defaulters.length > 0 && (
+            <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
+              <div className="flex items-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/20">
+                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                  <AlertTriangle className="text-red-600 dark:text-red-400 w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Defaulter Warning Console</h3>
+                  <p className="text-xs text-gray-400">Students below required attendance threshold — {stats.defaulters.length} requiring immediate action</p>
+                </div>
+                <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-bold rounded-full">
+                  {stats.defaulters.length} At Risk
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-dark-border">
+                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Student</th>
+                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Class</th>
+                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Theory ≥75%</th>
+                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Lab ≥60%</th>
+                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Overall</th>
+                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                    {stats.defaulters.map((d) => (
+                      <tr key={d.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/30 transition-colors">
+                        <td className="p-3">
+                          <button
+                            onClick={() => fetchStudentDetails(d.id)}
+                            className="font-semibold text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 hover:underline text-left"
+                          >
+                            {d.name}
+                          </button>
+                          <div className="text-[11px] text-gray-400 mt-0.5">{d.email}</div>
+                          {d.gracePeriodEnds && new Date(d.gracePeriodEnds) > new Date() && (
+                            <span className="inline-block mt-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                              ⏳ Grace until {new Date(d.gracePeriodEnds).toLocaleDateString()}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                            {d.className}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              d.theoryPercentage >= 75
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {d.theoryPercentage}%
+                            </span>
+                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  d.theoryPercentage >= 75 ? 'bg-green-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(100, d.theoryPercentage)}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-gray-400">{d.theoryRatio}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              d.labPercentage >= 60
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                            }`}>
+                              {d.labPercentage}%
+                            </span>
+                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  d.labPercentage >= 60 ? 'bg-green-500' : 'bg-purple-500'
+                                }`}
+                                style={{ width: `${Math.min(100, d.labPercentage)}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-gray-400">{d.labRatio}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{d.attendancePercentage}%</span>
+                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.min(100, d.attendancePercentage)}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-gray-400">{d.attendedClasses}/{d.totalClasses}</span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => generateWarningLetter(d)}
+                              className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors shadow-sm"
+                            >
+                              <FileText className="w-3.5 h-3.5" /> Letter
+                            </button>
+                            <button
+                              onClick={() => handleSendWarningEmail(d)}
+                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors shadow-sm"
+                            >
+                              <Mail className="w-3.5 h-3.5" /> Email
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        // STUDENT DASHBOARD LAYOUT
+        <div className="space-y-6">
+
+          {/* ── Student Hero Header ───────────────────────────────── */}
+          <div className="bg-gradient-to-br from-primary-600 via-violet-700 to-purple-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">🎓 Student</span>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                    (stats.theoryPercentage || 0) >= 75
+                      ? 'bg-green-500/30 text-green-200'
+                      : 'bg-red-500/30 text-red-200'
+                  }`}>
+                    {(stats.theoryPercentage || 0) >= 75 ? '✓ Theory Eligible' : '⚠ Theory Defaulter'}
+                  </span>
+                </div>
+                <h1 className="text-2xl font-bold">Welcome back, {user?.name?.split(' ')[0]} 👋</h1>
+                <p className="text-primary-200 text-sm mt-1">
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {user?.College?.name && (
+                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
+                      🏢 {user.College.name}
+                    </span>
+                  )}
+                  {user?.course && (
+                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
+                      🎓 {user.course}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Gamified Badges */}
+                <div className="flex gap-2 mt-4">
+                  {(stats.attendancePercentage || 0) >= 90 && (
+                    <div className="flex items-center gap-1 bg-yellow-400/20 text-yellow-200 px-2 py-1 rounded-md text-xs font-bold border border-yellow-400/30" title="Attendance Titan: >= 90% Attendance">
+                      👑 Titan
+                    </div>
+                  )}
+
+                  {(stats.attendancePercentage || 0) === 100 && (
+                    <div className="flex items-center gap-1 bg-purple-400/20 text-purple-200 px-2 py-1 rounded-md text-xs font-bold border border-purple-400/30" title="Flawless: 100% Attendance">
+                      💎 Flawless
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                  <div className={`text-2xl font-black ${
+                    (stats.theoryPercentage || 0) >= 75 ? 'text-green-300' : 'text-red-300'
+                  }`}>{stats.theoryPercentage || 0}%</div>
+                  <div className="text-[10px] text-primary-200 font-semibold uppercase">Theory</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                  <div className={`text-2xl font-black ${
+                    (stats.labPercentage || 0) >= 60 ? 'text-green-300' : 'text-red-300'
+                  }`}>{stats.labPercentage || 0}%</div>
+                  <div className="text-[10px] text-primary-200 font-semibold uppercase">Lab</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                  <div className="text-2xl font-black text-white">{stats.attendancePercentage || 0}%</div>
+                  <div className="text-[10px] text-primary-200 font-semibold uppercase">Overall</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {stats.gracePeriodEnds && (
+            <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 p-5 rounded-2xl flex items-start gap-4 shadow-sm">
+              <div className="p-2.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl">
+                <AlertCircle className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-md font-bold text-amber-900 dark:text-amber-300">Defaulter Grace Period Active</h3>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                  Your attendance has dropped below 75%. You have a grace period until <strong>{new Date(stats.gracePeriodEnds).toLocaleDateString()}</strong> to raise your attendance or submit Duty Leave/Medical requests before parents are automatically alerted.
+                </p>
+                <div className="mt-3">
+                  <Link to="/recovery" className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline">
+                    👉 Go to Recovery Console to get attendance credits
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <StatCard title="Theory Attendance" value={`${stats.theoryPercentage || 0}%`} subtitle={`${stats.theoryAttended || 0} of ${stats.theoryTotal || 0} classes attended`} icon={<CheckSquare className="text-green-600" />} color="bg-green-100 dark:bg-green-900/30" to="/attendance/view" />
+            <StatCard title="Lab Attendance" value={`${stats.labPercentage || 0}%`} subtitle={`${stats.labAttended || 0} of ${stats.labTotal || 0} sessions attended`} icon={<CheckSquare className="text-purple-600" />} color="bg-purple-100 dark:bg-purple-900/30" to="/attendance/view" />
+            <StatCard title="Overall Attendance" value={`${stats.attendancePercentage || 0}%`} subtitle="Theory + lab combined" icon={<Percent className="text-blue-600" />} color="bg-blue-100 dark:bg-blue-900/30" to="/attendance/view" />
+            <StatCard title="Total Sessions Held" value={(stats.theoryTotal || 0) + (stats.labTotal || 0)} subtitle="Across all registered subjects" icon={<BookOpen className="text-orange-600" />} color="bg-orange-100 dark:bg-orange-900/30" to="/attendance/view" />
+          </div>
+
+          {/* ── AI Attendance Predictor ───────────────────────── */}
+          {stats.aiPredictor && (
+            <div className="bg-gradient-to-r from-blue-50 to-primary-50 dark:from-blue-900/10 dark:to-primary-900/10 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+              <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900/40 rounded-2xl flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-blue-400 opacity-20 animate-pulse"></div>
+                <Brain className="w-8 h-8 text-blue-600 dark:text-blue-400 relative z-10" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                  AI Attendance Predictor
+                  <span className="bg-gradient-to-r from-primary-500 to-purple-500 text-transparent bg-clip-text text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-primary-200 dark:border-primary-800">Beta</span>
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Based on your current attendance, here is your margin of safety:
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <div className="text-xs font-bold text-gray-400 uppercase mb-1">Theory Safe Misses</div>
+                    <div className="flex items-end gap-2">
+                      <span className={`text-2xl font-black ${stats.aiPredictor.theorySafeMisses > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {stats.aiPredictor.theorySafeMisses}
+                      </span>
+                      <span className="text-sm text-gray-500 font-medium mb-1">classes</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">If you miss {stats.aiPredictor.theorySafeMisses + 1} more class, you drop below 75%.</p>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                    <div className="text-xs font-bold text-gray-400 uppercase mb-1">What if I miss next 3?</div>
+                    <div className="flex items-end gap-2">
+                      <span className="text-2xl font-black text-primary-500">
+                        {stats.aiPredictor.theoryDropAfter3Misses}%
+                      </span>
+                      <span className="text-sm text-gray-500 font-medium mb-1">theory attd.</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {stats.aiPredictor.theoryDropAfter3Misses < 75 
+                        ? '🚨 You will become a defaulter!'
+                        : '✅ You will still be in the safe zone.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Exam Registration Lock & Hall Ticket (Feature E) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Theory Exam Card */}
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-xl ${isTheoryEligible ? 'bg-green-100 dark:bg-green-900/20 text-green-600' : 'bg-red-100 dark:bg-red-900/20 text-red-600'}`}>
+                  <Award className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Theory Exam Admit Card</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {isTheoryEligible 
+                      ? 'Eligible! You have maintained theory attendance >= 75%.'
+                      : `Debarred! Theory attendance (${stats.theoryPercentage || 0}%) is deficient. (Required: 75%)`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div>
+                {isTheoryEligible ? (
+                  <button
+                    onClick={() => generateAdmitCard('theory')}
+                    className="w-full px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-md text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+                  >
+                    <FileText className="w-4 h-4" /> Download Theory Admit Card
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    🔒 Theory Hall Ticket Locked
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Practical Exam Card */}
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-xl ${isPracticalEligible ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600' : 'bg-red-100 dark:bg-red-900/20 text-red-600'}`}>
+                  <Award className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Practical Exam Admit Card</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {isPracticalEligible 
+                      ? 'Eligible! You have maintained practical attendance >= 60%.'
+                      : `Debarred! Practical attendance (${stats.labPercentage || 0}%) is deficient. (Required: 60%)`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div>
+                {isPracticalEligible ? (
+                  <button
+                    onClick={() => generateAdmitCard('practical')}
+                    className="w-full px-5 py-2.5 bg-gradient-to-r from-primary-600 to-violet-600 hover:from-primary-700 hover:to-violet-700 text-white rounded-xl shadow-md text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+                  >
+                    <FileText className="w-4 h-4" /> Download Practical Admit Card
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    🔒 Practical Hall Ticket Locked
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Bunk Calculator (Option A) */}
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Subject-wise Attendance & Bunk Predictor</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-dark-border text-xs">
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400">Subject</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Ratio</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Percentage</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-right">Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(stats.subjectWiseStats || []).map((sub) => {
+                      const reqPct = sub.type === 'lab' ? 60 : 75;
+                      const bunkCalc = getBunkCalculations(sub.attended, sub.total, sub.type);
+                      return (
+                        <tr key={sub.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50">
+                          <td className="p-3 font-medium text-gray-900 dark:text-white">
+                            <div>{sub.name} <span className="text-xs text-gray-500 font-normal">({sub.type === 'lab' ? 'Lab' : 'Theory'})</span></div>
+                            <div className="text-xs text-gray-400 font-normal">{sub.code}</div>
+                          </td>
+                          <td className="p-3 text-center text-gray-500">{sub.attended}/{sub.total}</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                              sub.percentage >= reqPct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {sub.percentage}%
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            {bunkCalc.message}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(stats.subjectWiseStats || []).length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="p-4 text-center text-gray-400">No subject records available.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Internal Marks (Feature G) */}
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Continuous Internal Evaluation Scores</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-dark-border text-xs">
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400">Subject</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Mid-Sem</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Quiz</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Assignment</th>
+                      <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Total (Max 50)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(stats.marks || []).map((m) => {
+                      const isLab = m.Subject?.type === 'lab';
+                      const midMax = isLab ? 0 : 20;
+                      const quizMax = 10;
+                      const assignmentMax = isLab ? 40 : 20;
+                      
+                      const totalMark = (isLab ? 0 : (m.midSem || 0)) + (m.quiz || 0) + (m.assignment || 0);
+                      const isEntered = (isLab ? false : m.midSem !== null) || m.quiz !== null || m.assignment !== null;
+
+                      return (
+                        <tr key={m.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50">
+                          <td className="p-3 font-medium text-gray-900 dark:text-white">
+                            <div>{m.Subject?.name}</div>
+                            <div className="text-xs text-gray-400 font-normal">{m.Subject?.code} ({m.Subject?.type})</div>
+                          </td>
+                          <td className="p-3 text-center font-medium">
+                            {isLab ? (
+                              <span className="text-gray-400 text-xs">N/A</span>
+                            ) : (
+                              m.midSem !== null ? `${m.midSem}/${midMax}` : `-${midMax}`
+                            )}
+                          </td>
+                          <td className="p-3 text-center font-medium">
+                            {m.quiz !== null ? `${m.quiz}/${quizMax}` : `-${quizMax}`}
+                          </td>
+                          <td className="p-3 text-center font-medium">
+                            {m.assignment !== null ? `${m.assignment}/${assignmentMax}` : `-${assignmentMax}`}
+                          </td>
+                          <td className="p-3 text-center font-bold text-primary-600">
+                            {isEntered ? `${totalMark}/50` : '-/50'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(stats.marks || []).length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="p-4 text-center text-gray-400">No continuous marks recorded.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+          </div>
+        </div>
+
+        {/* My Teachers Section */}
+          {stats.myTeachers && stats.myTeachers.length > 0 && (
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">My Faculty & Instructors</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                List of teachers assigned to your academic subjects for this semester:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stats.myTeachers.map((t, idx) => (
+                  <div key={idx} className="bg-gray-50 dark:bg-dark-bg p-4 rounded-xl border border-gray-100 dark:border-dark-border flex items-start gap-3 hover:shadow-md transition-shadow">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                      {t.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">{t.name}</h4>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-1">{t.email}</p>
+                      <span className="inline-block text-[10px] font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 px-2 py-0.5 rounded-full border border-primary-100 dark:border-primary-900/30">
+                        {t.subjectName} ({t.subjectCode})
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SGPA Estimator Console */}
+          <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">SGPA Estimator Console</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Enter your expected End-Sem exam scores to estimate your Semester Grade Point Average (SGPA). Internal marks shown are synced from the database.
+            </p>
+
+            {/* Legend */}
+            <div className="flex gap-3 mb-4 text-xs flex-wrap">
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg font-semibold">📖 Theory: Mid-Sem(20) + Quiz(10) + Assignment(20) + End-Sem(50) = 100</span>
+              <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-semibold">🔬 Lab: Practical Work(40) + Quiz(10) = 50 (no end-sem)</span>
+            </div>
+            
+            <div className="space-y-3">
+              {(stats.marks || []).map((m) => {
+                const subId = m.subjectId;
+                const isLab = m.Subject?.type === 'lab';
+                const dbMid = m.midSem;
+                const dbQuiz = m.quiz;
+                const dbAss = m.assignment;
+
+                return (
+                  <div key={m.id} className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-xl border ${
+                    isLab 
+                      ? 'bg-purple-50/50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/20' 
+                      : 'bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border'
+                  }`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">{isLab ? '🔬' : '📖'}</span>
+                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{m.Subject?.name}</h4>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {m.Subject?.code} • Credits: {m.Subject?.credits || (isLab ? 1 : 3)} • <span className={isLab ? 'text-purple-500' : 'text-blue-500'}>{isLab ? 'Lab/Practical' : 'Theory'}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Mid-Sem — Theory only */}
+                      {!isLab && (
+                        <div className="flex flex-col items-center">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase mb-1 flex items-center gap-1">
+                            Mid-Sem (20) {dbMid !== null && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Synced from DB" />}
+                          </span>
+                          <input
+                            type="number"
+                            min="0" max="20"
+                            placeholder={dbMid !== null ? String(dbMid) : 'Not entered'}
+                            className={`w-16 px-2 py-1 border rounded-lg text-center text-xs font-semibold bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 cursor-not-allowed`}
+                            value={dbMid !== null ? dbMid : ''}
+                            readOnly
+                          />
+                        </div>
+                      )}
+
+                      {/* Quiz */}
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 font-bold uppercase mb-1 flex items-center gap-1">
+                          Quiz (10) {dbQuiz !== null && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Synced from DB" />}
+                        </span>
+                        <input
+                          type="number"
+                          min="0" max="10"
+                          placeholder={dbQuiz !== null ? String(dbQuiz) : 'Not entered'}
+                          className={`w-16 px-2 py-1 border rounded-lg text-center text-xs font-semibold bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 cursor-not-allowed`}
+                          value={dbQuiz !== null ? dbQuiz : ''}
+                          readOnly
+                        />
+                      </div>
+
+                      {/* Assignment / Practical Work */}
+                      <div className="flex flex-col items-center">
+                        <span className={`text-[10px] font-bold uppercase mb-1 flex items-center gap-1 ${
+                          isLab ? 'text-purple-500' : 'text-gray-500'
+                        }`}>
+                          {isLab ? 'Practical (40)' : 'Assgn (20)'} {dbAss !== null && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Synced from DB" />}
+                        </span>
+                        <input
+                          type="number"
+                          min="0" max={isLab ? 40 : 20}
+                          placeholder={dbAss !== null ? String(dbAss) : 'Not entered'}
+                          className={`w-16 px-2 py-1 border rounded-lg text-center text-xs font-semibold bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 cursor-not-allowed`}
+                          value={dbAss !== null ? dbAss : ''}
+                          readOnly
+                        />
+                      </div>
+
+                      {/* End-Sem — Theory only; labs have no separate end-sem */}
+                      {!isLab && (
+                        <div className="flex flex-col items-center">
+                          <span className="text-[10px] text-primary-500 font-bold uppercase mb-1">
+                            End-Sem (50)
+                          </span>
+                          <input
+                            type="number"
+                            min="0" max="50"
+                            placeholder="e.g. 40"
+                            className="w-20 px-2 py-1 border border-primary-300 dark:border-primary-900 rounded-lg dark:bg-dark-bg text-center text-xs font-bold text-primary-600 dark:text-primary-400 focus:ring-1 focus:ring-primary-500"
+                            value={expectedMarks[subId]?.expectedEndSem ?? ''}
+                            onChange={(e) => setExpectedMarks(prev => ({
+                              ...prev,
+                              [subId]: { ...(prev[subId] || {}), expectedEndSem: e.target.value === '' ? '' : Math.min(50, Math.max(0, Number(e.target.value))) }
+                            }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {(stats.marks || []).length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">No subjects registered for this class. SGPA estimation will be available once subjects are assigned.</p>
+              )}
+
+              {(stats.marks || []).length > 0 && (
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handlePredictSGPA}
+                    disabled={predicting}
+                    className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-bold shadow-md transition-colors disabled:opacity-50"
+                  >
+                    {predicting ? 'Calculating...' : '🎯 Calculate Predicted SGPA'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {predictedResult && (
+              <div className="mt-6 p-6 bg-primary-50/50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-900/20 rounded-2xl animate-fade-in">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-md font-bold text-primary-900 dark:text-primary-300">SGPA Estimation Summary</h4>
+                  <span className="text-2xl font-black text-primary-700 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/40 px-4 py-1.5 rounded-xl">
+                    SGPA: {predictedResult.predictedSGPA}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-primary-100 dark:border-primary-900/20 text-primary-800 dark:text-primary-300">
+                        <th className="pb-2 font-bold">Subject</th>
+                        <th className="pb-2 text-center font-bold">Credits</th>
+                        <th className="pb-2 text-center font-bold">Internals (50)</th>
+                        <th className="pb-2 text-center font-bold">End-Sem (50)</th>
+                        <th className="pb-2 text-center font-bold">Total (100)</th>
+                        <th className="pb-2 text-right font-bold">Grade (Points)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {predictedResult.predictions.map((p) => (
+                        <tr key={p.subjectId} className="border-b border-primary-50/50 dark:border-primary-900/5 last:border-0 text-gray-700 dark:text-gray-300">
+                          <td className="py-2.5 font-semibold">{p.name} ({p.code})</td>
+                          <td className="py-2.5 text-center font-semibold">{p.credits}</td>
+                          <td className="py-2.5 text-center">{p.internalsTotal}</td>
+                          <td className="py-2.5 text-center">{p.expectedEndSem}</td>
+                          <td className="py-2.5 text-center font-bold">{p.totalScore}</td>
+                          <td className="py-2.5 text-right font-bold text-primary-600 dark:text-primary-400">
+                            {p.grade} ({p.gradePoint})
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-2">
+                <AdvancedAnalytics stats={stats} />
+              </div>
+              <div className="lg:col-span-1">
+                <PredictiveAnalytics />
+              </div>
+            </div>
+          
+          <KanbanBoard />
+        </div>
+      )}
+      {/* Student Detailed Attendance Modal (Admin/Teacher view) */}
+      {selectedStudent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-full max-w-2xl border border-gray-100 dark:border-dark-border shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detailed Attendance Report</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Student: <strong className="text-gray-700 dark:text-gray-200">{selectedStudent.student?.name}</strong> • {selectedStudent.student?.email}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedStudent(null)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Attendance overview stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Theory Attendance</span>
+                <span className={`text-xl font-bold ${selectedStudent.theoryPercentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                  {selectedStudent.theoryPercentage}%
+                </span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">
+                  ({selectedStudent.theoryAttended}/{selectedStudent.theoryTotal} classes)
+                </span>
+              </div>
+              
+              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Lab Attendance</span>
+                <span className={`text-xl font-bold ${selectedStudent.labPercentage >= 60 ? 'text-green-600' : 'text-red-600'}`}>
+                  {selectedStudent.labPercentage}%
+                </span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">
+                  ({selectedStudent.labAttended}/{selectedStudent.labTotal} classes)
+                </span>
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border text-center">
+                <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Overall Attendance</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                  {selectedStudent.attendancePercentage}%
+                </span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">
+                  ({selectedStudent.theoryAttended + selectedStudent.labAttended}/{selectedStudent.theoryTotal + selectedStudent.labTotal} classes)
+                </span>
+              </div>
+            </div>
+
+            {/* Subject wise detailed table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 text-gray-500 font-bold">
+                    <th className="pb-2">Subject Name (Code)</th>
+                    <th className="pb-2 text-center">Type</th>
+                    <th className="pb-2 text-center">Attended/Held</th>
+                    <th className="pb-2 text-center">Percentage</th>
+                    <th className="pb-2 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedStudent.subjects?.map((sub) => {
+                    const threshold = sub.type === 'lab' ? 60 : 75;
+                    const isSafe = sub.percentage >= threshold;
+                    return (
+                      <tr key={sub.id} className="border-b border-gray-50 dark:border-gray-800/30 last:border-0 text-gray-700 dark:text-gray-300">
+                        <td className="py-3 font-semibold">{sub.name} ({sub.code})</td>
+                        <td className="py-3 text-center capitalize">{sub.type}</td>
+                        <td className="py-3 text-center font-medium">{sub.attended}/{sub.total}</td>
+                        <td className="py-3 text-center font-bold">{sub.percentage}%</td>
+                        <td className="py-3 text-right">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isSafe ? 'bg-green-50 text-green-700 dark:bg-green-950/20' : 'bg-red-50 text-red-700 dark:bg-red-950/20'}`}>
+                            {isSafe ? 'Safe' : 'Defaulter'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(!selectedStudent.subjects || selectedStudent.subjects.length === 0) && (
+                    <tr>
+                      <td colSpan="5" className="text-center py-4 text-gray-400">No subjects or attendance records found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Dashboard;
