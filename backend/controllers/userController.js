@@ -302,4 +302,23 @@ const getGuardianStudent = async (req, res) => {
   }
 };
 
-module.exports = { getUsers, updateUser, sendWarningEmail, deleteUser, getResumeData, getGuardianStudent };
+const registerFace = async (req, res) => {
+  try {
+    const { faceDescriptor } = req.body;
+    if (!faceDescriptor) {
+      throw new Error('Please provide face descriptor data');
+    }
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.faceDescriptor = faceDescriptor;
+    await user.save();
+    
+    res.status(200).json({ message: 'Face template registered successfully!', faceDescriptor });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+module.exports = { getUsers, updateUser, sendWarningEmail, deleteUser, getResumeData, getGuardianStudent, registerFace };

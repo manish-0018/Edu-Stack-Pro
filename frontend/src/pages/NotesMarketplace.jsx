@@ -14,6 +14,8 @@ const NotesMarketplace = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [newNote, setNewNote] = useState({ title: '', description: '', price: 10, subjectId: '' });
   const [file, setFile] = useState(null);
+  const [activeMarketplaceCoupon, setActiveMarketplaceCoupon] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState('');
 
   const fetchMaterialsAndSubjects = async () => {
     try {
@@ -48,11 +50,15 @@ const NotesMarketplace = () => {
     }
   };
 
-  const handlePurchase = async (materialId) => {
-    if (!window.confirm("Are you sure you want to spend tokens to unlock these notes?")) return;
+  const handlePurchase = async (materialId, purchaseType = 'lifetime') => {
+    const costText = purchaseType === 'rental' ? 'rent this note for 3 days' : 'unlock this note permanently';
+    if (!window.confirm(`Are you sure you want to spend tokens to ${costText}?`)) return;
     try {
-      const res = await axios.post(`/api/economy/purchase/${materialId}`);
-      toast.success('Notes unlocked successfully!');
+      const res = await axios.post(`/api/economy/purchase/${materialId}`, {
+        couponCode: appliedCoupon,
+        purchaseType
+      });
+      toast.success(purchaseType === 'rental' ? 'Lease started successfully!' : 'Notes unlocked permanently!');
       setTokenBalance(res.data.tokens);
       fetchMaterialsAndSubjects(); // refresh to show as purchased
     } catch (err) {
@@ -83,24 +89,59 @@ const NotesMarketplace = () => {
             {tokenBalance}
           </div>
           {user.role === 'student' ? (
-            <button 
-              onClick={handleClaimTokens}
-              disabled={claiming}
-              className="w-full bg-white text-yellow-700 hover:bg-yellow-50 py-2 rounded-xl font-bold transition-colors disabled:opacity-50"
-            >
-              {claiming ? 'Verifying...' : 'Claim Weekly Tokens'}
-            </button>
+            <div className="space-y-3">
+              <div className="text-left">
+                <label className="block text-[9px] text-yellow-200 font-bold uppercase tracking-wider mb-1">Coupon Discount Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. KIWISTUDY20"
+                    value={activeMarketplaceCoupon}
+                    onChange={e => setActiveMarketplaceCoupon(e.target.value)}
+                    className="flex-1 min-w-0 px-2 py-1.5 bg-white/10 border border-white/20 placeholder-yellow-200/60 text-white rounded-xl text-xs font-bold uppercase outline-none focus:bg-white/20 text-center"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const code = activeMarketplaceCoupon.trim().toUpperCase();
+                      if (code === 'KIWISTUDY20' || code === 'CAFEFREE10') {
+                        setAppliedCoupon(code);
+                        toast.success(`Coupon ${code} applied successfully!`);
+                      } else {
+                        setAppliedCoupon('');
+                        toast.error('Invalid Coupon Code');
+                      }
+                    }}
+                    className="px-3 bg-white text-yellow-800 font-bold rounded-xl text-xs hover:bg-yellow-50 transition-colors shrink-0"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {appliedCoupon && (
+                  <span className="text-[9px] text-yellow-100 mt-1 block text-center font-bold">
+                    {appliedCoupon === 'KIWISTUDY20' ? '✓ 20% Off Notes Active!' : '✓ 10% Off Notes Active!'}
+                  </span>
+                )}
+              </div>
+              <button 
+                onClick={handleClaimTokens}
+                disabled={claiming}
+                className="w-full bg-white text-yellow-700 hover:bg-yellow-50 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-xs"
+              >
+                {claiming ? 'Verifying...' : 'Claim Weekly Tokens'}
+              </button>
+            </div>
           ) : user.role === 'teacher' ? (
             <button 
               onClick={() => setShowUpload(!showUpload)}
-              className="w-full bg-white text-yellow-700 hover:bg-yellow-50 py-2 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-white text-yellow-700 hover:bg-yellow-50 py-2 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-xs"
             >
               <Upload className="w-4 h-4" /> Sell Item
             </button>
           ) : user.role === 'student' ? (
              <button 
               onClick={() => setShowUpload(!showUpload)}
-              className="w-full mt-4 bg-yellow-700 text-yellow-50 hover:bg-yellow-800 py-2 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-4 bg-yellow-700 text-yellow-50 hover:bg-yellow-800 py-2 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-xs"
             >
               <Upload className="w-4 h-4" /> Sell Item
             </button>
@@ -171,48 +212,83 @@ const NotesMarketplace = () => {
           </div>
         </form>
       )}
-
-      {/* Notes Grid */}
+            {/* Notes Grid */}
       <h2 className="text-2xl font-bold mt-8 mb-4">Available Items</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {materials.length === 0 && <p className="text-gray-500">No items available yet.</p>}
-        {materials.map(mat => (
-          <div key={mat.id} className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden flex flex-col relative group">
-            
-            <div className="absolute top-3 right-3 bg-yellow-100 text-yellow-800 font-bold px-3 py-1 rounded-full flex items-center gap-1 text-sm shadow-sm">
-              <Coins className="w-4 h-4" /> {mat.price}
-            </div>
-            
-            <div className="absolute top-3 left-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold px-3 py-1 rounded-full text-xs shadow-sm uppercase tracking-wider">
-              {mat.itemType}
-            </div>
+        {materials.map(mat => {
+          const hasDiscount = appliedCoupon === 'KIWISTUDY20' || appliedCoupon === 'CAFEFREE10';
+          const discountPct = appliedCoupon === 'KIWISTUDY20' ? 0.8 : appliedCoupon === 'CAFEFREE10' ? 0.9 : 1.0;
+          const finalPrice = hasDiscount ? Math.ceil(mat.price * discountPct) : mat.price;
+          const rentalPrice = Math.ceil(finalPrice * 0.3);
 
-            <div className="p-6 pt-12 flex-grow">
-              <h3 className="font-bold text-lg mb-2 leading-tight">{mat.title}</h3>
-              {mat.description && <p className="text-sm text-gray-500 mb-4">{mat.description}</p>}
+          return (
+            <div key={mat.id} className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden flex flex-col relative group">
+              
+              <div className="absolute top-3 right-3 bg-yellow-100 text-yellow-800 font-bold px-3 py-1 rounded-full flex items-center gap-1 text-sm shadow-sm z-10">
+                <Coins className="w-4 h-4" /> 
+                {hasDiscount ? (
+                  <span>
+                    <span className="line-through text-xs text-yellow-600/70 mr-1">{mat.price}</span>
+                    {finalPrice}
+                  </span>
+                ) : (
+                  mat.price
+                )}
+              </div>
+              
+              <div className="absolute top-3 left-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold px-3 py-1 rounded-full text-xs shadow-sm uppercase tracking-wider">
+                {mat.itemType}
+              </div>
+
+              <div className="p-6 pt-12 flex-grow">
+                <h3 className="font-bold text-lg mb-2 leading-tight">{mat.title}</h3>
+                {mat.description && <p className="text-sm text-gray-500 mb-4">{mat.description}</p>}
+                
+                {/* Active rental display banner */}
+                {mat.purchased && mat.purchaseType === 'rental' && (
+                  <div className="mt-2 text-xs bg-amber-50 text-amber-700 p-2 rounded-lg font-bold border border-amber-100">
+                    ⏰ 3-Day Rental Active<br />
+                    Expires: {new Date(mat.leaseExpiresAt).toLocaleDateString()}
+                  </div>
+                )}
+                {mat.purchased && mat.purchaseType === 'lifetime' && (
+                  <div className="mt-2 text-xs bg-emerald-50 text-emerald-700 p-2 rounded-lg font-bold border border-emerald-100">
+                    ✓ Lifetime Access Unlocked
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-4 border-t border-gray-50 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 space-y-2">
+                {mat.purchased ? (
+                  <a 
+                    href={mat.contentUrl || '#'} 
+                    target={mat.contentUrl ? "_blank" : "_self"}
+                    rel="noreferrer"
+                    className="w-full flex justify-center items-center gap-2 bg-green-100 hover:bg-green-200 text-green-700 py-2.5 rounded-xl font-medium transition-colors text-xs"
+                  >
+                    <CheckCircle2 className="w-5 h-5" /> {mat.contentUrl ? 'Download/View' : 'Purchased (Contact Seller)'}
+                  </a>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => handlePurchase(mat.id, 'lifetime')}
+                      className="w-full flex justify-center items-center gap-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white py-2 rounded-xl font-bold transition-colors text-xs"
+                    >
+                      <Store className="w-3.5 h-3.5" /> Lifetime for {finalPrice}
+                    </button>
+                    <button 
+                      onClick={() => handlePurchase(mat.id, 'rental')}
+                      className="w-full flex justify-center items-center gap-1.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-800 py-2 rounded-xl font-bold transition-colors border border-yellow-200 text-xs"
+                    >
+                      ⏱ Rent 3 Days for {rentalPrice}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            <div className="p-4 border-t border-gray-50 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-              {mat.purchased ? (
-                <a 
-                  href={mat.contentUrl || '#'} 
-                  target={mat.contentUrl ? "_blank" : "_self"}
-                  rel="noreferrer"
-                  className="w-full flex justify-center items-center gap-2 bg-green-100 hover:bg-green-200 text-green-700 py-2.5 rounded-xl font-medium transition-colors"
-                >
-                  <CheckCircle2 className="w-5 h-5" /> {mat.contentUrl ? 'Download/View' : 'Purchased (Contact Seller)'}
-                </a>
-              ) : (
-                <button 
-                  onClick={() => handlePurchase(mat.id)}
-                  className="w-full flex justify-center items-center gap-2 bg-gray-900 hover:bg-gray-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white py-2.5 rounded-xl font-medium transition-colors"
-                >
-                  <Store className="w-4 h-4" /> Unlock for {mat.price} Tokens
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -1,9 +1,12 @@
 const { Announcement, User } = require('../models');
 const { Op } = require('sequelize');
 
-// @desc Create announcement (admin/teacher)
+// @desc Create announcement (admin only)
 const createAnnouncement = async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only administrators are authorized to post announcements.' });
+    }
     const { title, content, category, expiresAt, targetRole } = req.body;
     const ann = await Announcement.create({
       title, content,
@@ -56,22 +59,25 @@ const togglePin = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// @desc Delete announcement (admin/teacher who posted)
+// @desc Delete announcement (admin only)
 const deleteAnnouncement = async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only administrators are authorized to delete announcements.' });
+    }
     const ann = await Announcement.findByPk(req.params.id);
     if (!ann) return res.status(404).json({ message: 'Not found' });
-    if (req.user.role !== 'admin' && ann.postedById !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
     await ann.destroy();
     res.status(200).json({ id: req.params.id });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// @desc Update announcement
+// @desc Update announcement (admin only)
 const updateAnnouncement = async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only administrators are authorized to update announcements.' });
+    }
     const ann = await Announcement.findByPk(req.params.id);
     if (!ann) return res.status(404).json({ message: 'Not found' });
     await ann.update(req.body);

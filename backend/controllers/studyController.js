@@ -34,6 +34,12 @@ const getIncomingRequests = async (req, res) => {
 const requestBuddy = async (req, res) => {
   try {
     const { subjectId, tutorId } = req.body;
+
+    // Lock 1-on-1 tutoring behind premium checks for students
+    if (req.user.role === 'student' && !req.user.isPremium) {
+      return res.status(403).json({ message: '1-on-1 Tutoring requests require a Premium Semester Pass.' });
+    }
+
     let topStudent = null;
     let targetSubjectId = subjectId;
 
@@ -136,6 +142,10 @@ const completeRequest = async (req, res) => {
 
 const searchGlobalPeers = async (req, res) => {
   try {
+    // Lock Global Peer Matching behind premium checks for students
+    if (req.user.role === 'student' && !req.user.isPremium) {
+      return res.status(403).json({ message: 'Global Peer Finder requires a Premium Semester Pass.' });
+    }
     const { query } = req.query;
     if (!query) return res.status(200).json([]);
 

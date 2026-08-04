@@ -1,4 +1,4 @@
-const { User, Class, Subject, AttendanceRecord, Attendance, Mark, RecoveryAssignment } = require('../models');
+const { User, Class, Subject, AttendanceRecord, Attendance, Mark, RecoveryAssignment, College } = require('../models');
 
 const getDashboardStats = async (req, res) => {
   try {
@@ -195,8 +195,32 @@ const getDashboardStats = async (req, res) => {
         theoryDropAfter3Misses: theoryDropTo
       };
 
-      // Fetch all subjects for the student's class, including Teacher details
+      // Check if student's class has an active attendance session
       const studentClassId = studentUser.classId;
+      if (studentClassId) {
+        const studentClass = await Class.findByPk(studentClassId);
+        if (studentClass && studentClass.isSessionActive) {
+          // Find the active attendance session to get the subject name
+          const activeAttendance = await Attendance.findOne({
+            where: { classId: studentClassId, date: new Date().toISOString().split('T')[0] },
+            include: [{ model: Subject, attributes: ['name'] }]
+          });
+          stats.activeClass = {
+            id: studentClass.id,
+            name: studentClass.name,
+            latitude: studentClass.latitude,
+            longitude: studentClass.longitude,
+            subjectId: activeAttendance ? activeAttendance.subjectId : null,
+            subjectName: activeAttendance && activeAttendance.Subject ? activeAttendance.Subject.name : 'Current Class'
+          };
+        } else {
+          stats.activeClass = null;
+        }
+      } else {
+        stats.activeClass = null;
+      }
+
+      // Fetch all subjects for the student's class, including Teacher details
       const classSubjects = await Subject.findAll({
         where: { classId: studentClassId },
         include: [{ model: User, as: 'Teacher', attributes: ['name', 'email'] }]
@@ -294,6 +318,10 @@ const getDashboardStats = async (req, res) => {
       });
 
       stats.marks = allMarks;
+    }
+
+    if (req.user.collegeId) {
+      stats.college = await College.findByPk(req.user.collegeId);
     }
 
     res.status(200).json(stats);

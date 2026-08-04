@@ -1,4 +1,4 @@
-const { CompanyListing, PlacementApplication, User } = require('../models');
+const { CompanyListing, PlacementApplication, User, PrepHistory } = require('../models');
 
 // Get all company listings
 const getCompanyListings = async (req, res) => {
@@ -188,11 +188,44 @@ const updateApplicationStatus = async (req, res) => {
   }
 };
 
+const createPrepHistory = async (req, res) => {
+  try {
+    const { type, target, score, details } = req.body;
+    if (!type || !target || score === undefined) {
+      throw new Error('Prep activity type, target company/tool, and score are required');
+    }
+    const record = await PrepHistory.create({
+      studentId: req.user.id,
+      type,
+      target,
+      score,
+      details: typeof details === 'object' ? JSON.stringify(details) : details
+    });
+    res.status(201).json(record);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const getPrepHistory = async (req, res) => {
+  try {
+    const history = await PrepHistory.findAll({
+      where: { studentId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+    res.status(200).json(history);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getCompanyListings,
   createCompanyListing,
   updateResumeUrl,
   applyToListing,
   getApplications,
-  updateApplicationStatus
+  updateApplicationStatus,
+  createPrepHistory,
+  getPrepHistory
 };

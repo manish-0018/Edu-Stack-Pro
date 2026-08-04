@@ -38,6 +38,10 @@ const StudyGroup = sequelize.define('StudyGroup', {
   notesData: {
     type: DataTypes.JSON,
     allowNull: true
+  },
+  targetColleges: {
+    type: DataTypes.JSON,
+    allowNull: true
   }
 });
 

@@ -85,9 +85,11 @@ const Forums = () => {
           </h1>
           <p className="text-gray-500">Ask questions, share insights, discuss with peers.</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none">
-          <Plus className="w-5 h-5" /> Ask a Question
-        </button>
+        {user?.role === 'student' && (
+          <button onClick={() => setShowModal(true)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none">
+            <Plus className="w-5 h-5" /> Ask a Question
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -175,14 +177,16 @@ const Forums = () => {
                     </div>
                   )}
 
-                  {/* Reply Input */}
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="Write a reply..." value={replyMap[post.id] || ''}
-                      onChange={e => setReplyMap(p => ({ ...p, [post.id]: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && reply(post.id)}
-                      className="flex-1 px-4 py-2.5 text-sm border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 dark:bg-slate-900/50" />
-                    <button onClick={() => reply(post.id)} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-xl font-bold">Reply</button>
-                  </div>
+                   {/* Reply Input */}
+                   {(user?.role === 'student' || user?.role === 'teacher') && (
+                     <div className="flex gap-2">
+                       <input type="text" placeholder="Write a reply..." value={replyMap[post.id] || ''}
+                         onChange={e => setReplyMap(p => ({ ...p, [post.id]: e.target.value }))}
+                         onKeyDown={e => e.key === 'Enter' && reply(post.id)}
+                         className="flex-1 px-4 py-2.5 text-sm border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 dark:bg-slate-900/50" />
+                       <button onClick={() => reply(post.id)} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-xl font-bold">Reply</button>
+                     </div>
+                   )}
                 </div>
               </div>
             </div>

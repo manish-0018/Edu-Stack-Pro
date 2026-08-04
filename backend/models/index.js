@@ -41,6 +41,11 @@ const AlumniProfile = require('./AlumniProfile');
 const JobPost = require('./JobPost');
 const JobApplication = require('./JobApplication');
 const Announcement = require('./Announcement');
+const Transaction = require('./Transaction');
+const PrepHistory = require('./PrepHistory');
+const StudyGuide = require('./StudyGuide');
+const ProjectPosting = require('./ProjectPosting');
+const ProjectInvite = require('./ProjectInvite');
 
 // User and Class (Students belong to a Class)
 Class.hasMany(User, { foreignKey: 'classId' });
@@ -250,6 +255,28 @@ BookReview.belongsTo(LibraryBook, { foreignKey: 'bookId' });
 User.hasMany(BookReview, { foreignKey: 'studentId' });
 BookReview.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
 
+// Transaction associations
+User.hasMany(Transaction, { foreignKey: 'studentId' });
+Transaction.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
+
+// PrepHistory associations
+User.hasMany(PrepHistory, { foreignKey: 'studentId' });
+PrepHistory.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
+
+// StudyGuide associations
+User.hasMany(StudyGuide, { foreignKey: 'studentId' });
+StudyGuide.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
+
+// ProjectPosting associations
+User.hasMany(ProjectPosting, { as: 'Creator', foreignKey: 'creatorId' });
+ProjectPosting.belongsTo(User, { as: 'Creator', foreignKey: 'creatorId' });
+
+// ProjectInvite associations
+ProjectPosting.hasMany(ProjectInvite, { foreignKey: 'projectPostingId', onDelete: 'CASCADE' });
+ProjectInvite.belongsTo(ProjectPosting, { foreignKey: 'projectPostingId' });
+User.hasMany(ProjectInvite, { foreignKey: 'inviteeId' });
+ProjectInvite.belongsTo(User, { as: 'Invitee', foreignKey: 'inviteeId' });
+
 module.exports = {
   User,
   Class,
@@ -293,5 +320,10 @@ module.exports = {
   JobApplication,
   Announcement,
   BookReview,
-  College
+  College,
+  Transaction,
+  PrepHistory,
+  StudyGuide,
+  ProjectPosting,
+  ProjectInvite
 };

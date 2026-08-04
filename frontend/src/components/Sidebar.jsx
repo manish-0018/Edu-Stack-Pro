@@ -26,7 +26,8 @@ import {
   Brain,
   UserSquare2,
   Megaphone,
-  Download
+  Download,
+  Calculator
 } from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
@@ -85,6 +86,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Opportunities', icon: <Compass />, path: '/opportunities', roles: ['admin', 'student'] },
     { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher'] },
     { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian'] },
+    { name: 'Plus Upgrade 👑', icon: <Award className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student'] }
   ];
 
   return (
@@ -114,8 +116,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                   Edu Stack Pro
                 </span>
                 {user?.College?.name && (
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user.College.name}>
-                    {user.College.name}
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user?.College?.name}>
+                    {user?.College?.name}
                   </span>
                 )}
               </div>

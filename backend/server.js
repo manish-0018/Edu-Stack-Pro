@@ -30,15 +30,20 @@ const io = new Server(server, {
     methods: ['GET', 'POST', 'PUT']
   }
 });
+app.set('io', io);
 
 // WebSockets Logic
 io.on('connection', (socket) => {
   console.log('A user connected via WebSocket:', socket.id);
 
-  // Join a specific workspace room
   socket.on('join_session', (sessionId) => {
     socket.join(sessionId);
+    socket.sessionId = sessionId;
     console.log(`User ${socket.id} joined session ${sessionId}`);
+    
+    // Broadcast updated headcount to all clients in the room
+    const roomSize = io.sockets.adapter.rooms.get(sessionId)?.size || 0;
+    io.to(sessionId).emit('watching_count', { sessionId, count: roomSize });
   });
 
   // Handle new chat messages
@@ -73,6 +78,10 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    if (socket.sessionId) {
+      const roomSize = io.sockets.adapter.rooms.get(socket.sessionId)?.size || 0;
+      io.to(socket.sessionId).emit('watching_count', { sessionId: socket.sessionId, count: roomSize });
+    }
   });
 });
 
@@ -117,6 +126,19 @@ app.use('/api/alumni', require('./routes/alumniRoutes'));
 app.use('/api/jobs', require('./routes/jobRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 
+// Serve Frontend static assets
+const frontendDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res, next) => {
+    if (req.accepts('html') && !req.path.startsWith('/api')) {
+      res.sendFile(path.resolve(frontendDist, 'index.html'));
+    } else {
+      next();
+    }
+  });
+}
+
 // Error Middleware
 app.use(errorHandler);
 
@@ -147,7 +169,7 @@ const getFreePort = async (start) => {
 
 (async () => {
   try {
-    await sequelize.sync(); // DB Sync Reload
+    await sequelize.sync({ alter: true }); // DB Sync Reload
     console.log('Sequelize Models Synced to PostgreSQL DB');
     const startPort = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     const freePort = await getFreePort(startPort);

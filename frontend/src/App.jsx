@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -27,6 +27,7 @@ import Assignments from './pages/Assignments';
 import Quizzes from './pages/Quizzes';
 import Portfolio from './pages/Portfolio';
 import Announcements from './pages/Announcements';
+import PremiumUpgrade from './pages/PremiumUpgrade';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -69,6 +70,7 @@ function App() {
           <Route path="quizzes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Quizzes /></ProtectedRoute>} />
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Announcements /></ProtectedRoute>} />
+           <Route path="upgrade" element={<ProtectedRoute allowedRoles={['student']}><PremiumUpgrade /></ProtectedRoute>} />
         </Route>
       </Routes>
     </Router>

@@ -6,7 +6,9 @@ const {
   updateResumeUrl,
   applyToListing,
   getApplications,
-  updateApplicationStatus
+  updateApplicationStatus,
+  createPrepHistory,
+  getPrepHistory
 } = require('../controllers/placementController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -22,6 +24,10 @@ router.route('/applications')
 
 router.route('/applications/:id')
   .put(protect, authorize('admin', 'teacher'), updateApplicationStatus);
+
+router.route('/prep-history')
+  .get(protect, authorize('student'), getPrepHistory)
+  .post(protect, authorize('student'), createPrepHistory);
 
 router.route('/:id/apply')
   .post(protect, authorize('student'), applyToListing);

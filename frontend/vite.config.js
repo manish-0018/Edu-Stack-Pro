@@ -11,6 +11,11 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/uploads/, /^\/socket.io/]
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png'],
       manifest: {
         name: 'Edu Stack Pro',
@@ -50,6 +55,10 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+      '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true,
       },

@@ -1,4 +1,4 @@
-const { User, Class, College } = require('../models');
+const { User, Class, College, Transaction, Notification } = require('../models');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT
@@ -70,7 +70,7 @@ if (parentEmail && user.role === 'student') {
 
     if (user) {
       const fullUser = await User.findByPk(user.id, {
-        include: [{ model: College, as: 'College', attributes: ['name'] }]
+        include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
       });
       res.status(201).json({
         id: fullUser.id,
@@ -81,6 +81,8 @@ if (parentEmail && user.role === 'student') {
         course: fullUser.course,
         collegeId: fullUser.collegeId,
         College: fullUser.College,
+        faceDescriptor: fullUser.faceDescriptor,
+        isPremium: fullUser.isPremium,
         token: generateToken(fullUser.id),
       });
     } else {
@@ -104,7 +106,7 @@ const login = async (req, res) => {
 
     if (user && (await user.matchPassword(password))) {
       const fullUser = await User.findByPk(user.id, {
-        include: [{ model: College, as: 'College', attributes: ['name'] }]
+        include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
       });
       res.json({
         id: fullUser.id,
@@ -115,6 +117,8 @@ const login = async (req, res) => {
         course: fullUser.course,
         collegeId: fullUser.collegeId,
         College: fullUser.College,
+        faceDescriptor: fullUser.faceDescriptor,
+        isPremium: fullUser.isPremium,
         token: generateToken(fullUser.id),
       });
     } else {
@@ -133,7 +137,7 @@ const getMe = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] },
-      include: [{ model: College, as: 'College', attributes: ['name'] }]
+      include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
     });
     res.status(200).json(user);
   } catch (error) {
@@ -242,12 +246,146 @@ const createCollege = async (req, res) => {
   }
 };
 
+const updateCollegeLocation = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+    const { latitude, longitude } = req.body;
+    const college = await College.findByPk(req.params.id);
+    if (!college) {
+      return res.status(404).json({ message: 'College not found' });
+    }
+    await college.update({ 
+      latitude: parseFloat(latitude), 
+      longitude: parseFloat(longitude) 
+    });
+    res.status(200).json({ message: 'Campus location updated successfully!', college });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const upgradePremium = async (req, res) => {
+  try {
+    const { amount, paymentMethod } = req.body;
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    user.isPremium = true;
+    await user.save();
+
+    // Create a transaction record
+    const transactionId = 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    await Transaction.create({
+      studentId: user.id,
+      amount: amount || 2.00,
+      paymentMethod: paymentMethod || 'UPI',
+      transactionId,
+      status: 'completed'
+    });
+
+    // Create inbox notification
+    await Notification.create({
+      userId: user.id,
+      title: 'Edu Stack Plus Active 👑',
+      message: `You have successfully purchased the Premium Semester Pass for $${(amount || 2.00).toFixed(2)} via ${paymentMethod || 'UPI'}. Priority tutoring, global finder, and whiteboard recording are now active!`,
+      type: 'success'
+    });
+
+    res.status(200).json({ message: 'Upgraded to Premium Semester Pass successfully!', isPremium: true });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const getTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.findAll({
+      where: { studentId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+    res.status(200).json(transactions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getPaymentConfig = async (req, res) => {
+  try {
+    res.status(200).json({
+      upiId: process.env.DEVELOPER_UPI_ID || 'yourupi@upi'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getCollegeSettings = async (req, res) => {
+  try {
+    if (!req.user.collegeId) {
+      return res.status(400).json({ message: 'User is not associated with any college.' });
+    }
+    const college = await College.findByPk(req.user.collegeId);
+    if (!college) {
+      return res.status(404).json({ message: 'College not found.' });
+    }
+    res.status(200).json(college);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateCollegeSettings = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admins only.' });
+    }
+    if (!req.user.collegeId) {
+      return res.status(400).json({ message: 'Admin is not associated with any college.' });
+    }
+    const college = await College.findByPk(req.user.collegeId);
+    if (!college) {
+      return res.status(404).json({ message: 'College not found.' });
+    }
+
+    const { 
+      midSemStartDate, 
+      midSemEndDate, 
+      isMidSemAdmitCardEnabled, 
+      endSemStartDate, 
+      endSemEndDate, 
+      isEndSemAdmitCardEnabled 
+    } = req.body;
+
+    await college.update({
+      midSemStartDate: midSemStartDate !== undefined ? midSemStartDate : college.midSemStartDate,
+      midSemEndDate: midSemEndDate !== undefined ? midSemEndDate : college.midSemEndDate,
+      isMidSemAdmitCardEnabled: isMidSemAdmitCardEnabled !== undefined ? isMidSemAdmitCardEnabled : college.isMidSemAdmitCardEnabled,
+      endSemStartDate: endSemStartDate !== undefined ? endSemStartDate : college.endSemStartDate,
+      endSemEndDate: endSemEndDate !== undefined ? endSemEndDate : college.endSemEndDate,
+      isEndSemAdmitCardEnabled: isEndSemAdmitCardEnabled !== undefined ? isEndSemAdmitCardEnabled : college.isEndSemAdmitCardEnabled
+    });
+
+    res.status(200).json({ message: 'College settings updated successfully!', college });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   resetPassword,
   getColleges,
-  createCollege
+  createCollege,
+  updateCollegeLocation,
+  upgradePremium,
+  getPaymentConfig,
+  getTransactions,
+  getCollegeSettings,
+  updateCollegeSettings
 };
 

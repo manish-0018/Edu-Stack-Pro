@@ -21,6 +21,9 @@ const Workspace = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [socket, setSocket] = useState(null);
+  const [watchingCount, setWatchingCount] = useState(1);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   
   const [notesData, setNotesData] = useState('');
   const [activeMode, setActiveMode] = useState('notes'); // 'notes' or 'draw'
@@ -61,6 +64,12 @@ const Workspace = () => {
       setNotesData(syncedNotes);
     });
     
+    newSocket.on('watching_count', (data) => {
+      if (data.sessionId === id) {
+        setWatchingCount(data.count);
+      }
+    });
+
     // We will handle drawing sync inside DrawingBoard directly or pass socket.
     // For now, Workspace handles Notes and Chat.
 
@@ -68,6 +77,18 @@ const Workspace = () => {
       newSocket.disconnect();
     };
   }, [id, type]);
+
+  useEffect(() => {
+    let interval = null;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
   const fetchGroupDetails = async () => {
     try {
@@ -175,7 +196,13 @@ const Workspace = () => {
             <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </button>
           <div>
-            <h2 className="font-bold text-gray-900 dark:text-white leading-tight">Collaborative Workspace</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-gray-900 dark:text-white leading-tight">Collaborative Workspace</h2>
+              <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-100 dark:border-emerald-900/50 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {watchingCount} online
+              </span>
+            </div>
             <p className="text-xs text-gray-500">Session ID: {id.substring(0,8)}</p>
           </div>
         </div>
@@ -196,6 +223,62 @@ const Workspace = () => {
               <PenTool className="w-4 h-4" /> Draw
             </button>
           </div>
+
+          {/* Record Session Button */}
+          <button 
+            onClick={() => {
+              if (!user?.isPremium) {
+                toast.warning("Whiteboard recording & AI transcripts require a Premium Semester Pass.");
+                navigate('/upgrade');
+              } else {
+                const nextRecordingState = !isRecording;
+                setIsRecording(nextRecordingState);
+                if (nextRecordingState) {
+                  toast.info("Whiteboard & Chat recording started!");
+                } else {
+                  // Compile chat and notes for AI summarizer
+                  const chatTranscript = messages.map(m => `${m.Sender?.name || 'User'}: ${m.content}`).join('\n');
+                  const sessionNotes = notesData;
+                  const prompt = `Please summarize this whiteboard study session.
+Notes/Code:
+${sessionNotes || 'No notes taken.'}
+
+Chat Logs:
+${chatTranscript || 'No chat messages.'}
+
+Return a clean, detailed study guide summary in bullet points. Explain equations or code highlights.`;
+
+                  toast.info("Compiling study session & creating AI study guide...");
+                  axios.post('/api/ai/ask', { prompt, context: 'Whiteboard Study Session Summarizer' })
+                    .then(res => {
+                      const summary = res.data.response;
+                      const title = `AI Study Guide - ${new Date().toLocaleDateString()} (${type === 'group' ? 'Group Study' : '1-on-1 Tutoring'})`;
+                      axios.post('/api/collaboration/study-guides', {
+                        title,
+                        summary,
+                        transcript: chatTranscript || 'No chat messages during recording.'
+                      }).then(() => {
+                        toast.success("Recording saved! AI Study Guide added to Collaboration Hub.");
+                      });
+                    }).catch(err => {
+                      console.error(err);
+                      toast.error("Failed to generate AI study guide summary. Please save notes manually.");
+                    });
+                }
+              }
+            }}
+            className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${
+              isRecording 
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/10 animate-pulse' 
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full bg-red-500 ${isRecording ? 'bg-white' : ''}`} />
+            {isRecording 
+              ? `Recording ${Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:${(recordingSeconds % 60).toString().padStart(2, '0')}` 
+              : <span className="flex items-center gap-1.5">Record Session <span className="text-[8px] bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">👑 Plus</span></span>
+            }
+          </button>
 
           <button onClick={saveSession} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold flex items-center gap-2 transition-colors">
             <Save className="w-4 h-4" /> Save {activeMode === 'notes' ? 'Notes' : 'Board'}

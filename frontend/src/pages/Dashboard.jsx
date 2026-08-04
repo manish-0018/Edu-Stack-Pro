@@ -6,9 +6,11 @@ import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, Fi
 import KanbanBoard from '../components/KanbanBoard';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
+import SmartCheckinModal from '../components/SmartCheckinModal';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
+import AdBanner from '../components/AdBanner';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -49,7 +51,8 @@ const StatCard = ({ title, value, subtitle, icon, color, to }) => {
 };
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, updateCurrentUser } = useAuth();
+  const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [expectedMarks, setExpectedMarks] = useState({});
@@ -57,6 +60,106 @@ const Dashboard = () => {
   const [predicting, setPredicting] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentStatsLoading, setStudentStatsLoading] = useState(false);
+
+  // Admin campus location states
+  const [campusLatInput, setCampusLatInput] = useState('');
+  const [campusLonInput, setCampusLonInput] = useState('');
+  const [locationSaving, setLocationSaving] = useState(false);
+
+  // Admin exam parameters states
+  const [examSettings, setExamSettings] = useState({
+    midSemStartDate: '',
+    midSemEndDate: '',
+    isMidSemAdmitCardEnabled: false,
+    endSemStartDate: '',
+    endSemEndDate: '',
+    isEndSemAdmitCardEnabled: false
+  });
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  const fetchExamSettings = async () => {
+    try {
+      const res = await axios.get('/api/auth/college-settings');
+      setExamSettings(res.data);
+    } catch (err) {
+      console.error('Failed to fetch college exam settings', err);
+    }
+  };
+
+  const handleSaveExamSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      await axios.put('/api/auth/college-settings', examSettings);
+      toast.success('Exam schedules and admit card releases updated!');
+      updateCurrentUser({
+        College: {
+          ...user.College,
+          ...examSettings
+        }
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update exam parameters.');
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.College) {
+      setCampusLatInput(user.College.latitude || '20.3533');
+      setCampusLonInput(user.College.longitude || '85.8266');
+    }
+    if (user && user.role === 'admin') {
+      fetchExamSettings();
+    }
+  }, [user]);
+
+  const handleGetAdminLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser.');
+      return;
+    }
+    const toastId = toast.loading('Querying your current GPS coordinates...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCampusLatInput(position.coords.latitude.toFixed(6));
+        setCampusLonInput(position.coords.longitude.toFixed(6));
+        toast.update(toastId, { render: 'GPS coordinates loaded!', type: 'success', isLoading: false, autoClose: 2000 });
+      },
+      (err) => {
+        console.error(err);
+        toast.update(toastId, { render: 'Failed to access GPS. Please verify permissions.', type: 'error', isLoading: false, autoClose: 3000 });
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const handleSaveCampusLocation = async () => {
+    if (!campusLatInput || !campusLonInput) {
+      toast.error('Please input valid coordinates.');
+      return;
+    }
+    setLocationSaving(true);
+    try {
+      const res = await axios.put(`/api/auth/colleges/${user.collegeId}`, {
+        latitude: parseFloat(campusLatInput),
+        longitude: parseFloat(campusLonInput)
+      });
+      updateCurrentUser({
+        College: {
+          ...user.College,
+          latitude: parseFloat(campusLatInput),
+          longitude: parseFloat(campusLonInput)
+        }
+      });
+      toast.success('Campus coordinates updated successfully! All lockers updated.');
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to update campus coordinates.');
+    } finally {
+      setLocationSaving(false);
+    }
+  };
 
   const [showPwaPromo, setShowPwaPromo] = useState(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) return false;
@@ -480,9 +583,9 @@ const Dashboard = () => {
     }
   };
 
-  // Determine Exam Hall Ticket Eligibility:
-  const isTheoryEligible = stats.theoryPercentage >= 75 && stats.theoryTotal > 0;
-  const isPracticalEligible = stats.labPercentage >= 60 && stats.labTotal > 0;
+  // Determine Exam Hall Ticket Eligibility (Mid-Sem: 60%, End-Sem: 50% criteria)
+  const isMidSemEligible = (stats.attendancePercentage || 0) >= 60;
+  const isEndSemEligible = (stats.attendancePercentage || 0) >= 50;
 
   return (
     <div className="space-y-6">
@@ -532,7 +635,7 @@ const Dashboard = () => {
                   </span>
                   {user?.College?.name && (
                     <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">
-                      🏢 {user.College.name}
+                      🏢 {user?.College?.name}
                     </span>
                   )}
                 </div>
@@ -648,6 +751,173 @@ const Dashboard = () => {
               to="/subjects"
             />
           </div>
+
+          {/* ── Admin Campus Location Lock Panel ──────────────────── */}
+          {user.role === 'admin' && (
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                📍 Admin Campus Location Lock
+              </h3>
+              <p className="text-xs text-gray-400 mb-4">
+                Configure the target coordinates of your campus academic building. The student face scanner and teacher mark-attendance roster will lock to this location.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Campus Latitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 20.3533"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg text-sm"
+                    value={campusLatInput}
+                    onChange={(e) => setCampusLatInput(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Campus Longitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 85.8266"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg text-sm"
+                    value={campusLonInput}
+                    onChange={(e) => setCampusLonInput(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGetAdminLocation}
+                    className="flex-1 px-4 py-2 border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg rounded-lg text-xs font-bold transition-all"
+                  >
+                    Get Current GPS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveCampusLocation}
+                    disabled={locationSaving}
+                    className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all shadow shadow-primary-500/10"
+                  >
+                    {locationSaving ? 'Saving...' : 'Save Location'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Admin Exam Release Console ──────────────────────────── */}
+          {user.role === 'admin' && (
+            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                📅 Exam Scheduling & Hall Ticket Release Console
+              </h3>
+              <p className="text-xs text-gray-400 mb-4">
+                Schedule examination start/end dates and release hall tickets for download. Students who meet the attendance threshold can download released cards.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Mid Sem Section */}
+                <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border space-y-4">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b pb-2 flex items-center justify-between">
+                    <span>Mid-Semester Exams</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${examSettings.isMidSemAdmitCardEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {examSettings.isMidSemAdmitCardEnabled ? 'Released' : 'Locked'}
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg text-xs"
+                        value={examSettings.midSemStartDate || ''}
+                        onChange={(e) => setExamSettings({ ...examSettings, midSemStartDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">End Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg text-xs"
+                        value={examSettings.midSemEndDate || ''}
+                        onChange={(e) => setExamSettings({ ...examSettings, midSemEndDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-gray-600 dark:text-gray-300 font-medium font-bold">Release Admit Cards</span>
+                    <button
+                      type="button"
+                      onClick={() => setExamSettings({ ...examSettings, isMidSemAdmitCardEnabled: !examSettings.isMidSemAdmitCardEnabled })}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                        examSettings.isMidSemAdmitCardEnabled 
+                          ? 'bg-red-500 hover:bg-red-600 text-white' 
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {examSettings.isMidSemAdmitCardEnabled ? 'Lock Admit Cards' : 'Release Admit Cards'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* End Sem Section */}
+                <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border space-y-4">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b pb-2 flex items-center justify-between">
+                    <span>End-Semester Exams</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${examSettings.isEndSemAdmitCardEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {examSettings.isEndSemAdmitCardEnabled ? 'Released' : 'Locked'}
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg text-xs"
+                        value={examSettings.endSemStartDate || ''}
+                        onChange={(e) => setExamSettings({ ...examSettings, endSemStartDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">End Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg text-xs"
+                        value={examSettings.endSemEndDate || ''}
+                        onChange={(e) => setExamSettings({ ...examSettings, endSemEndDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-gray-600 dark:text-gray-300 font-medium font-bold">Release Admit Cards</span>
+                    <button
+                      type="button"
+                      onClick={() => setExamSettings({ ...examSettings, isEndSemAdmitCardEnabled: !examSettings.isEndSemAdmitCardEnabled })}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                        examSettings.isEndSemAdmitCardEnabled 
+                          ? 'bg-red-500 hover:bg-red-600 text-white' 
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {examSettings.isEndSemAdmitCardEnabled ? 'Lock Admit Cards' : 'Release Admit Cards'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-4">
+                <button
+                  type="button"
+                  onClick={handleSaveExamSettings}
+                  disabled={settingsSaving}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-bold transition-all shadow shadow-indigo-500/20"
+                >
+                  {settingsSaving ? 'Saving parameters...' : 'Save Exam Parameters'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* ── Charts Section ───────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -836,7 +1106,7 @@ const Dashboard = () => {
       ) : (
         // STUDENT DASHBOARD LAYOUT
         <div className="space-y-6">
-
+          <AdBanner />
           {/* ── Student Hero Header ───────────────────────────────── */}
           <div className="bg-gradient-to-br from-primary-600 via-violet-700 to-purple-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
@@ -860,7 +1130,7 @@ const Dashboard = () => {
                 <div className="flex flex-wrap gap-2 mt-2">
                   {user?.College?.name && (
                     <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
-                      🏢 {user.College.name}
+                      🏢 {user?.College?.name}
                     </span>
                   )}
                   {user?.course && (
@@ -869,6 +1139,8 @@ const Dashboard = () => {
                     </span>
                   )}
                 </div>
+
+
                 
                 {/* Gamified Badges */}
                 <div className="flex gap-2 mt-4">
@@ -905,6 +1177,69 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* Dean's Attendance Shortage & Debarment Alert Banner */}
+          {((stats.attendancePercentage || 0) < 70) && (
+            <div className={`p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm border-l-8 ${
+              (stats.attendancePercentage || 0) < 50
+                ? 'bg-red-500/10 border-red-500 dark:bg-red-950/20 text-red-700 dark:text-red-400'
+                : (stats.attendancePercentage || 0) < 60
+                ? 'bg-rose-500/10 border-rose-500 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400'
+                : 'bg-amber-500/10 border-amber-500 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400'
+            }`}>
+              <div className={`p-3 rounded-xl shrink-0 ${
+                (stats.attendancePercentage || 0) < 60 ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
+              }`}>
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-md font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  {((stats.attendancePercentage || 0) < 60) ? '🚨 EXAM DEBARMENT WARNING' : '⚠️ DEAN ATTENDANCE SHORTAGE NOTICE'}
+                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[9px] font-bold rounded-full uppercase tracking-wider animate-pulse">Critical</span>
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                  Your overall attendance is currently <strong className="text-gray-900 dark:text-white">{stats.attendancePercentage || 0}%</strong>, which is below the safe threshold of <strong>70%</strong>. 
+                  {((stats.attendancePercentage || 0) < 50) ? (
+                    <strong> Exams are approaching next week! You are officially DEBARRED from both Mid-Sem (req. 60%) and End-Sem (req. 50%) exams. All Hall Tickets are LOCKED.</strong>
+                  ) : ((stats.attendancePercentage || 0) < 60) ? (
+                    <strong> Exams are approaching next week! You are officially DEBARRED from Mid-Sem exams (req. 60%). Your Mid-Sem Hall Ticket is LOCKED.</strong>
+                  ) : (
+                    " Exams are approaching! You must maintain >= 60% (Mid-Sem) / 50% (End-Sem) or you will be barred from examinations."
+                  )}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Link to="/recovery" className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                    ✍️ Attend Saturday Remedials to recover credits
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Smart Check-In Active Session Prompt */}
+          {stats.activeClass && (
+            <div className="bg-gradient-to-r from-teal-500 via-cyan-500 to-indigo-600 text-white rounded-2xl p-6 shadow-md relative overflow-hidden border border-teal-400/20">
+              <div className="absolute right-0 bottom-0 translate-x-10 translate-y-10 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
+              <div className="absolute left-1/3 top-0 -translate-y-12 w-32 h-32 bg-teal-400/20 rounded-full blur-xl animate-pulse" />
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+                <div className="flex-1">
+                  <h3 className="text-md font-bold text-white mb-0.5 flex items-center gap-2">
+                    📍 Active Classroom Check-In
+                    <span className="px-2 py-0.5 bg-white/20 text-white text-[9px] font-bold rounded-full uppercase tracking-widest animate-pulse">Live</span>
+                  </h3>
+                  <p className="text-xs text-teal-100 max-w-xl leading-relaxed">
+                    Your attendance session for <strong>{stats.activeClass.name} ({stats.activeClass.subjectName})</strong> is currently open! Check-in now to mark yourself present.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCheckinModal(true)}
+                  className="flex-shrink-0 px-4 py-2 bg-white text-teal-600 hover:bg-teal-50 text-xs font-bold rounded-xl shadow transition-all hover:scale-[1.02] active:scale-[0.98] mt-2 md:mt-0"
+                >
+                  Check In Now
+                </button>
+              </div>
+            </div>
+          )}
 
           {stats.gracePeriodEnds && (
             <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 p-5 rounded-2xl flex items-start gap-4 shadow-sm">
@@ -981,72 +1316,118 @@ const Dashboard = () => {
 
           {/* Exam Registration Lock & Hall Ticket (Feature E) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Theory Exam Card */}
+            {/* Mid-Sem Exam Card */}
             <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between gap-4">
               <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-xl ${isTheoryEligible ? 'bg-green-100 dark:bg-green-900/20 text-green-600' : 'bg-red-100 dark:bg-red-900/20 text-red-600'}`}>
+                <div className={`p-3 rounded-xl ${
+                  !stats.college?.isMidSemAdmitCardEnabled
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                    : isMidSemEligible 
+                    ? 'bg-green-100 dark:bg-green-900/20 text-green-600' 
+                    : 'bg-red-100 dark:bg-red-900/20 text-red-600'
+                }`}>
                   <Award className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Theory Exam Admit Card</h3>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Mid-Sem Exam Hall Ticket</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {isTheoryEligible 
-                      ? 'Eligible! You have maintained theory attendance >= 75%.'
-                      : `Debarred! Theory attendance (${stats.theoryPercentage || 0}%) is deficient. (Required: 75%)`
-                    }
+                    {!stats.college?.isMidSemAdmitCardEnabled ? (
+                      stats.college?.midSemStartDate ? (
+                        `Exams scheduled: ${stats.college.midSemStartDate} to ${stats.college.midSemEndDate || 'N/A'}. Awaiting Release.`
+                      ) : (
+                        'Admit cards have not been released by the academic cell yet.'
+                      )
+                    ) : isMidSemEligible ? (
+                      'Eligible! You have maintained overall attendance >= 60%.'
+                    ) : (
+                      `Debarred! Overall attendance (${stats.attendancePercentage || 0}%) is deficient. (Required: 60% for Mid-Sem)`
+                    )}
                   </p>
                 </div>
               </div>
               <div>
-                {isTheoryEligible ? (
+                {!stats.college?.isMidSemAdmitCardEnabled ? (
+                  <button
+                    disabled
+                    className="w-full px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed border border-dashed border-gray-300 dark:border-gray-700"
+                  >
+                    🔒 Awaiting Release by College
+                  </button>
+                ) : isMidSemEligible ? (
                   <button
                     onClick={() => generateAdmitCard('theory')}
                     className="w-full px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-md text-sm font-semibold flex items-center justify-center gap-2 transition-all"
                   >
-                    <FileText className="w-4 h-4" /> Download Theory Admit Card
+                    <FileText className="w-4 h-4" /> Download Mid-Sem Admit Card
                   </button>
                 ) : (
-                  <button
-                    disabled
-                    className="w-full px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
-                  >
-                    🔒 Theory Hall Ticket Locked
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      disabled
+                      className="w-full px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      🔒 Mid-Sem Admit Card Locked
+                    </button>
+                    <p className="text-[10px] text-red-500 font-bold text-center">🚨 Attendance threshold check failed. You must attend make-up classes immediately.</p>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Practical Exam Card */}
+            {/* End-Sem Exam Card */}
             <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between gap-4">
               <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-xl ${isPracticalEligible ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600' : 'bg-red-100 dark:bg-red-900/20 text-red-600'}`}>
+                <div className={`p-3 rounded-xl ${
+                  !stats.college?.isEndSemAdmitCardEnabled
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                    : isEndSemEligible 
+                    ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-600' 
+                    : 'bg-red-100 dark:bg-red-900/20 text-red-600'
+                }`}>
                   <Award className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Practical Exam Admit Card</h3>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">End-Sem Exam Hall Ticket</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {isPracticalEligible 
-                      ? 'Eligible! You have maintained practical attendance >= 60%.'
-                      : `Debarred! Practical attendance (${stats.labPercentage || 0}%) is deficient. (Required: 60%)`
-                    }
+                    {!stats.college?.isEndSemAdmitCardEnabled ? (
+                      stats.college?.endSemStartDate ? (
+                        `Exams scheduled: ${stats.college.endSemStartDate} to ${stats.college.endSemEndDate || 'N/A'}. Awaiting Release.`
+                      ) : (
+                        'Admit cards have not been released by the academic cell yet.'
+                      )
+                    ) : isEndSemEligible ? (
+                      'Eligible! You have maintained overall attendance >= 50%.'
+                    ) : (
+                      `Debarred! Overall attendance (${stats.attendancePercentage || 0}%) is deficient. (Required: 50% for End-Sem)`
+                    )}
                   </p>
                 </div>
               </div>
               <div>
-                {isPracticalEligible ? (
+                {!stats.college?.isEndSemAdmitCardEnabled ? (
+                  <button
+                    disabled
+                    className="w-full px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed border border-dashed border-gray-300 dark:border-gray-700"
+                  >
+                    🔒 Awaiting Release by College
+                  </button>
+                ) : isEndSemEligible ? (
                   <button
                     onClick={() => generateAdmitCard('practical')}
                     className="w-full px-5 py-2.5 bg-gradient-to-r from-primary-600 to-violet-600 hover:from-primary-700 hover:to-violet-700 text-white rounded-xl shadow-md text-sm font-semibold flex items-center justify-center gap-2 transition-all"
                   >
-                    <FileText className="w-4 h-4" /> Download Practical Admit Card
+                    <FileText className="w-4 h-4" /> Download End-Sem Admit Card
                   </button>
                 ) : (
-                  <button
-                    disabled
-                    className="w-full px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
-                  >
-                    🔒 Practical Hall Ticket Locked
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      disabled
+                      className="w-full px-5 py-2.5 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      🔒 End-Sem Admit Card Locked
+                    </button>
+                    <p className="text-[10px] text-red-500 font-bold text-center">🚨 Attendance threshold check failed. You must attend make-up classes immediately.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -1459,6 +1840,13 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+      
+      <SmartCheckinModal 
+        isOpen={showCheckinModal} 
+        onClose={() => setShowCheckinModal(false)} 
+        activeClass={stats.activeClass}
+        onCheckinSuccess={fetchStats}
+      />
     </div>
   );
 };

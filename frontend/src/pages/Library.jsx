@@ -15,6 +15,9 @@ const Library = () => {
   const [selectedBook, setSelectedBook] = useState(null); // for reviews modal
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   
+  // Recommender states
+  const [recommendedSubject, setRecommendedSubject] = useState(null);
+  
   const [newBook, setNewBook] = useState({
     title: '',
     author: '',
@@ -30,8 +33,35 @@ const Library = () => {
       setBooks(booksRes.data);
       
       if (user && user.role === 'student') {
-        const checkoutsRes = await axios.get('/api/library/my-checkouts');
+        const [checkoutsRes, marksRes] = await Promise.all([
+          axios.get('/api/library/my-checkouts'),
+          axios.get('/api/marks')
+        ]);
         setMyCheckouts(checkoutsRes.data);
+
+        // Grade-driven recommendation math
+        if (marksRes.data && marksRes.data.length > 0) {
+          const subjectTotals = {};
+          marksRes.data.forEach(m => {
+            const name = m.Subject?.name;
+            if (!name) return;
+            if (!subjectTotals[name]) subjectTotals[name] = { total: 0, max: 0 };
+            const score = (m.midSem || 0) + (m.assignment || 0) + (m.quiz || 0);
+            subjectTotals[name].total += score;
+            subjectTotals[name].max += 60;
+          });
+          
+          let lowestSubject = null;
+          let lowestScore = 100;
+          Object.entries(subjectTotals).forEach(([name, data]) => {
+            const pct = (data.total / data.max) * 100;
+            if (pct < lowestScore && pct < 85) { // Under 85% gets targeted help
+              lowestScore = pct;
+              lowestSubject = name;
+            }
+          });
+          setRecommendedSubject(lowestSubject);
+        }
       }
     } catch (err) {
       toast.error('Failed to load library data');
@@ -104,6 +134,14 @@ const Library = () => {
     return matchesSearch && matchesCategory;
   });
 
+  const recommendedBooks = books.filter(b => {
+    if (!recommendedSubject) return false;
+    const sub = recommendedSubject.toLowerCase();
+    const cat = b.category.toLowerCase();
+    const title = b.title.toLowerCase();
+    return cat.includes(sub) || sub.includes(cat) || title.includes(sub.split(' ')[0]) || sub.split(' ').some(w => w.length > 3 && title.includes(w));
+  });
+
   const getAverageRating = (book) => {
     const reviews = book.BookReviews || [];
     if (reviews.length === 0) return 0;
@@ -160,6 +198,68 @@ const Library = () => {
             <button type="submit" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">Save Book</button>
           </div>
         </form>
+      )}
+
+      {/* Grade-Driven Library Recommender */}
+      {user.role === 'student' && recommendedSubject && recommendedBooks.length > 0 && (
+        <div className="space-y-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/15 dark:to-pink-950/10 p-8 rounded-3xl border border-purple-100 dark:border-purple-900/30 text-left">
+          <div>
+            <h2 className="text-xl font-black text-purple-900 dark:text-purple-400 flex items-center gap-2">
+              🎯 AI Study Booster Recommendations
+            </h2>
+            <p className="text-xs text-purple-700/80 dark:text-purple-300/80 mt-1 font-semibold leading-relaxed">
+              We noticed your internal assessment marks for <span className="font-extrabold text-purple-900 dark:text-white bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded">{recommendedSubject}</span> have dropped. Here are targeted reference textbooks in the library to help you prepare:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            {recommendedBooks.map(book => {
+              const avgRating = getAverageRating(book);
+              return (
+                <div key={book.id} className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-purple-100/50 dark:border-purple-900/20 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="px-2 py-0.5 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 rounded-md text-[10px] font-bold">
+                        {book.category}
+                      </span>
+                      <div className="flex items-center gap-1 text-yellow-500">
+                        <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                        <span className="text-xs font-bold">{avgRating > 0 ? `${avgRating}/5.0` : 'No reviews'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-gray-900 dark:text-white leading-snug line-clamp-1">{book.title}</h3>
+                      <p className="text-[11px] text-gray-400">By {book.author}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t dark:border-slate-800 space-y-2">
+                    <div className="flex gap-2">
+                      {book.ebookUrl && (
+                        <a href={book.ebookUrl} target="_blank" rel="noreferrer" className="flex-1 text-center bg-purple-50 hover:bg-purple-100 text-purple-700 py-1.5 rounded-lg text-[10px] font-extrabold flex items-center justify-center gap-1">
+                          <ExternalLink className="w-3 h-3" /> Read PDF
+                        </a>
+                      )}
+                      <button 
+                        onClick={() => setSelectedBook(book)}
+                        className="flex-1 bg-gray-50 hover:bg-gray-100 dark:bg-slate-850 dark:hover:bg-slate-805 text-gray-700 dark:text-gray-200 py-1.5 rounded-lg text-[10px] font-extrabold flex items-center justify-center gap-1"
+                      >
+                        Reviews
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => handleCheckout(book.id)} 
+                      disabled={book.availableCopies <= 0}
+                      className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-100 disabled:text-gray-400 text-white py-2 rounded-lg text-[10px] font-extrabold transition-colors"
+                    >
+                      {book.availableCopies > 0 ? 'Reserve Book' : 'Unavailable'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Issued Books */}
@@ -327,7 +427,7 @@ const Library = () => {
             </div>
 
             {/* Write a Review */}
-            {user.role === 'student' && (
+            {user && (user.role === 'student' || user.role === 'teacher' || user.role === 'admin') && (
               <form onSubmit={handleAddReview} className="space-y-4 pt-4 border-t dark:border-slate-800">
                 <h3 className="text-sm font-bold text-gray-400">WRITE A REVIEW</h3>
                 

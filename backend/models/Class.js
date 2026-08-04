@@ -22,6 +22,32 @@ const Class = sequelize.define('Class', {
   collegeId: {
     type: DataTypes.UUID,
     allowNull: true
+  },
+  latitude: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: 20.3533
+  },
+  longitude: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: 85.8266
+  },
+  activeOtp: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  activeOtpExpires: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  activeQrToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  isSessionActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 });
 

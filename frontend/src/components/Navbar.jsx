@@ -156,9 +156,12 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
               <UserIcon className="w-4 h-4" />
             </div>
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                {user?.isPremium && <span className="text-amber-500" title="Premium Semester Pass Active">👑</span>}
+                <span className={user?.isPremium ? 'text-amber-500 dark:text-amber-400 font-extrabold' : ''}>{user?.name}</span>
+              </p>
               <p className="text-[10px] font-bold text-primary-500 uppercase">
-                {user?.role} {user?.course && `• ${user.course}`}
+                {user?.isPremium ? 'Premium ' : ''}{user?.role} {user?.course && `• ${user.course}`}
               </p>
             </div>
           </button>

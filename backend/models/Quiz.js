@@ -9,7 +9,8 @@ const Quiz = sequelize.define('Quiz', {
   timeLimitMinutes: { type: DataTypes.INTEGER, defaultValue: 30 },
   dueDate:          { type: DataTypes.DATE,    allowNull: true },
   totalMarks:       { type: DataTypes.INTEGER, defaultValue: 0 },
-  isActive:         { type: DataTypes.BOOLEAN, defaultValue: true }
+  isActive:         { type: DataTypes.BOOLEAN, defaultValue: true },
+  isLocked:         { type: DataTypes.BOOLEAN, defaultValue: false }
 });
 
 module.exports = Quiz;
