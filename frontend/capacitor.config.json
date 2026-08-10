@@ -1,0 +1,30 @@
+{
+  "appId": "com.attendease.app",
+  "appName": "Edu Stack Pro",
+  "webDir": "dist",
+  "server": {
+    "url": "http://10.5.119.125:5000",
+    "cleartext": true,
+    "allowNavigation": [
+      "10.5.119.125"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#4f46e5",
+      "showSpinner": true,
+      "spinnerColor": "#ffffff",
+      "androidSpinnerStyle": "large"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#4f46e5"
+    }
+  }
+}
