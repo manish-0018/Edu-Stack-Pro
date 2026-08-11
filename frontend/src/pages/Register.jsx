@@ -48,8 +48,10 @@ const Register = () => {
       try {
         const res = await axios.get('/api/auth/colleges');
         setColleges(res.data);
+        console.log('Fetched colleges:', res.data);
       } catch (err) {
-        console.error("Failed to load colleges", err);
+        console.error('Failed to load colleges', err);
+        // optional: setColleges([]);
       }
     };
     fetchColleges();
@@ -58,7 +60,7 @@ const Register = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const url = formData.collegeId ? `/api/classes?collegeId=${formData.collegeId}` : '/api/classes';
+        const url = formData.collegeId ? `/api/classes?collegeId=${formData.collegeId}` : `/api/classes`;
         const res = await axios.get(url);
         setClasses(res.data);
       } catch (err) {
