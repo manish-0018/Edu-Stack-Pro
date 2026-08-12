@@ -323,11 +323,11 @@ const Register = () => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Staff Access Code</label>
-                <div className="relative">
+                <div className="relative animate-fade-in">
                   <input
                     type={showNewCollegeKey ? "text" : "password"}
                     required
-                    placeholder="Create custom verification code"
+                    placeholder="e.g., MYCOLLEGE-STAFF-2026"
                     className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
                     value={newCollegeKey}
                     onChange={(e) => setNewCollegeKey(e.target.value)}
@@ -340,6 +340,9 @@ const Register = () => {
                     {showNewCollegeKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                <p className="text-[10px] text-gray-500 mt-1 dark:text-gray-400">
+                  💡 <strong>Create a custom code here.</strong> You will share this code with your teachers/staff so they can register under your college.
+                </p>
               </div>
 
               <div>
@@ -360,6 +363,24 @@ const Register = () => {
                   >
                     {showLicenseKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
+                </div>
+                <div className="mt-2 p-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 rounded-lg text-[11px] text-blue-700 dark:text-blue-300">
+                  🔑 <strong>Need a License Key?</strong> Contact the platform administrator at{' '}
+                  <a 
+                    href="mailto:admin@edustack.com?subject=Requesting%20EduStack%20Pro%20License%20Key" 
+                    className="font-bold underline hover:text-blue-800 dark:hover:text-blue-200"
+                  >
+                    admin@edustack.com
+                  </a>{' '}
+                  or via{' '}
+                  <a 
+                    href="https://wa.me/919876543210?text=Hi,%20I%20want%20to%20request%20a%20Master%20License%20Key%20for%20my%20college." 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="font-bold underline hover:text-blue-800 dark:hover:text-blue-200"
+                  >
+                    WhatsApp Support
+                  </a>
                 </div>
               </div>
 
