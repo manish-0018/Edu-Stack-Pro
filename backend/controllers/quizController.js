@@ -81,7 +81,13 @@ const getQuizzes = async (req, res) => {
           where: subjectWhere,
           attributes: ['name', 'code', 'classId'] 
         },
-        { model: User, as: 'Teacher', attributes: ['name'] },
+        { 
+          model: User, 
+          as: 'Teacher', 
+          attributes: ['name'],
+          where: { collegeId: req.user.collegeId },
+          required: true
+        },
         { model: QuizAttempt, required: false }
       ],
       order: [['createdAt', 'DESC']]
@@ -142,6 +148,20 @@ const submitAttempt = async (req, res) => {
 // @desc Get all results for a quiz (teacher)
 const getResults = async (req, res) => {
   try {
+    // Verify quiz belongs to the user's college
+    const quiz = await Quiz.findOne({
+      where: { id: req.params.id },
+      include: [{
+        model: User,
+        as: 'Teacher',
+        where: { collegeId: req.user.collegeId },
+        required: true
+      }]
+    });
+    if (!quiz) {
+      return res.status(403).json({ message: 'Access denied. Quiz does not belong to your college.' });
+    }
+
     const results = await QuizAttempt.findAll({
       where: { quizId: req.params.id },
       include: [{ model: User, as: 'Student', attributes: ['name', 'email'] }],
@@ -164,8 +184,24 @@ const getMyAttempt = async (req, res) => {
 // @desc Delete quiz (teacher/admin)
 const deleteQuiz = async (req, res) => {
   try {
-    const quiz = await Quiz.findByPk(req.params.id);
-    if (!quiz) return res.status(404).json({ message: 'Not found' });
+    const quiz = await Quiz.findOne({
+      where: { id: req.params.id },
+      include: [{
+        model: User,
+        as: 'Teacher',
+        attributes: ['collegeId'],
+        required: true
+      }]
+    });
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+    if (req.user.role === 'teacher' && quiz.teacherId !== req.user.id) {
+      return res.status(403).json({ message: 'You can only delete your own quizzes.' });
+    }
+    if (req.user.role === 'admin' && quiz.Teacher?.collegeId !== req.user.collegeId) {
+      return res.status(403).json({ message: 'Access denied. You can only delete quizzes from your college.' });
+    }
+
     await quiz.destroy();
     res.status(200).json({ id: req.params.id });
   } catch (err) { res.status(500).json({ message: err.message }); }
