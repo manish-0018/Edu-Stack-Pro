@@ -87,7 +87,13 @@ const getAssignments = async (req, res) => {
           where: subjectWhere,
           attributes: ['name', 'code', 'classId'] 
         },
-        { model: User, as: 'Teacher', attributes: ['name'] },
+        { 
+          model: User, 
+          as: 'Teacher', 
+          attributes: ['name'],
+          where: { collegeId: req.user.collegeId },
+          required: true
+        },
         { model: AssignmentSubmission, required: false }
       ],
       order: [['createdAt', 'DESC']]
@@ -160,6 +166,22 @@ const gradeSubmission = async (req, res) => {
 const getSubmissions = async (req, res) => {
   try {
     const { id: assignmentId } = req.params;
+
+    // Verify assignment belongs to the user's college
+    const assignment = await Assignment.findOne({
+      where: { id: assignmentId },
+      include: [{
+        model: User,
+        as: 'Teacher',
+        where: { collegeId: req.user.collegeId },
+        required: true
+      }]
+    });
+
+    if (!assignment) {
+      return res.status(403).json({ message: 'Access denied. Assignment does not belong to your college.' });
+    }
+
     const submissions = await AssignmentSubmission.findAll({
       where: { assignmentId },
       include: [{ model: User, as: 'Student', attributes: ['name', 'email'] }]
@@ -182,8 +204,25 @@ const getMySubmission = async (req, res) => {
 // @desc Delete assignment (teacher/admin)
 const deleteAssignment = async (req, res) => {
   try {
-    const assignment = await Assignment.findByPk(req.params.id);
-    if (!assignment) return res.status(404).json({ message: 'Not found' });
+    const assignment = await Assignment.findOne({
+      where: { id: req.params.id },
+      include: [{
+        model: User,
+        as: 'Teacher',
+        attributes: ['collegeId'],
+        required: true
+      }]
+    });
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
+    if (req.user.role === 'teacher' && assignment.teacherId !== req.user.id) {
+      return res.status(403).json({ message: 'You can only delete your own assignments.' });
+    }
+
+    if (req.user.role === 'admin' && assignment.Teacher?.collegeId !== req.user.collegeId) {
+      return res.status(403).json({ message: 'Access denied. You can only delete assignments for your college.' });
+    }
+
     await assignment.destroy();
     res.status(200).json({ id: req.params.id });
   } catch (err) { res.status(500).json({ message: err.message }); }
