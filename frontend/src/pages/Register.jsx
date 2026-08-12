@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Mail, Lock, User as UserIcon, UserPlus } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, UserPlus, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 const Register = () => {
@@ -16,6 +16,8 @@ const Register = () => {
   const [licenseKey, setLicenseKey] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [showNewCollegeKey, setShowNewCollegeKey] = useState(false);
+  const [showLicenseKey, setShowLicenseKey] = useState(false);
 
   const handleCreateCollege = async (e) => {
     e.preventDefault();
@@ -35,6 +37,8 @@ const Register = () => {
       setNewCollegeName('');
       setNewCollegeKey('');
       setLicenseKey('');
+      setShowNewCollegeKey(false);
+      setShowLicenseKey(false);
       setShowCollegeModal(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to register college');
@@ -319,26 +323,44 @@ const Register = () => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Staff Access Code</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Create custom verification code"
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
-                  value={newCollegeKey}
-                  onChange={(e) => setNewCollegeKey(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type={showNewCollegeKey ? "text" : "password"}
+                    required
+                    placeholder="Create custom verification code"
+                    className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
+                    value={newCollegeKey}
+                    onChange={(e) => setNewCollegeKey(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCollegeKey(!showNewCollegeKey)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    {showNewCollegeKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Master License Key</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter platform license key"
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
-                  value={licenseKey}
-                  onChange={(e) => setLicenseKey(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type={showLicenseKey ? "text" : "password"}
+                    required
+                    placeholder="Enter platform license key"
+                    className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
+                    value={licenseKey}
+                    onChange={(e) => setLicenseKey(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLicenseKey(!showLicenseKey)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    {showLicenseKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-3 justify-end pt-2">
@@ -348,6 +370,8 @@ const Register = () => {
                     setNewCollegeName('');
                     setNewCollegeKey('');
                     setLicenseKey('');
+                    setShowNewCollegeKey(false);
+                    setShowLicenseKey(false);
                     setShowCollegeModal(false);
                   }}
                   className="px-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg text-sm font-semibold transition-colors"
