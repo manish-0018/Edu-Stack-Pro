@@ -27,12 +27,18 @@ const getLeaveRequests = async (req, res) => {
       whereClause.studentId = req.user.id;
     }
 
+    // College isolation: filter students by college
+    const studentWhere = req.user.role !== 'student' 
+      ? { collegeId: req.user.collegeId }
+      : {};
+
     const leaveRequests = await LeaveRequest.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Student', attributes: ['name', 'email'] },
-        { model: User, as: 'Approver', attributes: ['name'] }
-      ]
+        { model: User, as: 'Student', attributes: ['name', 'email'], where: studentWhere, required: true },
+        { model: User, as: 'Approver', attributes: ['name'], required: false }
+      ],
+      order: [['createdAt', 'DESC']]
     });
     res.status(200).json(leaveRequests);
   } catch (error) {
@@ -43,9 +49,16 @@ const getLeaveRequests = async (req, res) => {
 const updateLeaveStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const leaveRequest = await LeaveRequest.findByPk(req.params.id);
+    const leaveRequest = await LeaveRequest.findByPk(req.params.id, {
+      include: [{ model: User, as: 'Student', attributes: ['collegeId'] }]
+    });
 
     if (!leaveRequest) throw new Error('Leave request not found');
+
+    // Block cross-college approvals
+    if (leaveRequest.Student?.collegeId !== req.user.collegeId) {
+      return res.status(403).json({ message: 'Access denied. This student does not belong to your college.' });
+    }
 
     await leaveRequest.update({
       status,

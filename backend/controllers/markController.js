@@ -7,17 +7,18 @@ const getMarks = async (req, res) => {
     if (req.user.role === 'student') {
       whereClause.studentId = req.user.id;
     } else if (req.user.role === 'teacher') {
-      // Find subjects taught by this teacher
       const subjects = await Subject.findAll({ where: { teacherId: req.user.id } });
       const subjectIds = subjects.map(s => s.id);
       whereClause.subjectId = subjectIds;
     }
+    // Admin: filter by college via class
+    const classWhere = req.user.role !== 'student' ? { collegeId: req.user.collegeId } : {};
 
     const marks = await Mark.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Student', attributes: ['id', 'name', 'email'] },
-        { model: Subject, include: [{ model: Class, attributes: ['name'] }] }
+        { model: User, as: 'Student', attributes: ['id', 'name', 'email'], where: req.user.role !== 'student' ? { collegeId: req.user.collegeId } : {}, required: req.user.role !== 'student' },
+        { model: Subject, include: [{ model: Class, where: classWhere, attributes: ['name'], required: true }] }
       ]
     });
 

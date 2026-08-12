@@ -12,15 +12,18 @@ const getTimetable = async (req, res) => {
     } else if (req.user.role === 'teacher') {
       whereClause.teacherId = req.user.id;
     }
-    // Admin sees all, or can filter by classId via query params
+    // Admin sees all in their college only, or can filter by classId
     if (req.query.classId) {
       whereClause.classId = req.query.classId;
     }
 
+    // College isolation via Class join
+    const classWhere = { collegeId: req.user.collegeId };
+
     const timetable = await Timetable.findAll({
       where: whereClause,
       include: [
-        { model: Class, attributes: ['name', 'semester'] },
+        { model: Class, where: classWhere, attributes: ['name', 'semester'], required: true },
         { model: Subject, attributes: ['name', 'code', 'type'] },
         { model: User, as: 'Teacher', attributes: ['name'] }
       ],

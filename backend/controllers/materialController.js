@@ -1,4 +1,4 @@
-const { Material, Subject } = require('../models');
+const { Material, Subject, Class } = require('../models');
 
 // Get all materials for a subject
 const getMaterialsBySubject = async (req, res) => {
@@ -13,10 +13,18 @@ const getMaterialsBySubject = async (req, res) => {
   }
 };
 
-// Get all materials
+// Get all materials (college-scoped)
 const getAllMaterials = async (req, res) => {
   try {
-    const materials = await Material.findAll({ order: [['date', 'DESC']] });
+    const materials = await Material.findAll({
+      include: [{
+        model: Subject,
+        include: [{ model: Class, where: { collegeId: req.user.collegeId }, required: true, attributes: [] }],
+        attributes: ['name'],
+        required: true
+      }],
+      order: [['date', 'DESC']]
+    });
     res.status(200).json(materials);
   } catch (error) {
     res.status(400).json({ message: error.message });
