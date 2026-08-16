@@ -3,10 +3,11 @@
   "appName": "Edu Stack Pro",
   "webDir": "dist",
   "server": {
-    "url": "http://10.5.119.125:5000",
+    "url": "https://frontend-production-519c.up.railway.app",
     "cleartext": true,
     "allowNavigation": [
-      "10.5.119.125"
+      "frontend-production-519c.up.railway.app",
+      "backend-production-a649.up.railway.app"
     ]
   },
   "android": {
