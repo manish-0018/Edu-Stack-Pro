@@ -19,10 +19,6 @@ const Quizzes = () => {
   const [showResults, setShowResults] = useState(null);
   const [results, setResults] = useState([]);
   const timerRef = useRef(null);
-  
-  // Lockdown Integrity states
-  const [isLockdownActive, setIsLockdownActive] = useState(false);
-  const [violationCount, setViolationCount] = useState(0);
 
   const [form, setForm] = useState({ title: '', subjectId: '', timeLimitMinutes: 30, dueDate: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0, marks: 1 }] });
 
@@ -36,22 +32,6 @@ const Quizzes = () => {
   const updateQ = (i, field, val) => setForm(p => { const qs = [...p.questions]; qs[i] = { ...qs[i], [field]: val }; return { ...p, questions: qs }; });
   const updateOption = (qi, oi, val) => setForm(p => { const qs = [...p.questions]; qs[qi].options[oi] = val; return { ...p, questions: qs }; });
 
-  const handleQuestionsCountChange = (countVal) => {
-    const count = Math.max(1, parseInt(countVal) || 1);
-    setForm(p => {
-      const qs = [...p.questions];
-      if (qs.length < count) {
-        const diff = count - qs.length;
-        for (let i = 0; i < diff; i++) {
-          qs.push({ question: '', options: ['', '', '', ''], correctAnswer: 0, marks: 1 });
-        }
-      } else if (qs.length > count) {
-        qs.splice(count);
-      }
-      return { ...p, questions: qs };
-    });
-  };
-
   const createQuiz = async (e) => {
     e.preventDefault();
     try {
@@ -61,71 +41,6 @@ const Quizzes = () => {
       fetchQuizzes();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
   };
-
-  const toggleLock = async (id) => {
-    try {
-      await axios.put(`/api/quizzes/${id}/toggle-lock`);
-      toast.success('Quiz lock status toggled!');
-      fetchQuizzes();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Toggle lock failed');
-    }
-  };
-
-  const playAlertSound = () => {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.value = 650;
-      gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
-      oscillator.start();
-      setTimeout(() => {
-        oscillator.stop();
-        audioCtx.close();
-      }, 300);
-    } catch (err) {}
-  };
-
-  useEffect(() => {
-    if (!activeQuiz || !isLockdownActive) return;
-
-    setViolationCount(0);
-
-    const handleBlur = () => {
-      toast.warn("🚨 LockDown Violation: Tab/Window switch detected! Focus loss logged.", { autoClose: 5000 });
-      playAlertSound();
-      setViolationCount(prev => prev + 1);
-    };
-
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        toast.error("🚨 LockDown Violation: Exited full-screen mode!", { autoClose: 5000 });
-        playAlertSound();
-        setViolationCount(prev => prev + 1);
-      }
-    };
-
-    window.addEventListener('blur', handleBlur);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    try {
-      document.documentElement.requestFullscreen();
-    } catch (err) {}
-
-    return () => {
-      window.removeEventListener('blur', handleBlur);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      try {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-        }
-      } catch (err) {}
-    };
-  }, [activeQuiz, isLockdownActive]);
 
   const startAttempt = async (quizId) => {
     try {
@@ -148,18 +63,10 @@ const Quizzes = () => {
     const ans = auto ? answers : currentAnswers;
     try {
       const r = await axios.post(`/api/quizzes/${quizId}/submit`, { answers: ans, timeTakenSeconds: activeQuiz ? activeQuiz.timeLimitMinutes * 60 - timeLeft : 0 });
-      setResult({ ...r.data, violations: isLockdownActive ? violationCount : 0 });
+      setResult(r.data);
       setActiveQuiz(null);
       fetchQuizzes();
       if (!auto) toast.success('Quiz submitted!');
-      
-      // Clean up lockdown
-      setIsLockdownActive(false);
-      try {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-        }
-      } catch (err) {}
     } catch (err) { toast.error(err.response?.data?.message || 'Submit failed'); }
   };
 
@@ -179,7 +86,7 @@ const Quizzes = () => {
           </h1>
           <p className="text-gray-500">Timed auto-graded quizzes for every subject.</p>
         </div>
-        {isTeacher && (
+        {(isTeacher || isAdmin) && (
           <button onClick={() => setShowCreate(true)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 dark:shadow-none">
             <Plus className="w-5 h-5" /> Create Quiz
           </button>
@@ -193,13 +100,6 @@ const Quizzes = () => {
           <h2 className="text-3xl font-black mb-1">Quiz Complete!</h2>
           <p className="text-5xl font-black my-4">{result.score} <span className="text-2xl font-normal opacity-75">/ {result.total}</span></p>
           <p className="text-lg opacity-90">{Math.round((result.score / result.total) * 100)}% Score</p>
-          {result.violations !== undefined && result.violations > 0 && (
-            <div className="mt-4">
-              <span className="text-xs bg-red-600/40 text-red-100 font-bold px-3 py-1.5 rounded-xl border border-red-400/20 inline-block">
-                ⚠️ Lockdown Practice Violations Flagged: {result.violations}
-              </span>
-            </div>
-          )}
           <button onClick={() => setResult(null)} className="mt-5 px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-bold">Close</button>
         </div>
       )}
@@ -231,50 +131,16 @@ const Quizzes = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-4 items-center">
+              <div className="flex gap-2">
                 {!isTeacher && !isAdmin && !myAttempt && (
-                  q.isLocked ? (
-                    <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-4 py-2.5 rounded-xl border border-red-100 dark:border-red-900/30 text-xs font-bold text-center">
-                      🔒 Quiz Locked (Attempts Closed)
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2 items-end">
-                      <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-bold cursor-pointer">
-                        <input 
-                          type="checkbox"
-                          checked={isLockdownActive}
-                          onChange={(e) => {
-                            if (!user?.isPremium && user?.role !== 'teacher' && user?.role !== 'admin') {
-                              toast.warning("🔒 Lockdown Practice Mode requires a Premium Plus Upgrade.");
-                            } else {
-                              setIsLockdownActive(e.target.checked);
-                            }
-                          }}
-                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                        />
-                        Lockdown Mode 🔒
-                      </label>
-                      <button onClick={() => startAttempt(q.id)} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 text-sm">
-                        Start <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )
+                  <button onClick={() => startAttempt(q.id)} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 text-sm">
+                    Start <ChevronRight className="w-4 h-4" />
+                  </button>
                 )}
                 {(isTeacher || isAdmin) && (
-                  <>
-                    <button onClick={() => fetchResults(q.id)} className="px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold flex items-center gap-2 text-sm">
-                      <BarChart2 className="w-4 h-4" /> Results ({q.QuizAttempts?.length || 0})
-                    </button>
-                    {isTeacher && (
-                      <button onClick={() => toggleLock(q.id)} className={`px-5 py-2 rounded-xl font-bold flex items-center gap-2 text-sm transition-all ${
-                        q.isLocked 
-                          ? 'bg-red-600 hover:bg-red-700 text-white shadow shadow-red-500/20' 
-                          : 'bg-orange-50 hover:bg-orange-100 text-orange-700'
-                      }`}>
-                        {q.isLocked ? '🔓 Unlock Quiz' : '🔒 Lock Quiz'}
-                      </button>
-                    )}
-                  </>
+                  <button onClick={() => fetchResults(q.id)} className="px-5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold flex items-center gap-2 text-sm">
+                    <BarChart2 className="w-4 h-4" /> Results ({q.QuizAttempts?.length || 0})
+                  </button>
                 )}
               </div>
             </div>
@@ -292,12 +158,6 @@ const Quizzes = () => {
                 ⏱ {mins}:{secs}
               </div>
             </div>
-            {isLockdownActive && (
-              <div className="bg-red-500 text-white px-6 py-3 font-bold text-xs flex justify-between items-center animate-pulse">
-                <span>🔒 LOCKDOWN INTEGRITY ACTIVE • Do not exit fullscreen or switch tabs.</span>
-                <span>Violations Flagged: {violationCount}</span>
-              </div>
-            )}
             <div className="p-6 space-y-6">
               {activeQuiz.QuizQuestions?.map((q, qi) => (
                 <div key={q.id} className="p-5 bg-gray-50 dark:bg-slate-800 rounded-2xl">
@@ -338,21 +198,11 @@ const Quizzes = () => {
                   <option value="">Select Subject</option>
                   {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <input type="number" min="1" max="100" placeholder="Number of Questions" value={form.questions.length} onChange={e => handleQuestionsCountChange(e.target.value)}
+                <input type="number" placeholder="Time Limit (minutes)" value={form.timeLimitMinutes} onChange={e => setForm({...form, timeLimitMinutes: e.target.value})}
                   className="px-4 py-3 border rounded-xl dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 block mb-1">Time Limit (minutes)</label>
-                  <input type="number" placeholder="Time Limit (minutes)" value={form.timeLimitMinutes} onChange={e => setForm({...form, timeLimitMinutes: e.target.value})}
-                    className="w-full px-4 py-3 border rounded-xl dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 block mb-1">Due Date</label>
-                  <input type="datetime-local" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}
-                    className="w-full px-4 py-3 border rounded-xl dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
-                </div>
-              </div>
+              <input type="datetime-local" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}
+                className="w-full px-4 py-3 border rounded-xl dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
 
               <div className="border-t dark:border-slate-700 pt-4 space-y-4">
                 <div className="flex justify-between items-center"><h3 className="font-black text-gray-900 dark:text-white">Questions</h3>

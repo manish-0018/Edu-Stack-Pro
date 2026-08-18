@@ -38,7 +38,7 @@ const ViewAttendance = () => {
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
-    doc.text('Edu Stack Pro Attendance Report', 14, 15);
+    doc.text('EduStack Pro Attendance Report', 14, 15);
     
     const tableColumn = ["Date", "Class", "Subject", "Total", "Present", "Absent"];
     const tableRows = [];

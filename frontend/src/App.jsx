@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -27,6 +27,7 @@ import Assignments from './pages/Assignments';
 import Quizzes from './pages/Quizzes';
 import Portfolio from './pages/Portfolio';
 import Announcements from './pages/Announcements';
+import MentorDashboard from './pages/MentorDashboard';
 import PremiumUpgrade from './pages/PremiumUpgrade';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -48,7 +49,17 @@ function App() {
         
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/dashboard" />} />
-          <Route path="dashboard" element={<ProtectedRoute>{user?.role === 'guardian' ? <GuardianDashboard /> : <Dashboard />}</ProtectedRoute>} />
+          <Route path="dashboard" element={
+            <ProtectedRoute>
+              {user?.role === 'guardian' ? (
+                <GuardianDashboard />
+              ) : user?.role === 'mentor' ? (
+                <MentorDashboard />
+              ) : (
+                <Dashboard />
+              )}
+            </ProtectedRoute>
+          } />
           <Route path="users" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ManageUsers /></ProtectedRoute>} />
           <Route path="classes" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ManageClasses /></ProtectedRoute>} />
           <Route path="subjects" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ManageSubjects /></ProtectedRoute>} />
@@ -70,7 +81,7 @@ function App() {
           <Route path="quizzes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Quizzes /></ProtectedRoute>} />
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Announcements /></ProtectedRoute>} />
-           <Route path="upgrade" element={<ProtectedRoute allowedRoles={['student']}><PremiumUpgrade /></ProtectedRoute>} />
+          <Route path="upgrade" element={<ProtectedRoute><PremiumUpgrade /></ProtectedRoute>} />
         </Route>
       </Routes>
     </Router>

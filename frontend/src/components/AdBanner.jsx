@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import { Megaphone, X, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const ADS = [
   {
     id: 1,
-    sponsor: "Kiwi Pizza & Cafe",
-    title: "Late Night Study Fuel! 🍕",
-    description: "Get 20% Off all pizzas & burgers. Show your Edu Stack Pro profile at checkout.",
-    code: "KIWISTUDY20",
-    color: "from-amber-500 to-orange-600",
-  },
-  {
-    id: 2,
     sponsor: "Campus Bookstore",
     title: "Semester Exam Master Kits 📚",
     description: "15% off reference books, guides, and engineering drawing sheets.",
@@ -19,18 +12,47 @@ const ADS = [
     color: "from-blue-500 to-indigo-600",
   },
   {
+    id: 2,
+    sponsor: "LeetCode Prep Hub",
+    title: "FAANG Prep Mock Kit 🏆",
+    description: "Get 25% discount on mock interview sessions and premium company-tagged DSA questions.",
+    code: "FAANGPREP25",
+    color: "from-amber-600 to-yellow-500",
+  },
+  {
     id: 3,
-    sponsor: "Apex Placement Prep",
-    title: "Crack the Coding Interview! 🚀",
-    description: "Access 100+ mock company-specific placement quizzes and mock interviews.",
-    code: "APEXCAREER",
-    color: "from-purple-500 to-pink-600",
+    sponsor: "Apex Tech Conclaves",
+    title: "National Hackathon Entry Pass 🎟️",
+    description: "Waive registration fee for the national 36-hour Smart Campus Hackathon contest.",
+    code: "HACKPASS",
+    color: "from-pink-500 to-rose-600",
+  },
+  {
+    id: 4,
+    sponsor: "PrepInsta Academy",
+    title: "TCS & Infosys Prep Bundle 🎯",
+    description: "Get 30% off the complete placement preparation package with mock tests.",
+    code: "PLACEMENT30",
+    color: "from-indigo-600 to-violet-700",
   }
 ];
 
 const AdBanner = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [claimedIds, setClaimedIds] = useState([]);
+
+  const handleClaim = (ad) => {
+    try {
+      navigator.clipboard.writeText(ad.code);
+      if (!claimedIds.includes(ad.id)) {
+        setClaimedIds((prev) => [...prev, ad.id]);
+      }
+      toast.success(`Coupon code "${ad.code}" copied to clipboard!`);
+    } catch (err) {
+      toast.error("Failed to copy coupon code.");
+    }
+  };
 
   if (!visible) return null;
 
@@ -73,10 +95,15 @@ const AdBanner = () => {
           
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => window.open('https://google.com', '_blank')}
-              className="px-4 py-2 bg-white text-slate-900 text-xs font-extrabold rounded-xl hover:bg-slate-100 transition-colors flex items-center gap-1.5 shadow-md"
+              onClick={() => handleClaim(currentAd)}
+              className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors flex items-center gap-1.5 shadow-md ${
+                claimedIds.includes(currentAd.id)
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-white text-slate-900 hover:bg-slate-100'
+              }`}
             >
-              Claim Coupon <ExternalLink className="w-3.5 h-3.5" />
+              {claimedIds.includes(currentAd.id) ? 'Claimed ✓' : 'Claim Coupon'} 
+              <ExternalLink className="w-3.5 h-3.5" />
             </button>
             <button 
               onClick={() => setVisible(false)}

@@ -753,14 +753,14 @@ const Dashboard = () => {
             />
           </div>
 
-          {/* ── Admin Campus Location Lock Panel ──────────────────── */}
-          {user.role === 'admin' && (
+          {/* ── Campus Location Lock Panel ──────────────────── */}
+          {user.role === 'teacher' && (
             <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
               <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                📍 Admin Campus Location Lock
+                📍 Campus Location Lock
               </h3>
               <p className="text-xs text-gray-400 mb-4">
-                Configure the target coordinates of your campus academic building. The student face scanner and teacher mark-attendance roster will lock to this location.
+                Configure the target coordinates of your campus academic building. The student face scanner and classroom check-in will lock to this location (limit is 5m).
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -1140,6 +1140,11 @@ const Dashboard = () => {
                   {user?.course && (
                     <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
                       🎓 {user.course}
+                    </span>
+                  )}
+                  {user?.rollNo && (
+                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
+                      🆔 Roll No: {user.rollNo}
                     </span>
                   )}
                 </div>
@@ -1739,14 +1744,10 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-2">
-                <AdvancedAnalytics stats={stats} />
-              </div>
-              <div className="lg:col-span-1">
-                <PredictiveAnalytics />
-              </div>
-            </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                      <AdvancedAnalytics stats={stats} />
+                      <PredictiveAnalytics />
+                    </div>
           
           <KanbanBoard />
         </div>

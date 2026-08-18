@@ -85,11 +85,11 @@ const SmartCheckinModal = ({ isOpen, onClose, activeClass, onCheckinSuccess }) =
         setDistance(dist);
         setGpsLoading(false);
 
-        if (dist <= 100) {
+        if (dist <= 5) {
           setGpsVerified(true);
         } else {
           setGpsVerified(false);
-          toast.warning(`Geofence validation failed. You are ${Math.round(dist)}m away from class.`);
+          toast.warning(`Geofence validation failed. You are ${Math.round(dist)}m away from class (limit is 5m).`);
         }
       },
       (err) => {
@@ -116,7 +116,7 @@ const SmartCheckinModal = ({ isOpen, onClose, activeClass, onCheckinSuccess }) =
     }
 
     if (!gpsVerified) {
-      toast.error('You must be within 100m range of the classroom to check-in.');
+      toast.error('You must be within 5m range of the classroom to check-in.');
       return;
     }
 

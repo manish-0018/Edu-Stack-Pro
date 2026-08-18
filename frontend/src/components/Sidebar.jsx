@@ -27,7 +27,7 @@ import {
   UserSquare2,
   Megaphone,
   Download,
-  Calculator
+  Sparkles
 } from 'lucide-react';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
@@ -65,28 +65,27 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   const menuItems = [
-    { name: 'Dashboard', icon: <LayoutDashboard />, path: '/dashboard', roles: ['admin', 'teacher', 'student'] },
+    { name: 'Dashboard', icon: <LayoutDashboard />, path: '/dashboard', roles: ['admin', 'teacher', 'student', 'mentor'] },
     { name: 'Users', icon: <Users />, path: '/users', roles: ['admin', 'teacher'] },
     { name: 'Classes', icon: <GraduationCap />, path: '/classes', roles: ['admin', 'teacher'] },
     { name: 'Subjects', icon: <BookOpen />, path: '/subjects', roles: ['admin', 'teacher'] },
     { name: 'Mark Attendance', icon: <CheckSquare />, path: '/attendance/mark', roles: ['teacher'] },
-    { name: 'View Attendance', icon: <CalendarDays />, path: '/attendance/view', roles: ['admin', 'teacher', 'student'] },
-    { name: 'Leave Requests', icon: <FileText />, path: '/leave', roles: ['admin', 'teacher', 'student'] },
+    { name: 'View Attendance', icon: <CalendarDays />, path: '/attendance/view', roles: ['admin', 'teacher', 'student', 'mentor'] },
+    { name: 'Leave Requests', icon: <FileText />, path: '/leave', roles: ['admin', 'teacher', 'student', 'mentor'] },
     { name: 'Manage Marks', icon: <BarChart3 />, path: '/marks', roles: ['teacher'] },
-    { name: 'Recovery Console', icon: <Award />, path: '/recovery', roles: ['admin', 'teacher', 'student'] },
     { name: 'Assignments', icon: <ClipboardList />, path: '/assignments', roles: ['admin', 'teacher', 'student'] },
     { name: 'Quizzes', icon: <Brain />, path: '/quizzes', roles: ['admin', 'teacher', 'student'] },
-    { name: 'Announcements', icon: <Megaphone />, path: '/announcements', roles: ['admin', 'teacher', 'student'] },
-    { name: 'Subject Forums', icon: <MessageSquare />, path: '/forums', roles: ['admin', 'student', 'teacher'] },
+    { name: 'Announcements', icon: <Megaphone />, path: '/announcements', roles: ['admin', 'teacher', 'student', 'mentor'] },
+    { name: 'Subject Forums', icon: <MessageSquare />, path: '/forums', roles: ['admin', 'student', 'teacher', 'mentor'] },
     { name: 'My Portfolio', icon: <UserSquare2 />, path: '/portfolio', roles: ['student'] },
     { name: 'Placements', icon: <Briefcase />, path: '/placements', roles: ['admin', 'teacher', 'student'] },
     { name: 'Mentorship', icon: <Users2 />, path: '/mentorship', roles: ['admin', 'student'] },
     { name: 'Study Buddies', icon: <HeartHandshake />, path: '/buddies', roles: ['student'] },
-    { name: 'Resource Hub', icon: <PenTool />, path: '/resources', roles: ['admin', 'student', 'teacher'] },
+    { name: 'Resource Hub', icon: <PenTool />, path: '/resources', roles: ['admin', 'student', 'teacher', 'mentor'] },
     { name: 'Opportunities', icon: <Compass />, path: '/opportunities', roles: ['admin', 'student'] },
-    { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher'] },
-    { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian'] },
-    { name: 'Plus Upgrade 👑', icon: <Award className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student'] }
+    { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher', 'mentor'] },
+    { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian', 'mentor'] },
+    { name: 'Upgrade to Plus', icon: <Sparkles className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student', 'teacher', 'mentor', 'admin'] }
   ];
 
   return (
@@ -113,11 +112,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-600 dark:from-primary-400 dark:to-primary-400 leading-none">
-                  Edu Stack Pro
+                  EduStack Pro
                 </span>
                 {user?.College?.name && (
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user?.College?.name}>
-                    {user?.College?.name}
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user.College.name}>
+                    {user.College.name}
                   </span>
                 )}
               </div>

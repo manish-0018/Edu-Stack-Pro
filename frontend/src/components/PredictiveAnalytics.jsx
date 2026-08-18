@@ -79,7 +79,7 @@ const PredictiveAnalytics = () => {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 relative z-10">
+      <div className="grid grid-cols-1 gap-4 mb-6 relative z-10">
         {/* Expected Performance Card */}
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-5 flex flex-col items-center justify-center text-center">
           <Award className="w-8 h-8 text-emerald-400 mb-2" />

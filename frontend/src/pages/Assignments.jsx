@@ -26,9 +26,6 @@ const Assignments = () => {
   const [uploadMap, setUploadMap] = useState({});
   const [assignmentFile, setAssignmentFile] = useState(null);
 
-  const selectedAssignment = assignments.find(a => a.id === showSubmissions);
-  const maxMarks = selectedAssignment?.maxMarks || 100;
-
   useEffect(() => { fetchAssignments(); fetchSubjects(); }, []);
 
   const fetchAssignments = async () => {
@@ -76,28 +73,11 @@ const Assignments = () => {
   };
 
   const gradeSubmission = async (subId) => {
-    const assignment = assignments.find(a => a.id === showSubmissions);
-    const maxMarks = assignment?.maxMarks || 100;
-    const gradeVal = grading[subId]?.grade;
-    if (gradeVal !== undefined && Number(gradeVal) > maxMarks) {
-      toast.error(`Grade cannot exceed the maximum marks of ${maxMarks}`);
-      return;
-    }
     try {
       await axios.put(`/api/assignments/submissions/${subId}/grade`, grading[subId]);
       toast.success('Graded!');
       fetchSubmissions(showSubmissions);
-    } catch (err) { toast.error(err.response?.data?.message || 'Grading failed'); }
-  };
-
-  const toggleLock = async (id) => {
-    try {
-      await axios.put(`/api/assignments/${id}/toggle-lock`);
-      toast.success('Assignment lock toggled!');
-      fetchAssignments();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Toggle lock failed');
-    }
+    } catch (err) { toast.error('Grading failed'); }
   };
 
   return (
@@ -110,7 +90,7 @@ const Assignments = () => {
           </h1>
           <p className="text-gray-500">Submit and manage course assignments.</p>
         </div>
-        {isTeacher && (
+        {(isTeacher || isAdmin) && (
           <button onClick={() => setShowCreate(true)} className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-violet-200 dark:shadow-none">
             <Plus className="w-5 h-5" /> Create Assignment
           </button>
@@ -173,57 +153,25 @@ const Assignments = () => {
                 {/* Actions */}
                 <div className="flex flex-col gap-2 min-w-[200px]">
                   {!isTeacher && !isAdmin && (
-                    a.isLocked ? (
-                      <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-4 rounded-2xl border border-red-100 dark:border-red-900/30 text-xs font-bold text-center flex flex-col items-center justify-center gap-1.5 shadow-sm">
-                        <span className="flex items-center gap-1">🔒 Submissions Closed</span>
-                        {mySubmission ? (
-                          <span className="text-[10px] text-gray-500 mt-1">You submitted this assignment successfully before it was locked.</span>
-                        ) : (
-                          <span className="text-[10px] text-red-500 mt-1 font-normal">You did not submit a solution before the deadline lock.</span>
-                        )}
-                      </div>
-                    ) : mySubmission ? (
-                      <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 text-xs font-bold text-center flex flex-col items-center justify-center gap-1.5 shadow-sm">
-                        <span className="flex items-center gap-1"><CheckCircle className="w-4 h-4 text-emerald-500" /> Solution Uploaded</span>
-                        {mySubmission.fileUrl && (
-                          <a href={mySubmission.fileUrl} target="_blank" rel="noreferrer" className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline mt-1">
-                            📄 View My Submission
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <input type="file" id={`file-${a.id}`} accept=".pdf" className="hidden"
-                          onChange={e => setUploadMap(p => ({ ...p, [a.id]: e.target.files[0] }))} />
-                        <label htmlFor={`file-${a.id}`} className="cursor-pointer flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium border border-gray-200 dark:border-slate-700 transition-all">
-                          <Upload className="w-4 h-4" />
-                          {uploadMap[a.id] ? uploadMap[a.id].name.substring(0, 15) + '...' : 'Choose Solution PDF'}
-                        </label>
-                        <button onClick={() => submitFile(a.id)} disabled={!uploadMap[a.id]}
-                          className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-                          <CheckCircle className="w-4 h-4" /> Submit Solution
-                        </button>
-                      </>
-                    )
+                    <>
+                      <input type="file" id={`file-${a.id}`} accept=".pdf" className="hidden"
+                        onChange={e => setUploadMap(p => ({ ...p, [a.id]: e.target.files[0] }))} />
+                      <label htmlFor={`file-${a.id}`} className="cursor-pointer flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium border border-gray-200 dark:border-slate-700 transition-all">
+                        <Upload className="w-4 h-4" />
+                        {uploadMap[a.id] ? uploadMap[a.id].name.substring(0, 15) + '...' : 'Choose Solution PDF'}
+                      </label>
+                      <button onClick={() => submitFile(a.id)} disabled={!uploadMap[a.id]}
+                        className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4" /> Submit Solution
+                      </button>
+                    </>
                   )}
                   {(isTeacher || isAdmin) && (
-                    <>
-                      <button onClick={() => { setShowSubmissions(a.id); fetchSubmissions(a.id); }}
-                        className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" />
-                        View Submissions ({a.AssignmentSubmissions?.length || 0})
-                      </button>
-                      {isTeacher && (
-                        <button onClick={() => toggleLock(a.id)}
-                          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                            a.isLocked 
-                              ? 'bg-red-600 hover:bg-red-700 text-white shadow shadow-red-500/20' 
-                              : 'bg-orange-50 hover:bg-orange-100 text-orange-700'
-                          }`}>
-                          {a.isLocked ? '🔓 Unlock Submissions' : '🔒 Lock Submissions'}
-                        </button>
-                      )}
-                    </>
+                    <button onClick={() => { setShowSubmissions(a.id); fetchSubmissions(a.id); }}
+                      className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      View Submissions ({a.AssignmentSubmissions?.length || 0})
+                    </button>
                   )}
                 </div>
               </div>
@@ -300,28 +248,18 @@ const Assignments = () => {
                     <Upload className="w-4 h-4" /> View Submitted File
                   </a>
                 )}
-                {isTeacher ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input type="number" min="0" max={maxMarks} placeholder={`Grade (max: ${maxMarks})`} value={grading[sub.id]?.grade || ''}
-                        onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], grade: e.target.value } }))}
-                        className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm" />
-                      <input type="text" placeholder="Feedback" value={grading[sub.id]?.feedback || ''}
-                        onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], feedback: e.target.value } }))}
-                        className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm" />
-                    </div>
-                    <button onClick={() => gradeSubmission(sub.id)}
-                      className="mt-2 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
-                      <Star className="w-4 h-4" /> Save Grade
-                    </button>
-                  </>
-                ) : (
-                  <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-xl text-xs text-gray-500 space-y-1">
-                    <div>Status: <span className="font-bold text-gray-700 dark:text-gray-300">{sub.status.toUpperCase()}</span></div>
-                    {sub.grade !== null && <div>Grade: <span className="font-bold text-gray-700 dark:text-gray-300">{sub.grade}</span></div>}
-                    {sub.feedback && <div>Feedback: <span className="font-bold text-gray-350">{sub.feedback}</span></div>}
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" placeholder="Grade" value={grading[sub.id]?.grade || ''}
+                    onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], grade: e.target.value } }))}
+                    className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm" />
+                  <input type="text" placeholder="Feedback" value={grading[sub.id]?.feedback || ''}
+                    onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], feedback: e.target.value } }))}
+                    className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm" />
+                </div>
+                <button onClick={() => gradeSubmission(sub.id)}
+                  className="mt-2 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
+                  <Star className="w-4 h-4" /> Save Grade
+                </button>
               </div>
             ))}
           </div>

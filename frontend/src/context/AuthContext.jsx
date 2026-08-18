@@ -1,9 +1,6 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
-// All API calls go to Railway backend
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
-
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -63,14 +60,8 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
-  const updateCurrentUser = (updatedData) => {
-    const updatedUser = { ...user, ...updatedData };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-  };
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, updateCurrentUser, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, register, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

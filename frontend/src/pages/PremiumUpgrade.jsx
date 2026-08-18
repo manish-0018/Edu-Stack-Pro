@@ -429,17 +429,19 @@ const PremiumUpgrade = () => {
               </>
             ) : (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase">Receive Money to (Merchant UPI ID)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. yourname@okaxis"
-                    value={customMerchantUpi}
-                    onChange={e => setCustomMerchantUpi(e.target.value)}
-                    className="w-full px-3 py-2 border border-amber-300 dark:border-amber-700/50 rounded-xl dark:bg-slate-800 focus:ring-1 focus:ring-amber-500 outline-none text-xs font-bold text-amber-600 dark:text-amber-400"
-                  />
-                  <span className="text-[9px] text-gray-400 block leading-tight">To save permanently, edit <code>DEVELOPER_UPI_ID</code> in backend <code>.env</code> file.</span>
-                </div>
+                {user?.role === 'admin' && (
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Receive Money to (Merchant UPI ID)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. yourname@okaxis"
+                      value={customMerchantUpi}
+                      onChange={e => setCustomMerchantUpi(e.target.value)}
+                      className="w-full px-3 py-2 border border-amber-300 dark:border-amber-700/50 rounded-xl dark:bg-slate-800 focus:ring-1 focus:ring-amber-500 outline-none text-xs font-bold text-amber-600 dark:text-amber-400"
+                    />
+                    <span className="text-[9px] text-gray-400 block leading-tight">To save permanently, edit <code>DEVELOPER_UPI_ID</code> in backend <code>.env</code> file.</span>
+                  </div>
+                )}
 
                 <div className="p-4 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl flex flex-col items-center gap-2">
                   <div className="w-40 h-40 bg-white border border-gray-200 rounded-xl flex items-center justify-center p-2 shadow-sm">

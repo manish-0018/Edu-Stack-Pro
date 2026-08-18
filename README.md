@@ -41,7 +41,7 @@ EduStack Pro is a modern, enterprise-grade Progressive Web App (PWA) designed to
 * [PostgreSQL](https://www.postgresql.org/) database server running.
 
 ### 1. Database Setup
-Create a PostgreSQL database named `edustack` (or preferred name) and update the credentials in the backend environment file.
+Create a PostgreSQL database named `attendease` (or preferred name) and update the credentials in the backend environment file.
 
 ### 2. Backend Setup
 1. Navigate to the backend directory:
@@ -59,7 +59,7 @@ Create a PostgreSQL database named `edustack` (or preferred name) and update the
    DB_HOST=127.0.0.1
    DB_USER=postgres
    DB_PASS=YOUR_DB_PASSWORD
-   DB_NAME=edustack
+   DB_NAME=attendease
    DB_PORT=5432
    ```
 4. Start the development server (runs database sync & seeding automatically):

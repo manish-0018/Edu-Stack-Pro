@@ -18,7 +18,7 @@ const categoryIcons = { Exam: '📝', Holiday: '🏖️', Event: '🎉', Fee: '�
 
 const Announcements = () => {
   const { user } = useAuth();
-  const canPost = user?.role === 'admin';
+  const canPost = user?.role === 'admin' || user?.role === 'teacher';
   const isAdmin = user?.role === 'admin';
   const [announcements, setAnnouncements] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
