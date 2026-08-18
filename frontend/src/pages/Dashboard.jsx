@@ -54,6 +54,7 @@ const StatCard = ({ title, value, subtitle, icon, color, to }) => {
 const Dashboard = () => {
   const { user, updateCurrentUser } = useAuth();
   const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [defaulterToEmail, setDefaulterToEmail] = useState(null);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [expectedMarks, setExpectedMarks] = useState({});
@@ -463,16 +464,14 @@ const Dashboard = () => {
     doc.save(`Defaulter_Warning_${defaulter.name.replace(/\s+/g, '_')}.pdf`);
   };
 
-  const handleSendWarningEmail = async (defaulter) => {
-    let confirmMsg = `Are you sure you want to dispatch an official academic warning notice to the parent of "${defaulter.name}"? This email will detail their current attendance deficit and alert them to the risk of semester exam debarment.`;
-    
-    if (defaulter.gracePeriodEnds && new Date(defaulter.gracePeriodEnds) > new Date()) {
-      confirmMsg += `\n\nNOTE: This student currently has active grace status until ${new Date(defaulter.gracePeriodEnds).toLocaleDateString()}.`;
-    }
+  const handleSendWarningEmail = (defaulter) => {
+    setDefaulterToEmail(defaulter);
+  };
 
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
+  const executeSendWarningEmail = async () => {
+    if (!defaulterToEmail) return;
+    const defaulter = defaulterToEmail;
+    setDefaulterToEmail(null);
     const loadingToast = toast.loading("Sending warning notice email to parent...");
     try {
       const res = await axios.post(`/api/users/${defaulter.id}/send-warning`, {
@@ -1852,6 +1851,62 @@ const Dashboard = () => {
         activeClass={stats.activeClass}
         onCheckinSuccess={fetchStats}
       />
+
+      {/* ── Custom Professional Email Warning Modal ── */}
+      {defaulterToEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-dark-card w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-gray-100 dark:border-dark-border flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border bg-red-50/50 dark:bg-red-950/10">
+              <h3 className="font-bold text-red-600 dark:text-red-400 flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Dispatch Academic Warning
+              </h3>
+              <button 
+                onClick={() => setDefaulterToEmail(null)} 
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                Are you sure you want to dispatch an official academic warning notice to the parent of <strong className="text-gray-900 dark:text-white">"{defaulterToEmail.name}"</strong>?
+              </p>
+              <div className="bg-gray-50 dark:bg-dark-bg p-3.5 rounded-2xl border border-gray-100 dark:border-dark-border text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <p>📧 This email will detail their current attendance deficit and alert them to the risk of semester exam debarment.</p>
+                {defaulterToEmail.gracePeriodEnds && new Date(defaulterToEmail.gracePeriodEnds) > new Date() && (
+                  <p className="text-amber-600 dark:text-amber-400 font-bold mt-2 flex items-center gap-1">
+                    ⚠️ Active grace status until {new Date(defaulterToEmail.gracePeriodEnds).toLocaleDateString()}.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-dark-border flex gap-2 justify-end bg-gray-50/30 dark:bg-dark-card">
+              <button
+                type="button"
+                onClick={() => setDefaulterToEmail(null)}
+                className="px-4 py-2 border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg rounded-xl text-xs font-bold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeSendWarningEmail}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/10"
+              >
+                Confirm & Dispatch
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
