@@ -30,6 +30,14 @@ const ProjectPosting = sequelize.define('ProjectPosting', {
   status: {
     type: DataTypes.STRING,
     defaultValue: 'open', // open, closed
+  },
+  collegeId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
+  course: {
+    type: DataTypes.STRING,
+    allowNull: true,
   }
 });
 

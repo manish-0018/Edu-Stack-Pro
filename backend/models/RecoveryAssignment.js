@@ -36,41 +36,6 @@ const RecoveryAssignment = sequelize.define('RecoveryAssignment', {
     type: DataTypes.INTEGER,
     defaultValue: 1, // Number of virtual classes to add
     allowNull: false
-  },
-  absenceReason: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  absenceDate: {
-    type: DataTypes.DATEONLY,
-    allowNull: true
-  },
-  hoursMissed: {
-    type: DataTypes.INTEGER,
-    defaultValue: 1,
-    allowNull: true
-  },
-  documentUrl: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  reviewFeedback: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  feePaid: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true
-  },
-  sessionType: {
-    type: DataTypes.STRING,
-    defaultValue: 'Condonation Petition',
-    allowNull: false
-  },
-  remedialStatus: {
-    type: DataTypes.STRING,
-    defaultValue: 'Pending',
-    allowNull: false
   }
 });
 

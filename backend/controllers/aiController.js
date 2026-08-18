@@ -1,114 +1,396 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { Mark, AttendanceRecord, Subject, User } = require('../models');
+const axios = require('axios');
+const { 
+  User, Mark, AttendanceRecord, Attendance, Subject, 
+  Class, Task, QuizAttempt, Assignment, AssignmentSubmission,
+  PredictionLog, StudyRecommendation, PeerMatch, Material
+} = require('../models');
+const { Op } = require('sequelize');
 
+// Set ML Service URL from env or fallback to local
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
+// Act as a tutor (gemini assistant proxy)
 const generateResponse = async (req, res) => {
   try {
     const { prompt, context } = req.body;
     
-    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+    // Call Python ML service campus assistant endpoint
+    // We send context based on user details
+    const student = await User.findByPk(req.user.id, {
+      include: [{ model: Class, attributes: ['name'] }]
+    });
+
+    const contextData = {
+      user: {
+        name: student.name,
+        role: student.role,
+        course: student.course,
+        className: student.Class?.name || 'N/A'
+      },
+      topicContext: context || 'General Tutoring'
+    };
+
+    try {
+      const mlRes = await axios.post(`${ML_SERVICE_URL}/assistant`, {
+        query: prompt,
+        role: req.user.role,
+        context_data: contextData
+      });
+      return res.status(200).json({ response: mlRes.data.response });
+    } catch (mlErr) {
+      console.warn("FastAPI offline, falling back to local mock helper:", mlErr.message);
       return res.status(200).json({
-        response: "🤖 **AI Tutor is currently offline!**\n\nTo activate the AI Smart Tutor, please add your Google Gemini API key to the backend `.env` file as `GEMINI_API_KEY`."
+        response: `🤖 **AI Tutor (Offline Mode)**\n\nI am currently operating in offline mode. Please make sure the Python ML Service is running at ${ML_SERVICE_URL}.\n\nYour question was: *${prompt}*`
       });
     }
-
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    let fullPrompt = prompt;
-    if (context) {
-      fullPrompt = `Context/Topic: ${context}\n\nStudent's Question: ${prompt}\n\nPlease act as a helpful, expert tutor. Break down complex topics simply. Format your answer beautifully in Markdown.`;
-    }
-
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const text = response.text();
-
-    res.status(200).json({ response: text });
   } catch (error) {
-    console.error("AI Error:", error);
-    res.status(500).json({ message: "Failed to generate AI response. Ensure your API key is valid." });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// Predict Academic Performance and Risk Level
 const predictAcademicFuture = async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      return res.status(200).json({
-        prediction: "AI Engine Offline. Please add your Gemini API Key.",
-        atRisk: [],
-        strategy: "Focus on attending your classes regularly."
-      });
+    const studentId = req.query.studentId || req.user.id;
+    
+    // 1. Enforce strict tenant isolation: Check student belongs to same college
+    const student = await User.findByPk(studentId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
     }
-    // Determine which student to run prediction for
-    let studentId;
-    if (req.user && req.user.id) {
-      studentId = req.user.id;
-    } else if (req.query.studentId) {
-      studentId = req.query.studentId;
-    } else {
-      // Fallback to first student in the DB (for demo/testing)
-      const firstStudent = await User.findOne({ where: { role: 'student' } });
-      if (!firstStudent) {
-        return res.status(404).json({ message: 'No student data found.' });
+    if (student.collegeId !== req.user.collegeId) {
+      return res.status(403).json({ message: 'Access denied. Student belongs to another college.' });
+    }
+
+    // 2. Fetch attendance stats
+    const records = await AttendanceRecord.findAll({
+      where: { studentId },
+      include: [{ model: Attendance }]
+    });
+    let attended = 0;
+    records.forEach(r => {
+      if (['present', 'late', 'excused', 'duty'].includes(r.status)) attended++;
+    });
+    const attendance_pct = records.length === 0 ? 75.0 : (attended / records.length) * 100.0;
+
+    // 3. Fetch assignment stats
+    const studentSubjects = await Subject.findAll({ where: { classId: student.classId || null } });
+    const subjectIds = studentSubjects.map(s => s.id);
+    const allAssignments = await Assignment.findAll({ where: { subjectId: { [Op.in]: subjectIds } } });
+    const submissions = await AssignmentSubmission.findAll({ where: { studentId } });
+    const assignment_completion_rate = allAssignments.length === 0 ? 1.0 : (submissions.length / allAssignments.length);
+    
+    let totalAssMarks = 0;
+    let gradedAssCount = 0;
+    submissions.forEach(sub => {
+      if (sub.status === 'graded' && sub.grade !== null && sub.grade !== undefined) {
+        totalAssMarks += sub.grade;
+        gradedAssCount++;
       }
-      studentId = firstStudent.id;
-    }
-
-    // Fetch student's marks and attendance
-    const marks = await Mark.findAll({
-      where: { studentId },
-      include: [{ model: Subject, attributes: ['name'] }]
     });
+    const average_assignment_marks = gradedAssCount === 0 ? 70.0 : (totalAssMarks / gradedAssCount);
 
-    const attendanceRecords = await AttendanceRecord.findAll({
-      where: { studentId },
-      include: [{ model: require('../models').Attendance, include: [{ model: Subject, attributes: ['name'] }] }]
+    // 4. Fetch quiz stats
+    const quizAttempts = await QuizAttempt.findAll({ where: { studentId } });
+    let totalQuizScore = 0;
+    quizAttempts.forEach(qa => {
+      totalQuizScore += qa.score || 0;
     });
+    const average_quiz_marks = quizAttempts.length === 0 ? 70.0 : (totalQuizScore / quizAttempts.length) * 10.0; // scaled to 100
 
-    // Calculate subject-wise stats to feed to AI
-    const stats = {};
+    // 5. Fetch marks (mid-sem)
+    const marks = await Mark.findAll({ where: { studentId } });
+    let totalMidSem = 0;
+    let midSemCount = 0;
     marks.forEach(m => {
-      const sub = m.Subject.name;
-      if(!stats[sub]) stats[sub] = { marks: [], totalAttended: 0, totalClasses: 0 };
-      stats[sub].marks.push({ type: m.examType, score: m.score, max: m.maxScore });
-    });
-
-    attendanceRecords.forEach(ar => {
-      if (!ar.Attendance || !ar.Attendance.Subject) return;
-      const sub = ar.Attendance.Subject.name;
-      if(!stats[sub]) stats[sub] = { marks: [], totalAttended: 0, totalClasses: 0 };
-      stats[sub].totalClasses++;
-      if (['present', 'late', 'excused', 'duty'].includes(ar.status)) {
-        stats[sub].totalAttended++;
+      if (m.midSem !== null) {
+        totalMidSem += m.midSem;
+        midSemCount++;
       }
     });
+    const mid_sem_score = midSemCount === 0 ? 70.0 : (totalMidSem / midSemCount);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } });
+    // 6. Fetch task activity (learning activity score)
+    const completedTasks = await Task.count({ where: { studentId, status: 'done' } });
+    const learning_activity_score = Math.min(completedTasks * 12.5, 100.0) || 40.0;
 
-    const prompt = `
-You are the Edu Stack Pro Predictive Academic Engine. Analyze the following student data and predict their academic trajectory.
-Data:
-${JSON.stringify(stats, null, 2)}
+    const inputData = {
+      attendance_pct,
+      assignment_completion_rate,
+      average_assignment_marks,
+      average_quiz_marks,
+      mid_sem_score,
+      learning_activity_score
+    };
+    console.log("DEBUG Prediction inputData:", JSON.stringify(inputData));
 
-Return a valid JSON response matching this schema:
-{
-  "prediction": "A 2-sentence highly personalized prediction of their final semester performance based on their data. Mention specific subjects.",
-  "atRisk": ["subject_name_1", "subject_name_2"],
-  "strategy": "A 2-sentence actionable study strategy for them to improve."
-}
-If they have no data, predict that they are starting fresh and have a bright future.
-`;
+    let predictionResult;
+    try {
+      // Post to FastAPI ML service
+      const mlRes = await axios.post(`${ML_SERVICE_URL}/predict`, inputData);
+      predictionResult = mlRes.data;
+    } catch (mlErr) {
+      console.warn("FastAPI service offline, using fallback heuristic predictor:", mlErr.message, JSON.stringify(mlErr.response?.data));
+      // Fallback local heuristic model (so the app never crashes)
+      let expectedGrade = (attendance_pct * 0.3) + (average_assignment_marks * 0.3) + (mid_sem_score * 0.4);
+      expectedGrade = Math.min(Math.max(expectedGrade, 30.0), 100.0);
+      let risk = "LOW";
+      if (attendance_pct < 60.0 || expectedGrade < 50.0) risk = "HIGH";
+      else if (attendance_pct < 75.0 || expectedGrade < 70.0) risk = "MODERATE";
 
-    const result = await model.generateContent(prompt);
-    let text = result.response.text().trim();
-    const jsonResponse = JSON.parse(text);
+      predictionResult = {
+        predicted_grade_pct: Math.round(expectedGrade, 2),
+        risk_level: risk,
+        explanation: ["Local prediction engine activated. Please ensure python ML service is online."],
+        confidence_score: 0.85
+      };
+    }
 
-    res.status(200).json(jsonResponse);
+    // Save prediction log to database (isolated by collegeId)
+    await PredictionLog.create({
+      userId: studentId,
+      collegeId: req.user.collegeId,
+      inputData,
+      predictionResult
+    });
+
+    // Update Study recommendations for subjects where mark is weak
+    const weakMarks = marks.filter(m => (m.midSem && m.midSem < 60) || (m.quiz && m.quiz < 60));
+    for (const wm of weakMarks) {
+      const subject = await Subject.findByPk(wm.subjectId);
+      if (subject) {
+        // Find relevant materials for this subject
+        const materials = await Material.findAll({ where: { subjectId: wm.subjectId }, limit: 2 });
+        const recommendedResources = materials.map(m => ({ id: m.id, title: m.title, url: m.contentUrl }));
+        
+        await StudyRecommendation.upsert({
+          studentId,
+          collegeId: req.user.collegeId,
+          subjectName: subject.name,
+          priority: 1, // High Priority
+          weaknessScore: wm.midSem || wm.quiz || 50,
+          reason: `Low marks in ${subject.name}`,
+          recommendedResources
+        });
+      }
+    }
+
+    res.status(200).json(predictionResult);
   } catch (error) {
-    console.error("AI Prediction Error:", error);
-    res.status(500).json({ message: "Failed to run predictions." });
+    res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = { generateResponse, predictAcademicFuture };
+// Get early-warning watchlist of at-risk students (For Teachers/Admins)
+const getAtRiskWatchlist = async (req, res) => {
+  try {
+    // 1. Fetch latest predictions for all students in this college
+    const latestPredictions = await PredictionLog.findAll({
+      where: { collegeId: req.user.collegeId },
+      include: [{ model: User, as: 'Student', attributes: ['name', 'email', 'course', 'classId'] }],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Filter unique student predictions
+    const seen = new Set();
+    const watchlist = [];
+
+    latestPredictions.forEach(log => {
+      if (log.userId && !seen.has(log.userId)) {
+        seen.add(log.userId);
+        const result = log.predictionResult;
+        if (result.risk_level === 'HIGH' || result.risk_level === 'MODERATE') {
+          watchlist.push({
+            studentId: log.userId,
+            studentName: log.Student?.name || 'N/A',
+            email: log.Student?.email || 'N/A',
+            course: log.Student?.course || 'N/A',
+            riskLevel: result.risk_level,
+            predictedGrade: result.predicted_grade_pct,
+            explanation: result.explanation,
+            confidence: result.confidence_score,
+            createdAt: log.createdAt
+          });
+        }
+      }
+    });
+
+    res.status(200).json(watchlist);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get personalized study plan/recommendations for students
+const getStudyRecommendations = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const recommendations = await StudyRecommendation.findAll({
+      where: { studentId, collegeId: req.user.collegeId },
+      order: [['priority', 'ASC']]
+    });
+    res.status(200).json(recommendations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Semantic Search Resource Hub
+const semanticSearchResources = async (req, res) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ message: 'Query parameter is required' });
+
+    // Fetch all materials from this college
+    const materials = await Material.findAll({
+      include: [{
+        model: Subject,
+        include: [{ model: Class, where: { collegeId: req.user.collegeId }, required: true, attributes: [] }],
+        attributes: ['name'],
+        required: true
+      }]
+    });
+
+    const resources = materials.map(m => ({
+      id: m.id,
+      title: m.title,
+      description: m.title, // using title as desc since no desc column exists
+      subjectName: m.Subject?.name || ''
+    }));
+
+    try {
+      const mlRes = await axios.post(`${ML_SERVICE_URL}/search_resources`, {
+        query,
+        resources
+      });
+      res.status(200).json(mlRes.data);
+    } catch (mlErr) {
+      console.warn("FastAPI offline, falling back to simple local keyword search:", mlErr.message);
+      // Fallback local regex search
+      const keyword = query.toLowerCase();
+      const matched = materials.filter(m => 
+        m.title.toLowerCase().includes(keyword) || 
+        (m.Subject?.name || '').toLowerCase().includes(keyword)
+      );
+      res.status(200).json(matched);
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// AI Peer Matcher Compatibility Score
+const findStudyBuddyMatches = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const student = await User.findByPk(studentId);
+    
+    // Fetch all other students in same college
+    const candidates = await User.findAll({
+      where: { 
+        collegeId: req.user.collegeId,
+        id: { [Op.ne]: studentId },
+        role: 'student'
+      }
+    });
+
+    // Create profile payloads
+    const makeProfile = async (u) => {
+      // Calculate strengths & weaknesses from marks
+      const marks = await Mark.findAll({ where: { studentId: u.id }, include: [Subject] });
+      const strengths = [];
+      const weaknesses = [];
+      const interests = [];
+      
+      marks.forEach(m => {
+        const sub = m.Subject?.name;
+        if (sub) {
+          interests.push(sub);
+          const avgScore = ((m.midSem || 0) + (m.quiz || 0) + (m.assignment || 0)) / 3.0;
+          if (avgScore >= 75) strengths.push(sub);
+          if (avgScore < 60) weaknesses.push(sub);
+        }
+      });
+
+      return {
+        id: u.id,
+        name: u.name,
+        course: u.course || 'N/A',
+        strengths,
+        weaknesses,
+        interests,
+        availability: ["evening", "weekend"] // Mock availability slot
+      };
+    };
+
+    const studentProfile = await makeProfile(student);
+    const candidateProfiles = await Promise.all(candidates.map(c => makeProfile(c)));
+
+    try {
+      const mlRes = await axios.post(`${ML_SERVICE_URL}/peer_match`, {
+        student: studentProfile,
+        candidates: candidateProfiles
+      });
+
+      // Save matches to database
+      for (const match of mlRes.data) {
+        await PeerMatch.upsert({
+          studentId,
+          matchedStudentId: match.id,
+          collegeId: req.user.collegeId,
+          compatibilityScore: match.compatibility_score,
+          matchReasons: match.reasons
+        });
+      }
+
+      res.status(200).json(mlRes.data);
+    } catch (mlErr) {
+      console.warn("FastAPI offline, fallback matching:", mlErr.message);
+      // Basic fallback match based on same course
+      const simpleMatches = candidateProfiles
+        .filter(c => c.course === studentProfile.course)
+        .map(c => ({
+          id: c.id,
+          name: c.name,
+          compatibility_score: 75.0,
+          reasons: [`Enrolled in the same course (${studentProfile.course}).`]
+        }));
+      res.status(200).json(simpleMatches);
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Model Monitoring & Retraining Controller
+const getModelMetrics = async (req, res) => {
+  try {
+    const mlRes = await axios.get(`${ML_SERVICE_URL}/model/metrics`);
+    res.status(200).json(mlRes.data);
+  } catch (mlErr) {
+    res.status(500).json({ message: "ML Service is offline. Cannot retrieve metrics." });
+  }
+};
+
+const triggerModelRetrain = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admins only.' });
+    }
+    const mlRes = await axios.post(`${ML_SERVICE_URL}/model/retrain`);
+    res.status(200).json(mlRes.data);
+  } catch (mlErr) {
+    res.status(500).json({ message: "ML Service offline. Failed to trigger retrain." });
+  }
+};
+
+module.exports = {
+  generateResponse,
+  predictAcademicFuture,
+  getAtRiskWatchlist,
+  getStudyRecommendations,
+  semanticSearchResources,
+  findStudyBuddyMatches,
+  getModelMetrics,
+  triggerModelRetrain
+};

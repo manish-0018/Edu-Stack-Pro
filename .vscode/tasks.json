@@ -15,7 +15,7 @@
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
-        "group": "edustack-pro-group"
+        "group": "attendease-group"
       }
     },
     {
@@ -32,11 +32,11 @@
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
-        "group": "edustack-pro-group"
+        "group": "attendease-group"
       }
     },
     {
-      "label": "Start EduStack Pro (All)",
+      "label": "Start AttendEase (All)",
       "dependsOn": [
         "Start Backend",
         "Start Frontend"

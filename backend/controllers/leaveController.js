@@ -27,18 +27,26 @@ const getLeaveRequests = async (req, res) => {
       whereClause.studentId = req.user.id;
     }
 
-    // College isolation: filter students by college
-    const studentWhere = req.user.role !== 'student' 
-      ? { collegeId: req.user.collegeId }
-      : {};
+    let studentWhere = {};
+    if (req.user.collegeId) {
+      studentWhere.collegeId = req.user.collegeId;
+    }
+    if (req.user.course) {
+      studentWhere.course = req.user.course;
+    }
 
     const leaveRequests = await LeaveRequest.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Student', attributes: ['name', 'email'], where: studentWhere, required: true },
-        { model: User, as: 'Approver', attributes: ['name'], required: false }
-      ],
-      order: [['createdAt', 'DESC']]
+        { 
+          model: User, 
+          as: 'Student', 
+          where: studentWhere,
+          required: true,
+          attributes: ['name', 'email', 'course', 'collegeId'] 
+        },
+        { model: User, as: 'Approver', attributes: ['name'] }
+      ]
     });
     res.status(200).json(leaveRequests);
   } catch (error) {
@@ -50,14 +58,16 @@ const updateLeaveStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const leaveRequest = await LeaveRequest.findByPk(req.params.id, {
-      include: [{ model: User, as: 'Student', attributes: ['collegeId'] }]
+      include: [{ model: User, as: 'Student', required: true }]
     });
 
     if (!leaveRequest) throw new Error('Leave request not found');
 
-    // Block cross-college approvals
-    if (leaveRequest.Student?.collegeId !== req.user.collegeId) {
-      return res.status(403).json({ message: 'Access denied. This student does not belong to your college.' });
+    if (req.user.collegeId && leaveRequest.Student?.collegeId !== req.user.collegeId) {
+      throw new Error('Access denied. Cross-college action blocked.');
+    }
+    if (req.user.course && leaveRequest.Student?.course !== req.user.course) {
+      throw new Error('Access denied. Cross-department action blocked.');
     }
 
     await leaveRequest.update({

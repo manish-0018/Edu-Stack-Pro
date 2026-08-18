@@ -6,6 +6,7 @@ import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, Fi
 import KanbanBoard from '../components/KanbanBoard';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
+import AiIntelligenceWatchlist from '../components/AiIntelligenceWatchlist';
 import SmartCheckinModal from '../components/SmartCheckinModal';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -1102,6 +1103,9 @@ const Dashboard = () => {
               </div>
             </div>
           )}
+          <div className="mt-6">
+            <AiIntelligenceWatchlist user={user} />
+          </div>
         </>
       ) : (
         // STUDENT DASHBOARD LAYOUT

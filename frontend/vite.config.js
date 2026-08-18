@@ -11,15 +11,10 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
-      workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/uploads/, /^\/socket.io/]
-      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png'],
       manifest: {
-        name: 'Edu Stack Pro',
-        short_name: 'Edu Stack Pro',
+        name: 'EduStack Pro',
+        short_name: 'EduStack',
         description: 'Smart College Attendance and Collaboration Portal',
         theme_color: '#4f46e5',
         background_color: '#ffffff',
@@ -52,18 +47,14 @@ export default defineConfig({
     'process.env': {}
   },
   server: {
-    port: 3000,
+    port: 3005,
     proxy: {
       '/api': {
-        target: 'http://localhost:5002',
-        changeOrigin: true,
-      },
-      '/uploads': {
-        target: 'http://localhost:5002',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:5002',
+        target: 'http://localhost:5000',
         ws: true,
       },
     },

@@ -1,4 +1,4 @@
-const { Attendance, AttendanceRecord, Class, Subject, User, Notification } = require('../models');
+const { Attendance, AttendanceRecord, Class, Subject, User } = require('../models');
 const { Op } = require('sequelize');
 
 const markAttendance = async (req, res) => {
@@ -9,94 +9,41 @@ const markAttendance = async (req, res) => {
       throw new Error('Please provide all required fields');
     }
 
+    // Scoping check
+    const targetClass = await Class.findByPk(classId);
+    if (!targetClass) throw new Error('Target class not found');
+    if (req.user.collegeId && targetClass.collegeId !== req.user.collegeId) {
+      throw new Error('Access denied. Class belongs to another college.');
+    }
+    if (req.user.course && targetClass.course !== req.user.course) {
+      throw new Error('Access denied. Class belongs to another department.');
+    }
+
     // Check if attendance already marked for this date
-    let attendance = await Attendance.findOne({
+    const existingAttendance = await Attendance.findOne({
       where: { classId, subjectId, date }
     });
 
-    if (!attendance) {
-      // Create the master attendance record
-      attendance = await Attendance.create({
-        classId,
-        subjectId,
-        date,
-        markedById: req.user.id
-      });
+    if (existingAttendance) {
+      throw new Error('Attendance already marked for this date');
     }
 
-    // Upsert individual student records
-    for (const r of records) {
-      let record = await AttendanceRecord.findOne({
-        where: { attendanceId: attendance.id, studentId: r.studentId }
-      });
-      if (record) {
-        await record.update({ status: r.status });
-      } else {
-        await AttendanceRecord.create({
-          attendanceId: attendance.id,
-          studentId: r.studentId,
-          status: r.status
-        });
-      }
-    }
+    // Create the master attendance record
+    const attendance = await Attendance.create({
+      classId,
+      subjectId,
+      date,
+      markedById: req.user.id
+    });
 
-    // Send notifications and email alerts in background
-    const absentRecords = records.filter(r => r.status === 'absent');
-    if (absentRecords.length > 0) {
-      (async () => {
-        try {
-          const subject = await Subject.findByPk(subjectId);
-          const subjectName = subject ? subject.name : 'Class';
+    // Create the individual student records
+    const mappedRecords = records.map(r => ({
+      attendanceId: attendance.id,
+      studentId: r.studentId,
+      status: r.status
+    }));
 
-          const nodemailer = require('nodemailer');
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-            port: process.env.SMTP_PORT || 587,
-            auth: {
-              user: process.env.SMTP_USER || 'test@example.com',
-              pass: process.env.SMTP_PASS || 'password'
-            }
-          });
-
-          for (const record of absentRecords) {
-            try {
-              const student = await User.findByPk(record.studentId);
-              if (!student) continue;
-
-              // 1. In-app alert
-              await Notification.create({
-                userId: student.id,
-                title: 'Absence Alert',
-                message: `You were marked ABSENT for ${subjectName} on ${date}.`,
-                type: 'alert'
-              });
-
-              // 2. Email alert to Student
-              await transporter.sendMail({
-                from: '"Edu Stack Pro Attendance" <attendance@edustack.edu>',
-                to: student.email,
-                subject: `Edu Stack Pro - Absence Alert: ${subjectName}`,
-                text: `Dear ${student.name},\n\nYou were marked ABSENT for the ${subjectName} class held on ${date}.\n\nIf you believe this is an error, please contact your subject teacher.\n\nBest regards,\nEdu Stack Pro Team`
-              });
-
-              // 3. Email alert to Parent
-              if (student.parentEmail && student.parentEmail !== student.email) {
-                await transporter.sendMail({
-                  from: '"Edu Stack Pro Attendance" <attendance@edustack.edu>',
-                  to: student.parentEmail,
-                  subject: `Edu Stack Pro - Absence Warning: ${student.name}`,
-                  text: `Dear Parent,\n\nThis is to inform you that your ward ${student.name} was marked ABSENT for their ${subjectName} class held on ${date}.\n\nPlease ensure they attend classes regularly to maintain the required attendance percentage.\n\nBest regards,\nEdu Stack Pro Team`
-                });
-              }
-            } catch (singleErr) {
-              console.error(`Absence notifier failed for student ${record.studentId}`, singleErr);
-            }
-          }
-        } catch (notifierErr) {
-          console.error("Absence alert system error", notifierErr);
-        }
-      })();
-    }
+    await AttendanceRecord.bulkCreate(mappedRecords);
 
     res.status(201).json(attendance);
   } catch (error) {
@@ -121,10 +68,23 @@ const getAttendance = async (req, res) => {
       recordWhereClause.studentId = studentId;
     }
 
+    let classWhere = {};
+    if (req.user.collegeId) {
+      classWhere.collegeId = req.user.collegeId;
+    }
+    if (req.user.course) {
+      classWhere.course = req.user.course;
+    }
+
     const attendances = await Attendance.findAll({
       where: whereClause,
       include: [
-        { model: Class, attributes: ['name'] },
+        { 
+          model: Class, 
+          where: classWhere,
+          required: true,
+          attributes: ['name', 'course'] 
+        },
         { model: Subject, attributes: ['name', 'code', 'type'] },
         { model: User, as: 'Marker', attributes: ['name'] },
         { 

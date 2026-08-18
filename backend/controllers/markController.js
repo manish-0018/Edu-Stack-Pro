@@ -7,18 +7,31 @@ const getMarks = async (req, res) => {
     if (req.user.role === 'student') {
       whereClause.studentId = req.user.id;
     } else if (req.user.role === 'teacher') {
+      // Find subjects taught by this teacher
       const subjects = await Subject.findAll({ where: { teacherId: req.user.id } });
       const subjectIds = subjects.map(s => s.id);
       whereClause.subjectId = subjectIds;
     }
-    // Admin: filter by college via class
-    const classWhere = req.user.role !== 'student' ? { collegeId: req.user.collegeId } : {};
+
+    let studentWhere = {};
+    if (req.user.collegeId) {
+      studentWhere.collegeId = req.user.collegeId;
+    }
+    if (req.user.course) {
+      studentWhere.course = req.user.course;
+    }
 
     const marks = await Mark.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Student', attributes: ['id', 'name', 'email'], where: req.user.role !== 'student' ? { collegeId: req.user.collegeId } : {}, required: req.user.role !== 'student' },
-        { model: Subject, include: [{ model: Class, where: classWhere, attributes: ['name'], required: true }] }
+        { 
+          model: User, 
+          as: 'Student', 
+          where: studentWhere,
+          required: true,
+          attributes: ['id', 'name', 'email', 'course', 'collegeId'] 
+        },
+        { model: Subject, include: [{ model: Class, attributes: ['name'] }] }
       ]
     });
 
@@ -33,6 +46,18 @@ const upsertMarks = async (req, res) => {
     const { subjectId, marks } = req.body;
     if (!subjectId || !Array.isArray(marks)) {
       throw new Error('Please provide subjectId and a marks array');
+    }
+
+    // Scoping validation on subject
+    const targetSubject = await Subject.findByPk(subjectId, {
+      include: [{ model: Class }]
+    });
+    if (!targetSubject) throw new Error('Subject not found');
+    if (req.user.collegeId && targetSubject.Class?.collegeId !== req.user.collegeId) {
+      throw new Error('Access denied. Subject belongs to another college.');
+    }
+    if (req.user.course && targetSubject.Class?.course !== req.user.course) {
+      throw new Error('Access denied. Subject belongs to another department.');
     }
 
     const savedMarks = [];

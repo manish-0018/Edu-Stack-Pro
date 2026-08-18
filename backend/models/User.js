@@ -31,8 +31,13 @@ const User = sequelize.define('User', {
     }
   },
   role: {
-    type: DataTypes.ENUM('admin', 'teacher', 'student', 'guardian'),
+    type: DataTypes.ENUM('admin', 'teacher', 'student', 'guardian', 'mentor'),
     defaultValue: 'student'
+  },
+  rollNo: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    unique: true
   },
   classId: {
     type: DataTypes.UUID,
@@ -68,14 +73,6 @@ const User = sequelize.define('User', {
   collegeId: {
     type: DataTypes.UUID,
     allowNull: true
-  },
-  faceDescriptor: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  isPremium: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
   }
 }, {
   hooks: {

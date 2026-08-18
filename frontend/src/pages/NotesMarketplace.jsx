@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Store, Coins, Upload, Download, CheckCircle2 } from 'lucide-react';
+import { Store, Coins, Upload, Download, CheckCircle2, Search, Brain } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const NotesMarketplace = () => {
@@ -36,6 +36,32 @@ const NotesMarketplace = () => {
     fetchMaterialsAndSubjects();
   }, []);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [useSemantic, setUseSemantic] = useState(true);
+  const [semanticResults, setSemanticResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSemanticResults(null);
+      return;
+    }
+
+    if (useSemantic) {
+      setSearching(true);
+      try {
+        const res = await axios.post('/api/ai/search', { query: searchQuery });
+        setSemanticResults(res.data);
+      } catch (err) {
+        toast.error('AI Semantic search failed. Falling back to local search.');
+        setSemanticResults(null);
+      } finally {
+        setSearching(false);
+      }
+    }
+  };
+
   const handleClaimTokens = async () => {
     setClaiming(true);
     try {
@@ -60,9 +86,55 @@ const NotesMarketplace = () => {
       });
       toast.success(purchaseType === 'rental' ? 'Lease started successfully!' : 'Notes unlocked permanently!');
       setTokenBalance(res.data.tokens);
-      fetchMaterialsAndSubjects(); // refresh to show as purchased
+      fetchMaterialsAndSubjects();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Purchase failed');
+    }
+  };
+
+  const displayedMaterials = (() => {
+    if (useSemantic && semanticResults !== null) {
+      return semanticResults.map(resItem => {
+        const mat = materials.find(m => m.id === resItem.id);
+        if (!mat) return null;
+        return {
+          ...mat,
+          similarityScore: resItem.similarity_score
+        };
+      }).filter(Boolean);
+    } else {
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        return materials.filter(m => 
+          m.title.toLowerCase().includes(query) || 
+          (m.description || '').toLowerCase().includes(query)
+        );
+      }
+      return materials;
+    }
+  })();
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('title', newNote.title);
+      formData.append('description', newNote.description);
+      formData.append('price', newNote.price);
+      if (newNote.subjectId) formData.append('subjectId', newNote.subjectId);
+      formData.append('itemType', newNote.itemType || 'notes');
+      if (file) formData.append('file', file);
+
+      await axios.post('/api/economy/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Item listed successfully!');
+      setShowUpload(false);
+      setNewNote({ title: '', description: '', price: 10, subjectId: '', itemType: 'notes' });
+      setFile(null);
+      fetchMaterialsAndSubjects();
+    } catch (err) {
+      toast.error('Failed to list item');
     }
   };
 
@@ -98,88 +170,51 @@ const NotesMarketplace = () => {
                     placeholder="e.g. KIWISTUDY20"
                     value={activeMarketplaceCoupon}
                     onChange={e => setActiveMarketplaceCoupon(e.target.value)}
-                    className="flex-1 min-w-0 px-2 py-1.5 bg-white/10 border border-white/20 placeholder-yellow-200/60 text-white rounded-xl text-xs font-bold uppercase outline-none focus:bg-white/20 text-center"
+                    className="w-full bg-white/10 border border-white/25 rounded px-2 py-1 text-xs text-white placeholder-white/50 focus:outline-none"
                   />
                   <button
-                    type="button"
                     onClick={() => {
-                      const code = activeMarketplaceCoupon.trim().toUpperCase();
-                      if (code === 'KIWISTUDY20' || code === 'CAFEFREE10') {
-                        setAppliedCoupon(code);
-                        toast.success(`Coupon ${code} applied successfully!`);
+                      if (activeMarketplaceCoupon === 'KIWISTUDY20' || activeMarketplaceCoupon === 'CAFEFREE10') {
+                        setAppliedCoupon(activeMarketplaceCoupon);
+                        toast.success('Marketplace discount applied!');
                       } else {
-                        setAppliedCoupon('');
-                        toast.error('Invalid Coupon Code');
+                        toast.error('Invalid coupon code');
                       }
                     }}
-                    className="px-3 bg-white text-yellow-800 font-bold rounded-xl text-xs hover:bg-yellow-50 transition-colors shrink-0"
+                    className="bg-white text-yellow-600 px-3 py-1 rounded text-xs font-bold"
                   >
                     Apply
                   </button>
                 </div>
-                {appliedCoupon && (
-                  <span className="text-[9px] text-yellow-100 mt-1 block text-center font-bold">
-                    {appliedCoupon === 'KIWISTUDY20' ? '✓ 20% Off Notes Active!' : '✓ 10% Off Notes Active!'}
-                  </span>
-                )}
               </div>
-              <button 
+              <button
                 onClick={handleClaimTokens}
                 disabled={claiming}
-                className="w-full bg-white text-yellow-700 hover:bg-yellow-50 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-xs"
+                className="w-full bg-white text-yellow-600 hover:bg-yellow-50 disabled:opacity-50 px-4 py-2 rounded-xl text-xs font-bold shadow transition-all hover:scale-[1.02]"
               >
-                {claiming ? 'Verifying...' : 'Claim Weekly Tokens'}
+                {claiming ? 'Claiming...' : 'Claim Attendance Tokens'}
               </button>
             </div>
-          ) : user.role === 'teacher' ? (
-            <button 
+          ) : (
+            <button
               onClick={() => setShowUpload(!showUpload)}
-              className="w-full bg-white text-yellow-700 hover:bg-yellow-50 py-2 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-xs"
+              className="w-full bg-white text-yellow-600 hover:bg-yellow-50 px-4 py-2 rounded-xl text-xs font-bold shadow transition-all flex items-center justify-center gap-1.5"
             >
-              <Upload className="w-4 h-4" /> Sell Item
+              <Upload className="w-4 h-4" /> {showUpload ? 'Close Upload Form' : 'Upload Notes / PYQs'}
             </button>
-          ) : user.role === 'student' ? (
-             <button 
-              onClick={() => setShowUpload(!showUpload)}
-              className="w-full mt-4 bg-yellow-700 text-yellow-50 hover:bg-yellow-800 py-2 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-xs"
-            >
-              <Upload className="w-4 h-4" /> Sell Item
-            </button>
-          ) : null}
+          )}
         </div>
       </div>
 
       {showUpload && (
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          try {
-            const formData = new FormData();
-            formData.append('title', newNote.title);
-            formData.append('description', newNote.description);
-            formData.append('price', newNote.price);
-            if (newNote.subjectId) formData.append('subjectId', newNote.subjectId);
-            formData.append('itemType', newNote.itemType || 'notes');
-            if (file) formData.append('file', file);
-
-            await axios.post('/api/economy/upload', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            toast.success('Item listed successfully!');
-            setShowUpload(false);
-            setNewNote({ title: '', description: '', price: 10, subjectId: '', itemType: 'notes' });
-            setFile(null);
-            fetchMaterialsAndSubjects();
-          } catch (err) {
-            toast.error('Failed to list item');
-          }
-        }} className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
+        <form onSubmit={handleUpload} className="bg-white dark:bg-dark-card p-6 rounded-2xl border border-gray-100 dark:border-dark-border grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+          <div>
             <label className="block text-sm font-medium mb-1">Title</label>
             <input required type="text" className="w-full px-3 py-2 border rounded-lg dark:bg-dark-bg" value={newNote.title} onChange={e => setNewNote({...newNote, title: e.target.value})} />
           </div>
-          <div className="md:col-span-2">
+          <div>
             <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea required rows="2" className="w-full px-3 py-2 border rounded-lg dark:bg-dark-bg" value={newNote.description} onChange={e => setNewNote({...newNote, description: e.target.value})} />
+            <input required type="text" className="w-full px-3 py-2 border rounded-lg dark:bg-dark-bg" value={newNote.description} onChange={e => setNewNote({...newNote, description: e.target.value})} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Item Type</label>
@@ -212,11 +247,62 @@ const NotesMarketplace = () => {
           </div>
         </form>
       )}
-            {/* Notes Grid */}
-      <h2 className="text-2xl font-bold mt-8 mb-4">Available Items</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {materials.length === 0 && <p className="text-gray-500">No items available yet.</p>}
-        {materials.map(mat => {
+
+      {/* Notes Grid */}
+      <div className="mt-8 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="text-left">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Available Marketplace Items</h2>
+          <p className="text-xs text-gray-400 mt-1">Browse study guides, textbooks, and lab manuals from peers</p>
+        </div>
+
+        {/* Search Bar & AI Toggle */}
+        <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-1 shadow-sm w-full sm:w-auto">
+            <input
+              type="text"
+              placeholder={useSemantic ? "Search topics semantically..." : "Search by keyword..."}
+              value={searchQuery}
+              onChange={e => {
+                setSearchQuery(e.target.value);
+                if (!e.target.value.trim()) setSemanticResults(null);
+              }}
+              className="flex-1 px-3 py-2 bg-transparent text-sm outline-none w-full sm:w-64 dark:text-white"
+            />
+            <button
+              type="submit"
+              disabled={searching}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow"
+            >
+              {searching ? 'AI Matching...' : <><Search className="w-3.5 h-3.5" /> Search</>}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const newMode = !useSemantic;
+              setUseSemantic(newMode);
+              setSemanticResults(null);
+              toast.info(newMode ? 'AI Semantic Search Enabled' : 'Standard Keyword Search Enabled');
+            }}
+            className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border transition-all ${
+              useSemantic 
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-850 dark:text-indigo-400' 
+                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50 dark:bg-dark-card dark:border-dark-border dark:text-gray-400'
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5" /> AI Semantic {useSemantic ? 'ON' : 'OFF'}
+          </button>
+        </form>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 text-left">
+        {displayedMaterials.length === 0 && (
+          <p className="text-gray-500 col-span-full py-8 text-center border border-dashed rounded-xl">
+            No items match your search query.
+          </p>
+        )}
+        {displayedMaterials.map(mat => {
           const hasDiscount = appliedCoupon === 'KIWISTUDY20' || appliedCoupon === 'CAFEFREE10';
           const discountPct = appliedCoupon === 'KIWISTUDY20' ? 0.8 : appliedCoupon === 'CAFEFREE10' ? 0.9 : 1.0;
           const finalPrice = hasDiscount ? Math.ceil(mat.price * discountPct) : mat.price;

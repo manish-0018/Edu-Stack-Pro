@@ -14,14 +14,6 @@ const MaterialPurchase = sequelize.define('MaterialPurchase', {
   materialId: {
     type: DataTypes.UUID,
     allowNull: false
-  },
-  purchaseType: {
-    type: DataTypes.STRING,
-    defaultValue: 'lifetime' // lifetime, rental
-  },
-  leaseExpiresAt: {
-    type: DataTypes.DATE,
-    allowNull: true
   }
 });
 

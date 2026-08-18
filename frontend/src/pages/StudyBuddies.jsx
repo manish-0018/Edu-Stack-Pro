@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { 
   HeartHandshake, Users, MessageSquare, BookOpen, Clock, Star,
-  Search, Plus, Check, Play, MessageCircle, Radio, Lock
+  Search, Plus, Check, Play, MessageCircle, Radio, Lock, Brain, RefreshCw
 } from 'lucide-react';
 import AdBanner from '../components/AdBanner';
 
@@ -26,6 +26,8 @@ const StudyBuddies = () => {
   const [globalMatches, setGlobalMatches] = useState([]);
   const [searchingPeers, setSearchingPeers] = useState(false);
   const [studyGuides, setStudyGuides] = useState([]);
+  const [aiMatches, setAiMatches] = useState([]);
+  const [matchingBuddies, setMatchingBuddies] = useState(false);
 
   // Modals / Forms
   const [loading, setLoading] = useState(false);
@@ -70,6 +72,7 @@ const StudyBuddies = () => {
     if (activeTab === 'global-peers') setGlobalMatches([]);
     if (activeTab === 'study-guides') fetchStudyGuides();
     if (activeTab === 'team-builder') fetchProjectsAndInvites();
+    if (activeTab === 'ai-matches') handleRunAIPeerMatch();
   }, [activeTab]);
 
   const fetchProjectsAndInvites = async () => {
@@ -261,6 +264,20 @@ const StudyBuddies = () => {
     }
   };
 
+  const handleRunAIPeerMatch = async () => {
+    setMatchingBuddies(true);
+    const toastId = toast.loading('Calculating classmate compatibility scores...');
+    try {
+      const res = await axios.get('/api/ai/matches');
+      setAiMatches(res.data);
+      toast.update(toastId, { render: `Found ${res.data.length} matches!`, type: 'success', isLoading: false, autoClose: 4000 });
+    } catch (err) {
+      toast.update(toastId, { render: 'Failed to calculate compatibility scores.', type: 'error', isLoading: false, autoClose: 4000 });
+    } finally {
+      setMatchingBuddies(false);
+    }
+  };
+
   const requestDirectBuddy = async (tutorId) => {
     try {
       await axios.post('/api/study/request', { tutorId });
@@ -314,6 +331,7 @@ const StudyBuddies = () => {
         {[
           { id: '1on1', label: '1-on-1 Tutoring', icon: <HeartHandshake className="w-4 h-4" />, premium: true },
           { id: 'groups', label: 'Group Study Rooms', icon: <Users className="w-4 h-4" /> },
+          { id: 'ai-matches', label: 'AI Study Matcher', icon: <Brain className="w-4 h-4" /> },
           { id: 'global-peers', label: 'Global Peer Finder', icon: <Search className="w-4 h-4" />, premium: true },
           { id: 'study-guides', label: 'AI Study Guides', icon: <BookOpen className="w-4 h-4" />, premium: true },
           { id: 'team-builder', label: 'AI Team Builder', icon: <Users className="w-4 h-4" />, premium: true }
@@ -594,6 +612,69 @@ const StudyBuddies = () => {
         </div>
       )
     )}
+
+      {activeTab === 'ai-matches' && (
+        <div className="space-y-6 text-left">
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white border border-indigo-900/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Brain className="w-6 h-6 text-indigo-400" /> AI Study Buddy Matcher
+              </h2>
+              <p className="text-xs text-indigo-200 mt-1 max-w-xl">
+                Our FastAPI intelligence engine matches you with classmates in your college based on complementary skills, course alignment, subject strengths, and study availability overlap.
+              </p>
+            </div>
+            <button
+              onClick={handleRunAIPeerMatch}
+              disabled={matchingBuddies}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 self-start md:self-center"
+            >
+              <RefreshCw className={`w-4 h-4 ${matchingBuddies ? 'animate-spin' : ''}`} />
+              {matchingBuddies ? 'Matching...' : 'Re-Run AI Matching'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {aiMatches.map(match => (
+              <div key={match.id} className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">{match.name}</h4>
+                      <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold px-2 py-0.5 rounded uppercase tracking-wider inline-block mt-1">
+                        {match.compatibility_score}% Compatibility
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-3 mb-6">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Overlap Factors</p>
+                    <div className="space-y-1.5 bg-slate-50 dark:bg-dark-bg/40 p-3 rounded-xl border border-slate-100 dark:border-dark-border/20">
+                      {match.reasons.map((reason, index) => (
+                        <div key={index} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-1">
+                          <span className="text-indigo-500 shrink-0">•</span>
+                          <span>{reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => requestDirectBuddy(match.id)}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow"
+                >
+                  <HeartHandshake className="w-4 h-4" /> Connect Study Buddy
+                </button>
+              </div>
+            ))}
+            {aiMatches.length === 0 && !matchingBuddies && (
+              <div className="col-span-full py-16 text-center text-gray-400 bg-white dark:bg-dark-card rounded-2xl border border-dashed">
+                <Brain className="w-12 h-12 mx-auto mb-3 text-indigo-400" />
+                <p className="text-sm font-semibold">No high-compatibility study buddies found in your college yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {activeTab === 'study-guides' && (
         !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (

@@ -3,23 +3,15 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const sequelize = process.env.DATABASE_URL
-  ? new Sequelize(process.env.DATABASE_URL, {
-      dialect: 'postgres',
-      logging: false,
-      dialectOptions: {
-        ssl: process.env.NODE_ENV === 'production' ? { require: true, rejectUnauthorized: false } : false
-      }
-    })
-  : new Sequelize({
-      dialect: 'postgres',
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME,
-      logging: false,
-    });
+const sequelize = new Sequelize({
+  dialect: 'postgres',
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME,
+  logging: false, // set to console.log to see SQL queries
+});
 
 const connectDB = async () => {
   try {

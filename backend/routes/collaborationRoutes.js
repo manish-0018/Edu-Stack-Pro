@@ -5,8 +5,7 @@ const {
   getStudyGroups, getPastStudyGroups, createStudyGroup, rsvpStudyGroup, completeStudyGroup,
   getMessages, sendMessage,
   saveWhiteboard, rateSession, updateStudyRequest,
-  createStudyGuide, getStudyGuides,
-  createProjectPosting, getProjectPostings, matchProjectTeam, inviteProjectMember, getProjectInvites, respondToProjectInvite
+  getProjects, createProject, getProjectInvites, sendProjectInvite, respondToInvite, matchProjectPeers
 } = require('../controllers/collaborationController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -37,16 +36,12 @@ router.put('/study/:id/whiteboard', saveWhiteboard);
 router.put('/study/:id/rate', rateSession);
 router.put('/study/:id', updateStudyRequest);
 
-// Whiteboard AI Study Guides
-router.post('/study-guides', createStudyGuide);
-router.get('/study-guides', getStudyGuides);
-
-// AI Team Builder
-router.post('/projects', createProjectPosting);
-router.get('/projects', getProjectPostings);
-router.post('/projects/:id/match', matchProjectTeam);
-router.post('/projects/:id/invite', inviteProjectMember);
+// Team Builder / Projects
+router.get('/projects', getProjects);
+router.post('/projects', createProject);
 router.get('/projects/invites', getProjectInvites);
-router.put('/projects/invites/:inviteId', respondToProjectInvite);
+router.post('/projects/:id/invite', sendProjectInvite);
+router.put('/projects/invites/:id', respondToInvite);
+router.post('/projects/:id/match', matchProjectPeers);
 
 module.exports = router;

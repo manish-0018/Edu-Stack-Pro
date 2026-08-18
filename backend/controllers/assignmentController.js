@@ -1,4 +1,4 @@
-const { Assignment, AssignmentSubmission, User, Subject, Class, Notification } = require('../models');
+const { Assignment, AssignmentSubmission, User, Subject, Class } = require('../models');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -19,9 +19,6 @@ const createAssignment = (req, res) => {
   upload(req, res, async (err) => {
     if (err) return res.status(400).json({ message: err.message });
     try {
-      if (req.user.role !== 'teacher') {
-        return res.status(403).json({ message: 'Only teachers are authorized to upload assignments.' });
-      }
       const { title, description, subjectId, dueDate, maxMarks } = req.body;
       const fileUrl = req.file ? `/uploads/assignments/${req.file.filename}` : null;
       const assignment = await Assignment.create({
@@ -31,34 +28,6 @@ const createAssignment = (req, res) => {
         maxMarks: maxMarks || 100,
         fileUrl
       });
-
-      // Send notification to all students in the class section
-      try {
-        const subject = await Subject.findByPk(subjectId);
-        if (subject && subject.classId) {
-          const students = await User.findAll({
-            where: {
-              role: 'student',
-              classId: subject.classId,
-              collegeId: req.user.collegeId
-            }
-          });
-
-          const notifications = students.map(student => ({
-            userId: student.id,
-            title: 'New Assignment Uploaded 📝',
-            message: `A new assignment "${title}" has been uploaded for ${subject.name}. Due date: ${dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}.`,
-            type: 'info'
-          }));
-
-          if (notifications.length > 0) {
-            await Notification.bulkCreate(notifications);
-          }
-        }
-      } catch (notifErr) {
-        console.error("Failed to dispatch assignment notifications", notifErr);
-      }
-
       res.status(201).json(assignment);
     } catch (err) { res.status(500).json({ message: err.message }); }
   });
@@ -68,32 +37,13 @@ const createAssignment = (req, res) => {
 const getAssignments = async (req, res) => {
   try {
     let where = {};
-    let subjectWhere = {};
-
-    if (req.user.role === 'teacher') {
-      where.teacherId = req.user.id;
-    } else if (req.user.role === 'student') {
-      if (!req.user.classId) {
-        return res.status(200).json([]);
-      }
-      subjectWhere.classId = req.user.classId;
-    }
+    if (req.user.role === 'teacher') where.teacherId = req.user.id;
 
     const assignments = await Assignment.findAll({
       where,
       include: [
-        { 
-          model: Subject, 
-          where: subjectWhere,
-          attributes: ['name', 'code', 'classId'] 
-        },
-        { 
-          model: User, 
-          as: 'Teacher', 
-          attributes: ['name'],
-          where: { collegeId: req.user.collegeId },
-          required: true
-        },
+        { model: Subject, attributes: ['name', 'code'] },
+        { model: User, as: 'Teacher', attributes: ['name'] },
         { model: AssignmentSubmission, required: false }
       ],
       order: [['createdAt', 'DESC']]
@@ -110,9 +60,6 @@ const submitAssignment = (req, res) => {
       const { id: assignmentId } = req.params;
       const assignment = await Assignment.findByPk(assignmentId);
       if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
-      if (assignment.isLocked) {
-        return res.status(400).json({ message: 'This assignment has been locked by the teacher. Submissions are no longer accepted.' });
-      }
 
       const isLate = assignment.dueDate && new Date() > new Date(assignment.dueDate);
       const fileUrl = req.file ? `/uploads/assignments/${req.file.filename}` : null;
@@ -141,19 +88,10 @@ const submitAssignment = (req, res) => {
 // @desc   Grade a submission (teacher)
 const gradeSubmission = async (req, res) => {
   try {
-    if (req.user.role !== 'teacher') {
-      return res.status(403).json({ message: 'Only teachers are authorized to grade submissions.' });
-    }
     const { id } = req.params; // submissionId
     const { grade, feedback } = req.body;
     const submission = await AssignmentSubmission.findByPk(id);
     if (!submission) return res.status(404).json({ message: 'Submission not found' });
-
-    const assignment = await Assignment.findByPk(submission.assignmentId);
-    if (assignment && Number(grade) > assignment.maxMarks) {
-      return res.status(400).json({ message: `Grade cannot exceed the maximum marks of ${assignment.maxMarks}` });
-    }
-
     submission.grade = grade;
     submission.feedback = feedback || '';
     submission.status = 'graded';
@@ -166,22 +104,6 @@ const gradeSubmission = async (req, res) => {
 const getSubmissions = async (req, res) => {
   try {
     const { id: assignmentId } = req.params;
-
-    // Verify assignment belongs to the user's college
-    const assignment = await Assignment.findOne({
-      where: { id: assignmentId },
-      include: [{
-        model: User,
-        as: 'Teacher',
-        where: { collegeId: req.user.collegeId },
-        required: true
-      }]
-    });
-
-    if (!assignment) {
-      return res.status(403).json({ message: 'Access denied. Assignment does not belong to your college.' });
-    }
-
     const submissions = await AssignmentSubmission.findAll({
       where: { assignmentId },
       include: [{ model: User, as: 'Student', attributes: ['name', 'email'] }]
@@ -204,42 +126,11 @@ const getMySubmission = async (req, res) => {
 // @desc Delete assignment (teacher/admin)
 const deleteAssignment = async (req, res) => {
   try {
-    const assignment = await Assignment.findOne({
-      where: { id: req.params.id },
-      include: [{
-        model: User,
-        as: 'Teacher',
-        attributes: ['collegeId'],
-        required: true
-      }]
-    });
-    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
-
-    if (req.user.role === 'teacher' && assignment.teacherId !== req.user.id) {
-      return res.status(403).json({ message: 'You can only delete your own assignments.' });
-    }
-
-    if (req.user.role === 'admin' && assignment.Teacher?.collegeId !== req.user.collegeId) {
-      return res.status(403).json({ message: 'Access denied. You can only delete assignments for your college.' });
-    }
-
+    const assignment = await Assignment.findByPk(req.params.id);
+    if (!assignment) return res.status(404).json({ message: 'Not found' });
     await assignment.destroy();
     res.status(200).json({ id: req.params.id });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// @desc Toggle assignment submission lock (teacher who posted)
-const toggleAssignmentLock = async (req, res) => {
-  try {
-    const assignment = await Assignment.findByPk(req.params.id);
-    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
-    if (req.user.role !== 'teacher' || assignment.teacherId !== req.user.id) {
-      return res.status(403).json({ message: 'Only the teacher who uploaded the assignment can lock it.' });
-    }
-    assignment.isLocked = !assignment.isLocked;
-    await assignment.save();
-    res.status(200).json(assignment);
-  } catch (err) { res.status(500).json({ message: err.message }); }
-};
-
-module.exports = { createAssignment, getAssignments, submitAssignment, gradeSubmission, getSubmissions, getMySubmission, deleteAssignment, toggleAssignmentLock };
+module.exports = { createAssignment, getAssignments, submitAssignment, gradeSubmission, getSubmissions, getMySubmission, deleteAssignment };

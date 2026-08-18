@@ -7,6 +7,9 @@ const getClasses = async (req, res) => {
 
     if (req.user && req.user.collegeId) {
       whereClause.collegeId = req.user.collegeId;
+      if (req.user.course) {
+        whereClause.course = req.user.course;
+      }
     } else if (collegeId) {
       whereClause.collegeId = collegeId;
     }
@@ -23,19 +26,21 @@ const createClass = async (req, res) => {
     const { name, description } = req.body;
     if (!name) throw new Error('Please add a class name');
 
-    // Scope class check to the college
+    // Scope class check to the college and course
     const classExists = await Class.findOne({ 
       where: { 
         name, 
-        collegeId: req.user.collegeId || null 
+        collegeId: req.user.collegeId || null,
+        course: req.user.course || null
       } 
     });
-    if (classExists) throw new Error('Class already exists in this college');
+    if (classExists) throw new Error('Class already exists in this course/college');
 
     const newClass = await Class.create({ 
       name, 
       description,
-      collegeId: req.user.collegeId || null
+      collegeId: req.user.collegeId || null,
+      course: req.user.course || null
     });
     res.status(201).json(newClass);
   } catch (error) {
@@ -45,8 +50,12 @@ const createClass = async (req, res) => {
 
 const updateClass = async (req, res) => {
   try {
-    const classData = await Class.findByPk(req.params.id);
-    if (!classData) throw new Error('Class not found');
+    const whereClause = { id: req.params.id };
+    if (req.user.collegeId) whereClause.collegeId = req.user.collegeId;
+    if (req.user.course) whereClause.course = req.user.course;
+
+    const classData = await Class.findOne({ where: whereClause });
+    if (!classData) throw new Error('Class not found or access denied');
 
     await classData.update(req.body);
     res.status(200).json(classData);
@@ -57,8 +66,12 @@ const updateClass = async (req, res) => {
 
 const deleteClass = async (req, res) => {
   try {
-    const classData = await Class.findByPk(req.params.id);
-    if (!classData) throw new Error('Class not found');
+    const whereClause = { id: req.params.id };
+    if (req.user.collegeId) whereClause.collegeId = req.user.collegeId;
+    if (req.user.course) whereClause.course = req.user.course;
+
+    const classData = await Class.findOne({ where: whereClause });
+    if (!classData) throw new Error('Class not found or access denied');
 
     await classData.destroy();
     res.status(200).json({ id: req.params.id });

@@ -38,4 +38,27 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
-module.exports = { getMyNotifications, markAsRead, markAllAsRead };
+const createNotification = async (req, res) => {
+  try {
+    const { userId, title, message, type } = req.body;
+    
+    // Only allow teachers and admins to send notifications
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Only teachers or admins can send notifications.' });
+    }
+
+    const notification = await Notification.create({
+      userId,
+      title,
+      message,
+      type: type || 'info',
+      isRead: false
+    });
+
+    res.status(201).json(notification);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+module.exports = { getMyNotifications, markAsRead, markAllAsRead, createNotification };

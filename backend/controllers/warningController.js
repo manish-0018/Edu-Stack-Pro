@@ -78,7 +78,7 @@ const triggerDefaulterWarnings = async (req, res) => {
         if (student.parentEmail && student.parentEmail !== student.email) {
           try {
             await transporter.sendMail({
-              from: '"Edu Stack Pro Admin" <admin@edustack.edu>',
+              from: '"EduStack Admin" <admin@edustack.edu>',
               to: student.parentEmail,
               subject: 'URGENT: Academic Attendance Warning',
               text: `Dear Parent,\n\nThis is an automated warning that your ward ${student.name}'s attendance has dropped below the required threshold (Theory: ${theoryPercentage}%, Lab: ${labPercentage}%).\n\nPlease ensure they attend classes regularly.`

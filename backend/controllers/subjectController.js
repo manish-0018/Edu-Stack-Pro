@@ -13,6 +13,9 @@ const getSubjects = async (req, res) => {
     if (req.user.collegeId) {
       classWhere.collegeId = req.user.collegeId;
     }
+    if (req.user.course) {
+      classWhere.course = req.user.course;
+    }
 
     let subjects = await Subject.findAll({
       where: whereClause,
@@ -20,7 +23,8 @@ const getSubjects = async (req, res) => {
         { 
           model: Class, 
           where: classWhere,
-          attributes: ['name'] 
+          required: true,
+          attributes: ['name', 'course'] 
         },
         { model: User, as: 'Teacher', attributes: ['name'] }
       ]
@@ -45,6 +49,16 @@ const createSubject = async (req, res) => {
     const { name, code, classId, teacherId, type, credits, course } = req.body;
     if (!name || !code || !classId || !teacherId) throw new Error('Please add all required fields');
 
+    // Scoping validation on class
+    const targetClass = await Class.findByPk(classId);
+    if (!targetClass) throw new Error('Target class not found');
+    if (req.user.collegeId && targetClass.collegeId !== req.user.collegeId) {
+      throw new Error('Access denied. Class belongs to another college.');
+    }
+    if (req.user.course && targetClass.course !== req.user.course) {
+      throw new Error('Access denied. Class belongs to another department.');
+    }
+
     const subjectExists = await Subject.findOne({ where: { code } });
     if (subjectExists) throw new Error('Subject code already exists');
 
@@ -55,7 +69,7 @@ const createSubject = async (req, res) => {
       teacherId, 
       type: type || 'theory', 
       credits: credits !== undefined ? credits : 3,
-      course: course || null
+      course: req.user.course || course || null
     });
     res.status(201).json(newSubject);
   } catch (error) {
@@ -65,8 +79,17 @@ const createSubject = async (req, res) => {
 
 const updateSubject = async (req, res) => {
   try {
-    const subjectData = await Subject.findByPk(req.params.id);
+    const subjectData = await Subject.findByPk(req.params.id, {
+      include: [{ model: Class }]
+    });
     if (!subjectData) throw new Error('Subject not found');
+
+    if (req.user.collegeId && subjectData.Class?.collegeId !== req.user.collegeId) {
+      throw new Error('Access denied. Cross-college modification blocked.');
+    }
+    if (req.user.course && subjectData.Class?.course !== req.user.course) {
+      throw new Error('Access denied. Cross-department modification blocked.');
+    }
 
     await subjectData.update(req.body);
     res.status(200).json(subjectData);
@@ -77,8 +100,17 @@ const updateSubject = async (req, res) => {
 
 const deleteSubject = async (req, res) => {
   try {
-    const subjectData = await Subject.findByPk(req.params.id);
+    const subjectData = await Subject.findByPk(req.params.id, {
+      include: [{ model: Class }]
+    });
     if (!subjectData) throw new Error('Subject not found');
+
+    if (req.user.collegeId && subjectData.Class?.collegeId !== req.user.collegeId) {
+      throw new Error('Access denied. Cross-college modification blocked.');
+    }
+    if (req.user.course && subjectData.Class?.course !== req.user.course) {
+      throw new Error('Access denied. Cross-department modification blocked.');
+    }
 
     await subjectData.destroy();
     res.status(200).json({ id: req.params.id });

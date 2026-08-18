@@ -20,7 +20,7 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 const startSession = async (req, res) => {
   try {
     const classId = req.params.id;
-    const { subjectId, date } = req.body;
+    const { subjectId, date, latitude, longitude, enableLocationLock } = req.body;
 
     if (!subjectId || !date) {
       throw new Error('Please provide subjectId and date');
@@ -54,7 +54,10 @@ const startSession = async (req, res) => {
       isSessionActive: true,
       activeOtp,
       activeQrToken,
-      activeOtpExpires
+      activeOtpExpires,
+      latitude: enableLocationLock ? parseFloat(latitude) : null,
+      longitude: enableLocationLock ? parseFloat(longitude) : null,
+      isLocationLocked: !!enableLocationLock
     });
 
     // 3. Broadcast to socket room
@@ -265,9 +268,10 @@ const checkIn = async (req, res) => {
     }
 
     // 2. Verify Geofence GPS location
-    if (!bypassGps && targetClass.latitude && targetClass.longitude) {
+    const isGpsBypassed = !!(bypassGps && req.user.role !== 'student');
+    if (!isGpsBypassed && targetClass.isLocationLocked && targetClass.latitude && targetClass.longitude) {
       if (!latitude || !longitude) {
-        throw new Error('Please share your device location coordinates to check-in.');
+        throw new Error('This session requires location lock. Please enable GPS location access to check-in.');
       }
       const distance = getDistance(
         parseFloat(latitude),
@@ -275,8 +279,8 @@ const checkIn = async (req, res) => {
         targetClass.latitude,
         targetClass.longitude
       );
-      if (distance > 100) {
-        throw new Error(`Location verification failed. You are ${Math.round(distance)}m away (limit is 100m).`);
+      if (distance > 5) { // Limit to 5m classroom radius
+        throw new Error(`Access restricted. You are standing outside the classroom (distance: ${Math.round(distance)}m, limit is 5m).`);
       }
     }
 

@@ -151,13 +151,13 @@ const sendWarningEmail = async (req, res) => {
     }
 
     const mailOptions = {
-      from: '"Edu Stack Pro School Registry" <noreply@edustack.com>',
+      from: '"EduStack School Registry" <noreply@edustack.com>',
       to: targetEmail,
       subject: `⚠️ ATTENDANCE WARNING NOTICE: ${student.name.toUpperCase()} (Below 75%)`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
           <div style="background-color: #ef4444; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 4px; text-align: center;">
-            EDU STACK PRO ACADEMY - NOTICE
+            EDUSTACK ACADEMY - NOTICE
           </div>
           <p style="margin-top: 20px; font-size: 14px; color: #4a5568;">
             Dear Parent / Guardian,
@@ -302,23 +302,4 @@ const getGuardianStudent = async (req, res) => {
   }
 };
 
-const registerFace = async (req, res) => {
-  try {
-    const { faceDescriptor } = req.body;
-    if (!faceDescriptor) {
-      throw new Error('Please provide face descriptor data');
-    }
-    const user = await User.findByPk(req.user.id);
-    if (!user) {
-      throw new Error('User not found');
-    }
-    user.faceDescriptor = faceDescriptor;
-    await user.save();
-    
-    res.status(200).json({ message: 'Face template registered successfully!', faceDescriptor });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-module.exports = { getUsers, updateUser, sendWarningEmail, deleteUser, getResumeData, getGuardianStudent, registerFace };
+module.exports = { getUsers, updateUser, sendWarningEmail, deleteUser, getResumeData, getGuardianStudent };

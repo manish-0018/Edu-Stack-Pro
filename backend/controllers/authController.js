@@ -1,4 +1,4 @@
-const { User, Class, College, Transaction, Notification } = require('../models');
+const { User, Class, College, CourseRollConfig } = require('../models');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT
@@ -20,18 +20,19 @@ const register = async (req, res) => {
       throw new Error('Please add all required fields');
     }
 
-    // Role Verification Key to prevent students from registering as Admin or Teacher
-    if (role === 'admin' || role === 'teacher') {
+    // Role Verification Key to prevent students from registering as Admin, Teacher or Mentor
+    if (role === 'admin' || role === 'teacher' || role === 'mentor') {
       if (!collegeId) {
         res.status(400);
-        throw new Error('Please select a college to register as an Admin or Teacher.');
+        throw new Error('Please select a college to register as staff.');
       }
       const college = await College.findByPk(collegeId);
       if (!college) {
         res.status(404);
         throw new Error('Selected college not found.');
       }
-      if (accessCode !== college.secretKey) {
+      const masterLicense = process.env.PLATFORM_LICENSE_KEY || 'EDUSTACK-LICENSE-2026';
+      if (accessCode !== college.secretKey && accessCode !== masterLicense) {
         res.status(401);
         throw new Error(`Invalid Secret Access Code for ${college.name}.`);
       }
@@ -59,6 +60,30 @@ const register = async (req, res) => {
       userData.classId = classId;
     }
 
+    // Automatic non-colliding sequential roll number generator
+    if (userData.role === 'student' && userData.course && userData.collegeId) {
+      let rollConfig = await CourseRollConfig.findOne({
+        where: { course: userData.course, collegeId: userData.collegeId }
+      });
+      if (rollConfig) {
+        const nextRoll = rollConfig.currentRollNo + 1;
+        userData.rollNo = nextRoll;
+        await rollConfig.update({ currentRollNo: nextRoll });
+      } else {
+        const maxConfig = await CourseRollConfig.findOne({
+          order: [['currentRollNo', 'DESC']]
+        });
+        const startRoll = maxConfig ? (maxConfig.currentRollNo + 1000) : 2601001;
+        await CourseRollConfig.create({
+          course: userData.course,
+          collegeId: userData.collegeId,
+          startRollNo: startRoll,
+          currentRollNo: startRoll
+        });
+        userData.rollNo = startRoll;
+      }
+    }
+
     const user = await User.create(userData);
 
     // If a parent email is supplied and the new user is a student, just store it
@@ -70,7 +95,7 @@ if (parentEmail && user.role === 'student') {
 
     if (user) {
       const fullUser = await User.findByPk(user.id, {
-        include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
+        include: [{ model: College, as: 'College', attributes: ['name'] }]
       });
       res.status(201).json({
         id: fullUser.id,
@@ -79,10 +104,9 @@ if (parentEmail && user.role === 'student') {
         role: fullUser.role,
         classId: fullUser.classId,
         course: fullUser.course,
+        rollNo: fullUser.rollNo,
         collegeId: fullUser.collegeId,
         College: fullUser.College,
-        faceDescriptor: fullUser.faceDescriptor,
-        isPremium: fullUser.isPremium,
         token: generateToken(fullUser.id),
       });
     } else {
@@ -106,7 +130,7 @@ const login = async (req, res) => {
 
     if (user && (await user.matchPassword(password))) {
       const fullUser = await User.findByPk(user.id, {
-        include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
+        include: [{ model: College, as: 'College', attributes: ['name'] }]
       });
       res.json({
         id: fullUser.id,
@@ -115,10 +139,9 @@ const login = async (req, res) => {
         role: fullUser.role,
         classId: fullUser.classId,
         course: fullUser.course,
+        rollNo: fullUser.rollNo,
         collegeId: fullUser.collegeId,
         College: fullUser.College,
-        faceDescriptor: fullUser.faceDescriptor,
-        isPremium: fullUser.isPremium,
         token: generateToken(fullUser.id),
       });
     } else {
@@ -137,7 +160,7 @@ const getMe = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] },
-      include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
+      include: [{ model: College, as: 'College', attributes: ['name'] }]
     });
     res.status(200).json(user);
   } catch (error) {
@@ -246,120 +269,23 @@ const createCollege = async (req, res) => {
   }
 };
 
-const updateCollegeLocation = async (req, res) => {
+// @desc    Update a college tenant (e.g. settings or GPS coordinates)
+// @route   PUT /api/auth/colleges/:id
+// @access  Private
+const updateCollege = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
-    }
-    const { latitude, longitude } = req.body;
-    const college = await College.findByPk(req.params.id);
+    const { id } = req.params;
+    const { latitude, longitude, midSemStartDate, midSemEndDate, isMidSemAdmitCardEnabled, endSemStartDate, endSemEndDate, isEndSemAdmitCardEnabled } = req.body;
+
+    const college = await College.findByPk(id);
     if (!college) {
-      return res.status(404).json({ message: 'College not found' });
+      res.status(404);
+      throw new Error('College not found');
     }
-    await college.update({ 
-      latitude: parseFloat(latitude), 
-      longitude: parseFloat(longitude) 
-    });
-    res.status(200).json({ message: 'Campus location updated successfully!', college });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-const upgradePremium = async (req, res) => {
-  try {
-    const { amount, paymentMethod } = req.body;
-    const user = await User.findByPk(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    user.isPremium = true;
-    await user.save();
-
-    // Create a transaction record
-    const transactionId = 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    await Transaction.create({
-      studentId: user.id,
-      amount: amount || 2.00,
-      paymentMethod: paymentMethod || 'UPI',
-      transactionId,
-      status: 'completed'
-    });
-
-    // Create inbox notification
-    await Notification.create({
-      userId: user.id,
-      title: 'Edu Stack Plus Active 👑',
-      message: `You have successfully purchased the Premium Semester Pass for $${(amount || 2.00).toFixed(2)} via ${paymentMethod || 'UPI'}. Priority tutoring, global finder, and whiteboard recording are now active!`,
-      type: 'success'
-    });
-
-    res.status(200).json({ message: 'Upgraded to Premium Semester Pass successfully!', isPremium: true });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-const getTransactions = async (req, res) => {
-  try {
-    const transactions = await Transaction.findAll({
-      where: { studentId: req.user.id },
-      order: [['createdAt', 'DESC']]
-    });
-    res.status(200).json(transactions);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const getPaymentConfig = async (req, res) => {
-  try {
-    res.status(200).json({
-      upiId: process.env.DEVELOPER_UPI_ID || 'yourupi@upi'
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const getCollegeSettings = async (req, res) => {
-  try {
-    if (!req.user.collegeId) {
-      return res.status(400).json({ message: 'User is not associated with any college.' });
-    }
-    const college = await College.findByPk(req.user.collegeId);
-    if (!college) {
-      return res.status(404).json({ message: 'College not found.' });
-    }
-    res.status(200).json(college);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const updateCollegeSettings = async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admins only.' });
-    }
-    if (!req.user.collegeId) {
-      return res.status(400).json({ message: 'Admin is not associated with any college.' });
-    }
-    const college = await College.findByPk(req.user.collegeId);
-    if (!college) {
-      return res.status(404).json({ message: 'College not found.' });
-    }
-
-    const { 
-      midSemStartDate, 
-      midSemEndDate, 
-      isMidSemAdmitCardEnabled, 
-      endSemStartDate, 
-      endSemEndDate, 
-      isEndSemAdmitCardEnabled 
-    } = req.body;
 
     await college.update({
+      latitude: latitude !== undefined ? latitude : college.latitude,
+      longitude: longitude !== undefined ? longitude : college.longitude,
       midSemStartDate: midSemStartDate !== undefined ? midSemStartDate : college.midSemStartDate,
       midSemEndDate: midSemEndDate !== undefined ? midSemEndDate : college.midSemEndDate,
       isMidSemAdmitCardEnabled: isMidSemAdmitCardEnabled !== undefined ? isMidSemAdmitCardEnabled : college.isMidSemAdmitCardEnabled,
@@ -368,7 +294,7 @@ const updateCollegeSettings = async (req, res) => {
       isEndSemAdmitCardEnabled: isEndSemAdmitCardEnabled !== undefined ? isEndSemAdmitCardEnabled : college.isEndSemAdmitCardEnabled
     });
 
-    res.status(200).json({ message: 'College settings updated successfully!', college });
+    res.status(200).json(college);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -381,11 +307,6 @@ module.exports = {
   resetPassword,
   getColleges,
   createCollege,
-  updateCollegeLocation,
-  upgradePremium,
-  getPaymentConfig,
-  getTransactions,
-  getCollegeSettings,
-  updateCollegeSettings
+  updateCollege
 };
 

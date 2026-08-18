@@ -1,0 +1,32 @@
+{
+  "model_name": "EduStack Pro Multi-Task Intelligence Engine",
+  "training_date": "2026-08-18 00:58:45",
+  "dataset_size": 1000,
+  "features_used": [
+    "attendance_pct",
+    "assignment_completion_rate",
+    "average_assignment_marks",
+    "average_quiz_marks",
+    "mid_sem_score",
+    "learning_activity_score"
+  ],
+  "regression": {
+    "mae": 2.6735757496229757,
+    "rmse": 3.2708199080955978,
+    "r2_score": 0.9578295521196668
+  },
+  "classification": {
+    "accuracy": 0.925,
+    "precision": 0.9247685185185185,
+    "recall": 0.9240599979730414,
+    "f1_score": 0.9241790262077249
+  },
+  "feature_importances": {
+    "attendance_pct": 0.823111387319292,
+    "assignment_completion_rate": 0.06634793101768363,
+    "average_assignment_marks": 0.03669438498216108,
+    "average_quiz_marks": 0.04985980481176929,
+    "mid_sem_score": 0.0185738445126967,
+    "learning_activity_score": 0.005412647356397342
+  }
+}

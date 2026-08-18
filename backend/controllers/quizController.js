@@ -1,11 +1,8 @@
-const { Quiz, QuizQuestion, QuizAttempt, User, Subject, Notification } = require('../models');
+const { Quiz, QuizQuestion, QuizAttempt, User, Subject } = require('../models');
 
 // @desc Create quiz with questions (teacher)
 const createQuiz = async (req, res) => {
   try {
-    if (req.user.role !== 'teacher') {
-      return res.status(403).json({ message: 'Only teachers are authorized to create quizzes.' });
-    }
     const { title, subjectId, timeLimitMinutes, dueDate, questions } = req.body;
     const totalMarks = (questions || []).reduce((sum, q) => sum + (q.marks || 1), 0);
 
@@ -15,33 +12,6 @@ const createQuiz = async (req, res) => {
       dueDate: dueDate || null,
       totalMarks
     });
-
-    // Send notifications to students in the class section
-    try {
-      const subject = await Subject.findByPk(subjectId);
-      if (subject && subject.classId) {
-        const students = await User.findAll({
-          where: {
-            role: 'student',
-            classId: subject.classId,
-            collegeId: req.user.collegeId
-          }
-        });
-
-        const notifications = students.map(student => ({
-          userId: student.id,
-          title: 'New Quiz Scheduled 🧠',
-          message: `A new quiz "${title}" has been scheduled for ${subject.name}. Time Limit: ${timeLimitMinutes || 30} mins.`,
-          type: 'info'
-        }));
-
-        if (notifications.length > 0) {
-          await Notification.bulkCreate(notifications);
-        }
-      }
-    } catch (notifErr) {
-      console.error("Failed to dispatch quiz notifications", notifErr);
-    }
 
     if (questions && questions.length > 0) {
       await QuizQuestion.bulkCreate(questions.map(q => ({
@@ -62,32 +32,13 @@ const createQuiz = async (req, res) => {
 const getQuizzes = async (req, res) => {
   try {
     let where = {};
-    let subjectWhere = {};
-
-    if (req.user.role === 'teacher') {
-      where.teacherId = req.user.id;
-    } else if (req.user.role === 'student') {
-      if (!req.user.classId) {
-        return res.status(200).json([]);
-      }
-      subjectWhere.classId = req.user.classId;
-    }
+    if (req.user.role === 'teacher') where.teacherId = req.user.id;
 
     const quizzes = await Quiz.findAll({
       where,
       include: [
-        { 
-          model: Subject, 
-          where: subjectWhere,
-          attributes: ['name', 'code', 'classId'] 
-        },
-        { 
-          model: User, 
-          as: 'Teacher', 
-          attributes: ['name'],
-          where: { collegeId: req.user.collegeId },
-          required: true
-        },
+        { model: Subject, attributes: ['name', 'code'] },
+        { model: User, as: 'Teacher', attributes: ['name'] },
         { model: QuizAttempt, required: false }
       ],
       order: [['createdAt', 'DESC']]
@@ -106,9 +57,6 @@ const getQuizForAttempt = async (req, res) => {
       ]
     });
     if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
-    if (quiz.isLocked) {
-      return res.status(400).json({ message: 'This quiz has been locked by the teacher. Attempts are no longer accepted.' });
-    }
 
     // Check if already attempted
     const existing = await QuizAttempt.findOne({ where: { quizId: quiz.id, studentId: req.user.id } });
@@ -148,20 +96,6 @@ const submitAttempt = async (req, res) => {
 // @desc Get all results for a quiz (teacher)
 const getResults = async (req, res) => {
   try {
-    // Verify quiz belongs to the user's college
-    const quiz = await Quiz.findOne({
-      where: { id: req.params.id },
-      include: [{
-        model: User,
-        as: 'Teacher',
-        where: { collegeId: req.user.collegeId },
-        required: true
-      }]
-    });
-    if (!quiz) {
-      return res.status(403).json({ message: 'Access denied. Quiz does not belong to your college.' });
-    }
-
     const results = await QuizAttempt.findAll({
       where: { quizId: req.params.id },
       include: [{ model: User, as: 'Student', attributes: ['name', 'email'] }],
@@ -184,41 +118,11 @@ const getMyAttempt = async (req, res) => {
 // @desc Delete quiz (teacher/admin)
 const deleteQuiz = async (req, res) => {
   try {
-    const quiz = await Quiz.findOne({
-      where: { id: req.params.id },
-      include: [{
-        model: User,
-        as: 'Teacher',
-        attributes: ['collegeId'],
-        required: true
-      }]
-    });
-    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
-
-    if (req.user.role === 'teacher' && quiz.teacherId !== req.user.id) {
-      return res.status(403).json({ message: 'You can only delete your own quizzes.' });
-    }
-    if (req.user.role === 'admin' && quiz.Teacher?.collegeId !== req.user.collegeId) {
-      return res.status(403).json({ message: 'Access denied. You can only delete quizzes from your college.' });
-    }
-
+    const quiz = await Quiz.findByPk(req.params.id);
+    if (!quiz) return res.status(404).json({ message: 'Not found' });
     await quiz.destroy();
     res.status(200).json({ id: req.params.id });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// @desc Toggle quiz submission lock (teacher who posted)
-const toggleQuizLock = async (req, res) => {
-  try {
-    const quiz = await Quiz.findByPk(req.params.id);
-    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
-    if (req.user.role !== 'teacher' || quiz.teacherId !== req.user.id) {
-      return res.status(403).json({ message: 'Only the teacher who created the quiz can lock it.' });
-    }
-    quiz.isLocked = !quiz.isLocked;
-    await quiz.save();
-    res.status(200).json(quiz);
-  } catch (err) { res.status(500).json({ message: err.message }); }
-};
-
-module.exports = { createQuiz, getQuizzes, getQuizForAttempt, submitAttempt, getResults, getMyAttempt, deleteQuiz, toggleQuizLock };
+module.exports = { createQuiz, getQuizzes, getQuizForAttempt, submitAttempt, getResults, getMyAttempt, deleteQuiz };

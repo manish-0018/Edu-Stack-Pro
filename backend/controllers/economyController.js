@@ -42,16 +42,12 @@ const claimWeeklyTokens = async (req, res) => {
       return res.status(400).json({ message: `Your attendance is ${Math.round(attendancePercentage)}%. You need at least 85% to claim weekly tokens!` });
     }
 
-    // Award tokens (double if premium)
-    const claimAmount = user.isPremium ? 100 : 50;
-    user.tokens = (user.tokens || 0) + claimAmount;
+    // Award 50 tokens
+    user.tokens = (user.tokens || 0) + 50;
     user.lastTokenClaim = new Date();
     await user.save();
 
-    res.status(200).json({ 
-      message: `Successfully claimed ${claimAmount} Edu Stack Pro Tokens!${user.isPremium ? ' (2x Premium Multiplier Active!)' : ''}`, 
-      tokens: user.tokens 
-    });
+    res.status(200).json({ message: 'Successfully claimed 50 EduStack Tokens!', tokens: user.tokens });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -65,24 +61,14 @@ const getMarketplaceMaterials = async (req, res) => {
     });
 
     const purchases = await MaterialPurchase.findAll({
-      where: {
-        studentId: req.user.id,
-        [Op.or]: [
-          { leaseExpiresAt: null },
-          { leaseExpiresAt: { [Op.gt]: new Date() } }
-        ]
-      }
+      where: { studentId: req.user.id }
     });
+    const purchasedIds = purchases.map(p => p.materialId);
 
-    const formatted = materials.map(m => {
-      const p = purchases.find(p => p.materialId === m.id);
-      return {
-        ...m.toJSON(),
-        purchased: !!p,
-        purchaseType: p ? p.purchaseType : null,
-        leaseExpiresAt: p ? p.leaseExpiresAt : null
-      };
-    });
+    const formatted = materials.map(m => ({
+      ...m.toJSON(),
+      purchased: purchasedIds.includes(m.id)
+    }));
 
     res.status(200).json(formatted);
   } catch (err) {
@@ -92,61 +78,33 @@ const getMarketplaceMaterials = async (req, res) => {
 
 const purchaseMaterial = async (req, res) => {
   try {
-    const { couponCode, purchaseType } = req.body;
     const material = await Material.findByPk(req.params.id);
     if (!material) return res.status(404).json({ message: 'Material not found' });
 
     const user = await User.findByPk(req.user.id);
 
-    const activePurchase = await MaterialPurchase.findOne({
-      where: {
-        studentId: user.id,
-        materialId: material.id,
-        [Op.or]: [
-          { leaseExpiresAt: null },
-          { leaseExpiresAt: { [Op.gt]: new Date() } }
-        ]
-      }
+    const alreadyPurchased = await MaterialPurchase.findOne({
+      where: { studentId: user.id, materialId: material.id }
     });
-    if (activePurchase) {
-      return res.status(400).json({ message: 'You already have active access to this material' });
-    }
+    if (alreadyPurchased) return res.status(400).json({ message: 'You already own this material' });
 
-    let basePrice = material.price;
-    if (couponCode) {
-      const code = couponCode.trim().toUpperCase();
-      if (code === 'KIWISTUDY20') {
-        basePrice = Math.ceil(material.price * 0.8);
-      } else if (code === 'CAFEFREE10') {
-        basePrice = Math.ceil(material.price * 0.9);
-      }
-    }
-
-    let finalPrice = basePrice;
-    const isRental = purchaseType === 'rental';
-    if (isRental) {
-      finalPrice = Math.ceil(basePrice * 0.3); // 30% of normal price
-    }
-
-    if ((user.tokens || 0) < finalPrice) {
+    if ((user.tokens || 0) < material.price) {
       return res.status(400).json({ message: 'Insufficient tokens' });
     }
 
-    user.tokens -= finalPrice;
+    user.tokens -= material.price;
     await user.save();
 
     await MaterialPurchase.create({
       studentId: user.id,
-      materialId: material.id,
-      purchaseType: isRental ? 'rental' : 'lifetime',
-      leaseExpiresAt: isRental ? new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000) : null
+      materialId: material.id
     });
 
-    // Reward uploader
+    // Optionally reward uploader
     if (material.uploaderId) {
       const uploader = await User.findByPk(material.uploaderId);
       if (uploader) {
-        uploader.tokens = (uploader.tokens || 0) + Math.floor(finalPrice * 0.8);
+        uploader.tokens = (uploader.tokens || 0) + Math.floor(material.price * 0.8); // 80% cut to uploader
         await uploader.save();
       }
     }

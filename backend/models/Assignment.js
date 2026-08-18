@@ -9,8 +9,7 @@ const Assignment = sequelize.define('Assignment', {
   teacherId:   { type: DataTypes.UUID,    allowNull: false },
   dueDate:     { type: DataTypes.DATE,    allowNull: true  },
   maxMarks:    { type: DataTypes.INTEGER, defaultValue: 100 },
-  fileUrl:     { type: DataTypes.STRING,  allowNull: true  },
-  isLocked:    { type: DataTypes.BOOLEAN, defaultValue: false }
+  fileUrl:     { type: DataTypes.STRING,  allowNull: true  }
 });
 
 module.exports = Assignment;

@@ -46,6 +46,10 @@ const PrepHistory = require('./PrepHistory');
 const StudyGuide = require('./StudyGuide');
 const ProjectPosting = require('./ProjectPosting');
 const ProjectInvite = require('./ProjectInvite');
+const StudyRecommendation = require('./StudyRecommendation');
+const PeerMatch = require('./PeerMatch');
+const CourseRollConfig = require('./CourseRollConfig');
+const MentorshipSession = require('./MentorshipSession');
 
 // User and Class (Students belong to a Class)
 Class.hasMany(User, { foreignKey: 'classId' });
@@ -277,6 +281,26 @@ ProjectInvite.belongsTo(ProjectPosting, { foreignKey: 'projectPostingId' });
 User.hasMany(ProjectInvite, { foreignKey: 'inviteeId' });
 ProjectInvite.belongsTo(User, { as: 'Invitee', foreignKey: 'inviteeId' });
 
+// StudyRecommendation associations
+User.hasMany(StudyRecommendation, { foreignKey: 'studentId' });
+StudyRecommendation.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
+
+// PeerMatch associations
+User.hasMany(PeerMatch, { foreignKey: 'studentId' });
+PeerMatch.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
+User.hasMany(PeerMatch, { foreignKey: 'matchedStudentId' });
+PeerMatch.belongsTo(User, { as: 'MatchedStudent', foreignKey: 'matchedStudentId' });
+
+// PredictionLog associations
+User.hasMany(PredictionLog, { foreignKey: 'userId' });
+PredictionLog.belongsTo(User, { as: 'Student', foreignKey: 'userId' });
+
+// MentorshipSession associations
+User.hasMany(MentorshipSession, { foreignKey: 'studentId', as: 'StudentSessions' });
+User.hasMany(MentorshipSession, { foreignKey: 'mentorId', as: 'MentorSessions' });
+MentorshipSession.belongsTo(User, { foreignKey: 'studentId', as: 'Student' });
+MentorshipSession.belongsTo(User, { foreignKey: 'mentorId', as: 'Mentor' });
+
 module.exports = {
   User,
   Class,
@@ -325,5 +349,9 @@ module.exports = {
   PrepHistory,
   StudyGuide,
   ProjectPosting,
-  ProjectInvite
+  ProjectInvite,
+  StudyRecommendation,
+  PeerMatch,
+  CourseRollConfig,
+  MentorshipSession
 };
