@@ -9,3 +9,9 @@ android/build/
 
 *.log
 .env
+
+# Python virtual environment
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
