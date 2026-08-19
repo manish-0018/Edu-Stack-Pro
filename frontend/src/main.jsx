@@ -5,6 +5,9 @@ import './index.css'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { registerSW } from 'virtual:pwa-register'
+import axios from 'axios'
+
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 
 registerSW({ immediate: true })
 
