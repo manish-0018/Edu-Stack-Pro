@@ -129,7 +129,10 @@ const MarkAttendance = () => {
   const handleEndSmartSession = async () => {
     if (!selectedClass) return;
     try {
-      await axios.post(`/api/classes/${selectedClass}/end-session`);
+      await axios.post(`/api/classes/${selectedClass}/end-session`, {
+        subjectId: selectedSubject,
+        date
+      });
       setIsSmartActive(false);
       setOtp('');
       toast.info('Smart Check-In Session closed.');
