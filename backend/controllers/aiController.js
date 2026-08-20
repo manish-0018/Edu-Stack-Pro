@@ -48,12 +48,141 @@ const generateResponse = async (req, res) => {
   }
 };
 
+// Helper to calculate student prediction metrics and risk level dynamically
+const predictForStudent = async (studentId, collegeId) => {
+  const student = await User.findByPk(studentId);
+  if (!student) return null;
+
+  // 1. Fetch attendance stats
+  const records = await AttendanceRecord.findAll({
+    where: { studentId },
+    include: [{ model: Attendance }]
+  });
+  let attended = 0;
+  records.forEach(r => {
+    if (['present', 'late', 'excused', 'duty'].includes(r.status)) attended++;
+  });
+  const attendance_pct = records.length === 0 ? 75.0 : (attended / records.length) * 100.0;
+
+  // 2. Fetch assignment stats
+  const studentSubjects = await Subject.findAll({ where: { classId: student.classId || null } });
+  const subjectIds = studentSubjects.map(s => s.id);
+  const allAssignments = await Assignment.findAll({ where: { subjectId: { [Op.in]: subjectIds } } });
+  const submissions = await AssignmentSubmission.findAll({ where: { studentId } });
+  const assignment_completion_rate = allAssignments.length === 0 ? 1.0 : (submissions.length / allAssignments.length);
+  
+  let totalAssMarks = 0;
+  let gradedAssCount = 0;
+  submissions.forEach(sub => {
+    if (sub.status === 'graded' && sub.grade !== null && sub.grade !== undefined) {
+      totalAssMarks += sub.grade;
+      gradedAssCount++;
+    }
+  });
+  const average_assignment_marks = gradedAssCount === 0 ? 70.0 : (totalAssMarks / gradedAssCount);
+
+  // 3. Fetch quiz stats
+  const quizAttempts = await QuizAttempt.findAll({ where: { studentId } });
+  let totalQuizScore = 0;
+  quizAttempts.forEach(qa => {
+    totalQuizScore += qa.score || 0;
+  });
+  const average_quiz_marks = quizAttempts.length === 0 ? 70.0 : (totalQuizScore / quizAttempts.length) * 10.0;
+
+  // 4. Fetch marks (mid-sem)
+  const marks = await Mark.findAll({ where: { studentId } });
+  let totalMidSem = 0;
+  let midSemCount = 0;
+  marks.forEach(m => {
+    if (m.midSem !== null) {
+      totalMidSem += m.midSem;
+      midSemCount++;
+    }
+  });
+  const mid_sem_score = midSemCount === 0 ? 70.0 : (totalMidSem / midSemCount);
+
+  // 5. Fetch task activity (learning activity score)
+  const completedTasks = await Task.count({ where: { studentId, status: 'done' } });
+  const learning_activity_score = Math.min(completedTasks * 12.5, 100.0) || 40.0;
+
+  const inputData = {
+    attendance_pct,
+    assignment_completion_rate,
+    average_assignment_marks,
+    average_quiz_marks,
+    mid_sem_score,
+    learning_activity_score
+  };
+
+  let predictionResult;
+  try {
+    const mlRes = await axios.post(`${ML_SERVICE_URL}/predict`, inputData);
+    predictionResult = mlRes.data;
+  } catch (mlErr) {
+    let expectedGrade = (attendance_pct * 0.3) + (average_assignment_marks * 0.3) + (mid_sem_score * 0.4);
+    expectedGrade = Math.min(Math.max(expectedGrade, 30.0), 100.0);
+    let risk = "LOW";
+    const explanation = [];
+    if (attendance_pct < 75.0) {
+      explanation.push(`Attendance is critically low: ${Math.round(attendance_pct)}% (Required is 75%)`);
+    }
+    if (average_assignment_marks < 60.0) {
+      explanation.push(`Assignment performance is weak: ${Math.round(average_assignment_marks)}%`);
+    }
+    if (mid_sem_score < 50.0) {
+      explanation.push(`Mid-semester exam score is low: ${Math.round(mid_sem_score)}%`);
+    }
+    
+    if (attendance_pct < 60.0 || expectedGrade < 50.0) risk = "HIGH";
+    else if (attendance_pct < 75.0 || expectedGrade < 70.0) risk = "MODERATE";
+
+    if (explanation.length === 0) {
+      explanation.push("Academic performance is stable and meets standards.");
+    }
+
+    predictionResult = {
+      predicted_grade_pct: Math.round(expectedGrade, 2),
+      risk_level: risk,
+      explanation,
+      confidence_score: 0.85
+    };
+  }
+
+  // Save log
+  await PredictionLog.create({
+    userId: studentId,
+    collegeId,
+    inputData,
+    predictionResult
+  });
+
+  // Update Study recommendations for subjects where mark is weak
+  const weakMarks = marks.filter(m => (m.midSem && m.midSem < 60) || (m.quiz && m.quiz < 60));
+  for (const wm of weakMarks) {
+    const subject = await Subject.findByPk(wm.subjectId);
+    if (subject) {
+      const materials = await Material.findAll({ where: { subjectId: wm.subjectId }, limit: 2 });
+      const recommendedResources = materials.map(m => ({ id: m.id, title: m.title, url: m.contentUrl }));
+      
+      await StudyRecommendation.upsert({
+        studentId,
+        collegeId,
+        subjectName: subject.name,
+        priority: 1, // High Priority
+        weaknessScore: wm.midSem || wm.quiz || 50,
+        reason: `Low marks in ${subject.name}`,
+        recommendedResources
+      });
+    }
+  }
+
+  return predictionResult;
+};
+
 // Predict Academic Performance and Risk Level
 const predictAcademicFuture = async (req, res) => {
   try {
     const studentId = req.query.studentId || req.user.id;
-    
-    // 1. Enforce strict tenant isolation: Check student belongs to same college
     const student = await User.findByPk(studentId);
     if (!student) {
       return res.status(404).json({ message: 'Student not found.' });
@@ -62,119 +191,7 @@ const predictAcademicFuture = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Student belongs to another college.' });
     }
 
-    // 2. Fetch attendance stats
-    const records = await AttendanceRecord.findAll({
-      where: { studentId },
-      include: [{ model: Attendance }]
-    });
-    let attended = 0;
-    records.forEach(r => {
-      if (['present', 'late', 'excused', 'duty'].includes(r.status)) attended++;
-    });
-    const attendance_pct = records.length === 0 ? 75.0 : (attended / records.length) * 100.0;
-
-    // 3. Fetch assignment stats
-    const studentSubjects = await Subject.findAll({ where: { classId: student.classId || null } });
-    const subjectIds = studentSubjects.map(s => s.id);
-    const allAssignments = await Assignment.findAll({ where: { subjectId: { [Op.in]: subjectIds } } });
-    const submissions = await AssignmentSubmission.findAll({ where: { studentId } });
-    const assignment_completion_rate = allAssignments.length === 0 ? 1.0 : (submissions.length / allAssignments.length);
-    
-    let totalAssMarks = 0;
-    let gradedAssCount = 0;
-    submissions.forEach(sub => {
-      if (sub.status === 'graded' && sub.grade !== null && sub.grade !== undefined) {
-        totalAssMarks += sub.grade;
-        gradedAssCount++;
-      }
-    });
-    const average_assignment_marks = gradedAssCount === 0 ? 70.0 : (totalAssMarks / gradedAssCount);
-
-    // 4. Fetch quiz stats
-    const quizAttempts = await QuizAttempt.findAll({ where: { studentId } });
-    let totalQuizScore = 0;
-    quizAttempts.forEach(qa => {
-      totalQuizScore += qa.score || 0;
-    });
-    const average_quiz_marks = quizAttempts.length === 0 ? 70.0 : (totalQuizScore / quizAttempts.length) * 10.0; // scaled to 100
-
-    // 5. Fetch marks (mid-sem)
-    const marks = await Mark.findAll({ where: { studentId } });
-    let totalMidSem = 0;
-    let midSemCount = 0;
-    marks.forEach(m => {
-      if (m.midSem !== null) {
-        totalMidSem += m.midSem;
-        midSemCount++;
-      }
-    });
-    const mid_sem_score = midSemCount === 0 ? 70.0 : (totalMidSem / midSemCount);
-
-    // 6. Fetch task activity (learning activity score)
-    const completedTasks = await Task.count({ where: { studentId, status: 'done' } });
-    const learning_activity_score = Math.min(completedTasks * 12.5, 100.0) || 40.0;
-
-    const inputData = {
-      attendance_pct,
-      assignment_completion_rate,
-      average_assignment_marks,
-      average_quiz_marks,
-      mid_sem_score,
-      learning_activity_score
-    };
-    console.log("DEBUG Prediction inputData:", JSON.stringify(inputData));
-
-    let predictionResult;
-    try {
-      // Post to FastAPI ML service
-      const mlRes = await axios.post(`${ML_SERVICE_URL}/predict`, inputData);
-      predictionResult = mlRes.data;
-    } catch (mlErr) {
-      console.warn("FastAPI service offline, using fallback heuristic predictor:", mlErr.message, JSON.stringify(mlErr.response?.data));
-      // Fallback local heuristic model (so the app never crashes)
-      let expectedGrade = (attendance_pct * 0.3) + (average_assignment_marks * 0.3) + (mid_sem_score * 0.4);
-      expectedGrade = Math.min(Math.max(expectedGrade, 30.0), 100.0);
-      let risk = "LOW";
-      if (attendance_pct < 60.0 || expectedGrade < 50.0) risk = "HIGH";
-      else if (attendance_pct < 75.0 || expectedGrade < 70.0) risk = "MODERATE";
-
-      predictionResult = {
-        predicted_grade_pct: Math.round(expectedGrade, 2),
-        risk_level: risk,
-        explanation: ["Local prediction engine activated. Please ensure python ML service is online."],
-        confidence_score: 0.85
-      };
-    }
-
-    // Save prediction log to database (isolated by collegeId)
-    await PredictionLog.create({
-      userId: studentId,
-      collegeId: req.user.collegeId,
-      inputData,
-      predictionResult
-    });
-
-    // Update Study recommendations for subjects where mark is weak
-    const weakMarks = marks.filter(m => (m.midSem && m.midSem < 60) || (m.quiz && m.quiz < 60));
-    for (const wm of weakMarks) {
-      const subject = await Subject.findByPk(wm.subjectId);
-      if (subject) {
-        // Find relevant materials for this subject
-        const materials = await Material.findAll({ where: { subjectId: wm.subjectId }, limit: 2 });
-        const recommendedResources = materials.map(m => ({ id: m.id, title: m.title, url: m.contentUrl }));
-        
-        await StudyRecommendation.upsert({
-          studentId,
-          collegeId: req.user.collegeId,
-          subjectName: subject.name,
-          priority: 1, // High Priority
-          weaknessScore: wm.midSem || wm.quiz || 50,
-          reason: `Low marks in ${subject.name}`,
-          recommendedResources
-        });
-      }
-    }
-
+    const predictionResult = await predictForStudent(studentId, req.user.collegeId);
     res.status(200).json(predictionResult);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -184,36 +201,29 @@ const predictAcademicFuture = async (req, res) => {
 // Get early-warning watchlist of at-risk students (For Teachers/Admins)
 const getAtRiskWatchlist = async (req, res) => {
   try {
-    // 1. Fetch latest predictions for all students in this college
-    const latestPredictions = await PredictionLog.findAll({
-      where: { collegeId: req.user.collegeId },
-      include: [{ model: User, as: 'Student', attributes: ['name', 'email', 'course', 'classId'] }],
-      order: [['createdAt', 'DESC']]
+    // 1. Fetch all students in this college
+    const students = await User.findAll({
+      where: { collegeId: req.user.collegeId, role: 'student' }
     });
 
-    // Filter unique student predictions
-    const seen = new Set();
     const watchlist = [];
-
-    latestPredictions.forEach(log => {
-      if (log.userId && !seen.has(log.userId)) {
-        seen.add(log.userId);
-        const result = log.predictionResult;
-        if (result.risk_level === 'HIGH' || result.risk_level === 'MODERATE') {
-          watchlist.push({
-            studentId: log.userId,
-            studentName: log.Student?.name || 'N/A',
-            email: log.Student?.email || 'N/A',
-            course: log.Student?.course || 'N/A',
-            riskLevel: result.risk_level,
-            predictedGrade: result.predicted_grade_pct,
-            explanation: result.explanation,
-            confidence: result.confidence_score,
-            createdAt: log.createdAt
-          });
-        }
+    
+    // Calculate risk for each student in parallel
+    await Promise.all(students.map(async (student) => {
+      const result = await predictForStudent(student.id, req.user.collegeId);
+      if (result && (result.risk_level === 'HIGH' || result.risk_level === 'MODERATE')) {
+        watchlist.push({
+          studentId: student.id,
+          studentName: student.name,
+          email: student.email,
+          course: student.course || 'N/A',
+          riskLevel: result.risk_level,
+          predictedGrade: result.predicted_grade_pct,
+          explanation: result.explanation,
+          confidence: result.confidence_score
+        });
       }
-    });
+    }));
 
     res.status(200).json(watchlist);
   } catch (error) {
