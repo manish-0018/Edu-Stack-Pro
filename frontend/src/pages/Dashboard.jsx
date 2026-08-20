@@ -453,7 +453,7 @@ const Dashboard = () => {
     doc.text("Head of Department (BCA)", 15, 236);
 
     doc.setFont("helvetica", "bold");
-    doc.text("Hemant Kumar", 130, 230);
+    doc.text(stats?.classMentor?.name || "Hemant Kumar", 130, 230);
     doc.setFont("helvetica", "normal");
     doc.text("Class Mentor", 130, 236);
 
@@ -1146,6 +1146,11 @@ const Dashboard = () => {
                       🆔 Roll No: {user.rollNo}
                     </span>
                   )}
+                  {stats?.classMentor && (
+                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
+                      🧑‍🏫 Mentor: {stats.classMentor.name}
+                    </span>
+                  )}
                 </div>
 
 
@@ -1215,11 +1220,6 @@ const Dashboard = () => {
                     " Exams are approaching! You must maintain >= 60% (Mid-Sem) / 50% (End-Sem) or you will be barred from examinations."
                   )}
                 </p>
-                <div className="mt-3 flex gap-2">
-                  <Link to="/recovery" className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                    ✍️ Attend Saturday Remedials to recover credits
-                  </Link>
-                </div>
               </div>
             </div>
           )}
@@ -1259,11 +1259,6 @@ const Dashboard = () => {
                 <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                   Your attendance has dropped below 75%. You have a grace period until <strong>{new Date(stats.gracePeriodEnds).toLocaleDateString()}</strong> to raise your attendance or submit Duty Leave/Medical requests before parents are automatically alerted.
                 </p>
-                <div className="mt-3">
-                  <Link to="/recovery" className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline">
-                    👉 Go to Recovery Console to get attendance credits
-                  </Link>
-                </div>
               </div>
             </div>
           )}

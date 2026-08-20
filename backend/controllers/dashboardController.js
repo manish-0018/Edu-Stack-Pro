@@ -163,6 +163,7 @@ const getDashboardStats = async (req, res) => {
 
       // Check / Set Grace Period based on: either theory < 75 OR lab < 60!
       const studentUser = await User.findByPk(req.user.id);
+      const studentClassId = studentUser.classId;
       const hasDeficit = (theoryTotal > 0 && theoryPercentage < 75) || (labTotal > 0 && labPercentage < 60);
 
       if (hasDeficit && totalHeld > 0) {
@@ -221,7 +222,6 @@ const getDashboardStats = async (req, res) => {
       };
 
       // Fetch all subjects for the student's class, including Teacher details
-      const studentClassId = studentUser.classId;
       const classSubjects = await Subject.findAll({
         where: { classId: studentClassId },
         include: [{ model: User, as: 'Teacher', attributes: ['name', 'email'] }]
@@ -240,6 +240,16 @@ const getDashboardStats = async (req, res) => {
         }
       });
       stats.myTeachers = Object.values(teachersMap);
+
+      // Fetch Class Mentor: Any teacher/admin/mentor in the same college
+      const classMentor = await User.findOne({
+        where: {
+          collegeId: studentUser.collegeId,
+          role: { [Op.in]: ['admin', 'teacher', 'mentor'] }
+        },
+        attributes: ['name', 'email']
+      });
+      stats.classMentor = classMentor ? { name: classMentor.name, email: classMentor.email } : null;
 
       // Subject-wise attendance calculation
       const subjectMap = {};
