@@ -236,21 +236,36 @@ const getDashboardStats = async (req, res) => {
             name: sub.Teacher.name,
             email: sub.Teacher.email,
             subjectName: sub.name,
-            subjectCode: sub.code
+            subjectCode: sub.code,
+            role: 'teacher'
           };
         }
       });
-      stats.myTeachers = Object.values(teachersMap);
 
-      // Fetch Class Mentor: Any teacher/admin/mentor in the same college
+      // Fetch Class Mentor specifically (role = 'mentor') for same college & course
       const classMentor = await User.findOne({
         where: {
           collegeId: studentUser.collegeId,
-          role: { [Op.in]: ['admin', 'teacher', 'mentor'] }
+          course: studentUser.course,
+          role: 'mentor'
         },
         attributes: ['name', 'email']
       });
-      stats.classMentor = classMentor ? { name: classMentor.name, email: classMentor.email } : null;
+
+      // Add mentor as special entry in the Faculty & Instructors list
+      if (classMentor) {
+        teachersMap[classMentor.email] = {
+          name: classMentor.name,
+          email: classMentor.email,
+          subjectName: 'Class Mentor',
+          subjectCode: 'MENTOR',
+          role: 'mentor'
+        };
+      }
+
+      stats.myTeachers = Object.values(teachersMap);
+      // Keep classMentor null — no longer shown in welcome banner
+      stats.classMentor = null;
 
       // Subject-wise attendance calculation
       const subjectMap = {};

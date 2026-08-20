@@ -176,10 +176,10 @@ const getMentorshipSessions = async (req, res) => {
   }
 };
 
-// 6. Create counseling log
+// 6. Create counseling log or schedule meeting
 const createMentorshipSession = async (req, res) => {
   try {
-    const { studentId, notes, actionItems, status, sessionDate } = req.body;
+    const { studentId, notes, actionItems, status, sessionDate, meetingLink, meetingDate } = req.body;
     if (!studentId || !notes) {
       return res.status(400).json({ message: 'Please provide studentId and notes' });
     }
@@ -199,7 +199,9 @@ const createMentorshipSession = async (req, res) => {
       actionItems,
       status: status || 'completed',
       sessionDate: sessionDate || new Date(),
-      collegeId: req.user.collegeId
+      collegeId: req.user.collegeId,
+      meetingLink: meetingLink || null,
+      meetingDate: meetingDate || null
     });
 
     res.status(201).json(session);

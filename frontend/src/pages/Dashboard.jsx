@@ -978,133 +978,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* ── Defaulter Warning Console ───────────────────────── */}
-          {stats.defaulters && stats.defaulters.length > 0 && (
-            <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">
-              <div className="flex items-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/20">
-                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
-                  <AlertTriangle className="text-red-600 dark:text-red-400 w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Defaulter Warning Console</h3>
-                  <p className="text-xs text-gray-400">Students below required attendance threshold — {stats.defaulters.length} requiring immediate action</p>
-                </div>
-                <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-bold rounded-full">
-                  {stats.defaulters.length} At Risk
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-dark-border">
-                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Student</th>
-                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Class</th>
-                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Theory ≥75%</th>
-                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Lab ≥60%</th>
-                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Overall</th>
-                      <th className="p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                    {stats.defaulters.map((d) => (
-                      <tr key={d.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/30 transition-colors">
-                        <td className="p-3">
-                          <button
-                            onClick={() => fetchStudentDetails(d.id)}
-                            className="font-semibold text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 hover:underline text-left"
-                          >
-                            {d.name}
-                          </button>
-                          <div className="text-[11px] text-gray-400 mt-0.5">{d.email}</div>
-                          {d.gracePeriodEnds && new Date(d.gracePeriodEnds) > new Date() && (
-                            <span className="inline-block mt-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
-                              ⏳ Grace until {new Date(d.gracePeriodEnds).toLocaleDateString()}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                            {d.className}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                              d.theoryPercentage >= 75
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            }`}>
-                              {d.theoryPercentage}%
-                            </span>
-                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all ${
-                                  d.theoryPercentage >= 75 ? 'bg-green-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${Math.min(100, d.theoryPercentage)}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] text-gray-400">{d.theoryRatio}</span>
-                          </div>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                              d.labPercentage >= 60
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                            }`}>
-                              {d.labPercentage}%
-                            </span>
-                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all ${
-                                  d.labPercentage >= 60 ? 'bg-green-500' : 'bg-purple-500'
-                                }`}
-                                style={{ width: `${Math.min(100, d.labPercentage)}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] text-gray-400">{d.labRatio}</span>
-                          </div>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{d.attendancePercentage}%</span>
-                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-blue-500 transition-all"
-                                style={{ width: `${Math.min(100, d.attendancePercentage)}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] text-gray-400">{d.attendedClasses}/{d.totalClasses}</span>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => generateWarningLetter(d)}
-                              className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors shadow-sm"
-                            >
-                              <FileText className="w-3.5 h-3.5" /> Letter
-                            </button>
-                            <button
-                              onClick={() => handleSendWarningEmail(d)}
-                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors shadow-sm"
-                            >
-                              <Mail className="w-3.5 h-3.5" /> Email
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          <div className="mt-6">
-            <AiIntelligenceWatchlist user={user} />
-          </div>
+        
         </>
       ) : (
         // STUDENT DASHBOARD LAYOUT
@@ -1146,11 +1020,7 @@ const Dashboard = () => {
                       🆔 Roll No: {user.rollNo}
                     </span>
                   )}
-                  {stats?.classMentor && (
-                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
-                      🧑‍🏫 Mentor: {stats.classMentor.name}
-                    </span>
-                  )}
+                 
                 </div>
 
 
@@ -1549,23 +1419,26 @@ const Dashboard = () => {
             <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">My Faculty & Instructors</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                List of teachers assigned to your academic subjects for this semester:
+                Teachers and class mentor assigned for this semester:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {stats.myTeachers.map((t, idx) => (
-                  <div key={idx} className="bg-gray-50 dark:bg-dark-bg p-4 rounded-xl border border-gray-100 dark:border-dark-border flex items-start gap-3 hover:shadow-md transition-shadow">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                      {t.name.charAt(0).toUpperCase()}
+                {stats.myTeachers.map((t, idx) => {
+                  const isMentor = t.role === 'mentor';
+                  return (
+                  <div key={idx} className={`p-4 rounded-xl border flex items-start gap-3 hover:shadow-md transition-shadow ${isMentor ? 'bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/30' : 'bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border'}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm ${isMentor ? 'bg-gradient-to-br from-purple-500 to-violet-600' : 'bg-gradient-to-br from-primary-500 to-indigo-600'}`}>
+                      {isMentor ? '🧑‍🏫' : t.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">{t.name}</h4>
                       <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-1">{t.email}</p>
-                      <span className="inline-block text-[10px] font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 px-2 py-0.5 rounded-full border border-primary-100 dark:border-primary-900/30">
-                        {t.subjectName} ({t.subjectCode})
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${isMentor ? 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800/30' : 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 border-primary-100 dark:border-primary-900/30'}`}>
+                        {isMentor ? '🎓 Class Mentor' : `${t.subjectName} (${t.subjectCode})`}
                       </span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

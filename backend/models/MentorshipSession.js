@@ -36,6 +36,14 @@ const MentorshipSession = sequelize.define('MentorshipSession', {
   collegeId: {
     type: DataTypes.UUID,
     allowNull: false
+  },
+  meetingLink: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  meetingDate: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 });
 
