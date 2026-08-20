@@ -20,6 +20,38 @@ const College = sequelize.define('College', {
     type: DataTypes.STRING,
     allowNull: false,
     defaultValue: 'EDU-STAFF-KEY-2026'
+  },
+  latitude: {
+    type: DataTypes.DOUBLE,
+    allowNull: true
+  },
+  longitude: {
+    type: DataTypes.DOUBLE,
+    allowNull: true
+  },
+  midSemStartDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+  midSemEndDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+  isMidSemAdmitCardEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  endSemStartDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+  endSemEndDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+  isEndSemAdmitCardEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 });
 

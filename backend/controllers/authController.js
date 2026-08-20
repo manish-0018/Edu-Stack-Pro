@@ -95,7 +95,7 @@ if (parentEmail && user.role === 'student') {
 
     if (user) {
       const fullUser = await User.findByPk(user.id, {
-        include: [{ model: College, as: 'College', attributes: ['name'] }]
+        include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
       });
       res.status(201).json({
         id: fullUser.id,
@@ -130,7 +130,7 @@ const login = async (req, res) => {
 
     if (user && (await user.matchPassword(password))) {
       const fullUser = await User.findByPk(user.id, {
-        include: [{ model: College, as: 'College', attributes: ['name'] }]
+        include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
       });
       res.json({
         id: fullUser.id,
@@ -160,7 +160,7 @@ const getMe = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] },
-      include: [{ model: College, as: 'College', attributes: ['name'] }]
+      include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
     });
     res.status(200).json(user);
   } catch (error) {
