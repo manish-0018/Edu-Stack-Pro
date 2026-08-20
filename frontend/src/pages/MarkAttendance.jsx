@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Save } from 'lucide-react';
+import { Save, ShieldAlert, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { io } from 'socket.io-client';
 
 const MarkAttendance = () => {
   const { user } = useAuth();
@@ -17,6 +18,12 @@ const MarkAttendance = () => {
   const [materialTitle, setMaterialTitle] = useState('');
   const [materialUrl, setMaterialUrl] = useState('');
   const [materialSaving, setMaterialSaving] = useState(false);
+
+  // Geofenced Session States
+  const [isSmartActive, setIsSmartActive] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [expiresIn, setExpiresIn] = useState(15);
+  const [checkedInStudents, setCheckedInStudents] = useState([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -35,6 +42,101 @@ const MarkAttendance = () => {
     };
     fetchInitialData();
   }, []);
+
+  // Socket.io check-in listener
+  useEffect(() => {
+    let socketClient;
+    if (isSmartActive && selectedClass) {
+      socketClient = io(axios.defaults.baseURL || window.location.origin);
+      
+      socketClient.on('connect', () => {
+        socketClient.emit('join_session', selectedClass);
+      });
+
+      socketClient.on('student_checked_in', (data) => {
+        setCheckedInStudents(prev => {
+          if (prev.some(s => s.id === data.studentId)) return prev;
+          return [...prev, { id: data.studentId, name: data.name, email: data.email }];
+        });
+        
+        // Auto-mark present in UI list
+        setAttendanceData(prev => ({
+          ...prev,
+          [data.studentId]: 'present'
+        }));
+        
+        toast.success(`${data.name} checked in successfully!`);
+      });
+    }
+    return () => {
+      if (socketClient) {
+        socketClient.disconnect();
+      }
+    };
+  }, [isSmartActive, selectedClass]);
+
+  // Code rotation timer countdown
+  useEffect(() => {
+    let timer;
+    if (isSmartActive) {
+      timer = setInterval(() => {
+        setExpiresIn(prev => {
+          if (prev <= 1) {
+            handleRotateCodes();
+            return 15;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isSmartActive, selectedClass]);
+
+  const handleStartSmartSession = async () => {
+    if (!selectedClass || !selectedSubject) {
+      toast.error('Please select a class and subject first');
+      return;
+    }
+    try {
+      const res = await axios.post(`/api/classes/${selectedClass}/start-session`, {
+        subjectId: selectedSubject,
+        date,
+        latitude: user.College?.latitude || 20.3533,
+        longitude: user.College?.longitude || 85.8266,
+        enableLocationLock: true
+      });
+      setOtp(res.data.activeOtp);
+      setExpiresIn(15);
+      setCheckedInStudents([]);
+      setIsSmartActive(true);
+      toast.success('Smart Check-In Session started!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to start Smart Session');
+    }
+  };
+
+  const handleRotateCodes = async () => {
+    if (!selectedClass) return;
+    try {
+      const res = await axios.post(`/api/classes/${selectedClass}/rotate-codes`);
+      setOtp(res.data.activeOtp);
+      setExpiresIn(15);
+    } catch (err) {
+      console.error('Failed to rotate session codes', err);
+    }
+  };
+
+  const handleEndSmartSession = async () => {
+    if (!selectedClass) return;
+    try {
+      await axios.post(`/api/classes/${selectedClass}/end-session`);
+      setIsSmartActive(false);
+      setOtp('');
+      toast.info('Smart Check-In Session closed.');
+    } catch (err) {
+      toast.error('Failed to close Smart Session');
+    }
+  };
 
   // Fetch students when a class is selected
   useEffect(() => {
@@ -132,6 +234,93 @@ const MarkAttendance = () => {
           </select>
         </div>
       </div>
+
+      {/* ── Smart Geofenced Check-In Panel ── */}
+      {selectedClass && selectedSubject && (
+        <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+          {!isSmartActive ? (
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  Smart GPS Geofenced Check-In
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Open a live 15-second rotating OTP check-in session. Students can check in on their own dashboard if they are within 5m of the campus target coordinates.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleStartSmartSession}
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow shadow-teal-500/10 whitespace-nowrap self-stretch md:self-auto text-center"
+              >
+                Start Smart Session
+              </button>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-teal-500 to-indigo-600 text-white p-5 rounded-xl relative overflow-hidden">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
+                <div>
+                  <h3 className="text-base font-bold flex items-center gap-2">
+                    📍 Smart Check-In Session Active
+                    <span className="px-2 py-0.5 bg-white/20 text-white text-[9px] font-bold rounded-full uppercase tracking-widest animate-pulse">Live</span>
+                  </h3>
+                  <p className="text-xs text-teal-100 mt-1 max-w-md">
+                    Students can check in using the 4-digit code below. Ensure they are within 5 meters of the campus target coordinates.
+                  </p>
+                  
+                  {/* Active Code Display */}
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/20">
+                      <span className="text-[10px] text-teal-200 block uppercase font-bold tracking-wider">Access Code</span>
+                      <span className="text-2xl font-black font-mono tracking-widest">{otp || '----'}</span>
+                    </div>
+                    <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/20">
+                      <span className="text-[10px] text-teal-200 block uppercase font-bold tracking-wider">Expires In</span>
+                      <span className="text-2xl font-black font-mono">{expiresIn}s</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleRotateCodes}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all text-center"
+                  >
+                    Force Rotate Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEndSmartSession}
+                    className="px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-all shadow text-center"
+                  >
+                    End Check-In Session
+                  </button>
+                </div>
+              </div>
+              
+              {/* Live Checked-In Students List */}
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <h4 className="text-xs uppercase font-bold tracking-wider text-teal-200 mb-2">
+                  Live Check-Ins ({checkedInStudents.length})
+                </h4>
+                {checkedInStudents.length === 0 ? (
+                  <p className="text-xs text-teal-100 italic">Waiting for students to check in...</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-2">
+                    {checkedInStudents.map(student => (
+                      <span key={student.id} className="bg-white/20 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 animate-pulse">
+                        ✅ {student.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {students.length > 0 && (
         <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden">

@@ -38,6 +38,22 @@ const Class = sequelize.define('Class', {
   isLocationLocked: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  isSessionActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  activeOtp: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  activeQrToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  activeOtpExpires: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 });
 

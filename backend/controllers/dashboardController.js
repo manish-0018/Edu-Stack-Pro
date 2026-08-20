@@ -180,6 +180,31 @@ const getDashboardStats = async (req, res) => {
       }
       stats.gracePeriodEnds = studentUser.gracePeriodEnds;
 
+      // Active check-in session detection for student's class
+      const activeClassData = await Class.findOne({
+        where: { id: studentClassId, isSessionActive: true }
+      });
+      if (activeClassData) {
+        const activeAttendance = await Attendance.findOne({
+          where: { classId: studentClassId, date: new Date().toISOString().split('T')[0] },
+          order: [['createdAt', 'DESC']],
+          include: [{ model: Subject, attributes: ['name', 'code'] }]
+        });
+
+        stats.activeClass = {
+          id: activeClassData.id,
+          name: activeClassData.name,
+          latitude: activeClassData.latitude,
+          longitude: activeClassData.longitude,
+          isLocationLocked: activeClassData.isLocationLocked,
+          subjectId: activeAttendance ? activeAttendance.subjectId : null,
+          subjectName: activeAttendance && activeAttendance.Subject ? activeAttendance.Subject.name : 'Class Session',
+          subjectCode: activeAttendance && activeAttendance.Subject ? activeAttendance.Subject.code : ''
+        };
+      } else {
+        stats.activeClass = null;
+      }
+
       // AI Predictor Stats
       const theorySafe = theoryAttended > 0 ? Math.max(0, Math.floor(theoryAttended / 0.75) - theoryTotal) : 0;
       const labSafe = labAttended > 0 ? Math.max(0, Math.floor(labAttended / 0.60) - labTotal) : 0;
