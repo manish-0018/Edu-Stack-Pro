@@ -25,7 +25,20 @@ const markAttendance = async (req, res) => {
     });
 
     if (existingAttendance) {
-      throw new Error('Attendance already marked for this date');
+      // Delete existing individual student records for this attendanceId
+      await AttendanceRecord.destroy({
+        where: { attendanceId: existingAttendance.id }
+      });
+
+      // Create the new records
+      const mappedRecords = records.map(r => ({
+        attendanceId: existingAttendance.id,
+        studentId: r.studentId,
+        status: r.status
+      }));
+
+      await AttendanceRecord.bulkCreate(mappedRecords);
+      return res.status(200).json(existingAttendance);
     }
 
     // Create the master attendance record

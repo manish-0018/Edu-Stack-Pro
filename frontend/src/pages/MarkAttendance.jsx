@@ -133,9 +133,18 @@ const MarkAttendance = () => {
         subjectId: selectedSubject,
         date
       });
+      
+      // Update the manual table list based on check-ins
+      const finalData = {};
+      const checkedInIds = new Set(checkedInStudents.map(s => s.id));
+      students.forEach(s => {
+        finalData[s.id] = checkedInIds.has(s.id) ? 'present' : 'absent';
+      });
+      setAttendanceData(finalData);
+
       setIsSmartActive(false);
       setOtp('');
-      toast.info('Smart Check-In Session closed.');
+      toast.info('Smart Check-In Session closed. Student list updated.');
     } catch (err) {
       toast.error('Failed to close Smart Session');
     }
