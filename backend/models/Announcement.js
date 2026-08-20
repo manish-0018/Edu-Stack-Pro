@@ -13,7 +13,7 @@ const Announcement = sequelize.define('Announcement', {
   expiresAt:  { type: DataTypes.DATE,    allowNull: true  },
   postedById: { type: DataTypes.UUID,    allowNull: false },
   targetRole: {
-    type: DataTypes.ENUM('all', 'student', 'teacher'),
+    type: DataTypes.ENUM('all', 'student', 'teacher', 'mentor'),
     defaultValue: 'all'
   },
   collegeId: {

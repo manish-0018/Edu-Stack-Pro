@@ -80,7 +80,7 @@ function App() {
           <Route path="assignments" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Assignments /></ProtectedRoute>} />
           <Route path="quizzes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Quizzes /></ProtectedRoute>} />
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
-          <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Announcements /></ProtectedRoute>} />
+          <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'mentor']}><Announcements /></ProtectedRoute>} />
           <Route path="upgrade" element={<ProtectedRoute><PremiumUpgrade /></ProtectedRoute>} />
         </Route>
       </Routes>
