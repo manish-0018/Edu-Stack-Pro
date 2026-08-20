@@ -33,7 +33,18 @@ const getAnnouncements = async (req, res) => {
 
     // Role filter
     if (req.user.role !== 'admin') {
-      where.targetRole = { [Op.in]: ['all', req.user.role] };
+      if (req.user.role === 'mentor') {
+        // Mentors can see: 'all', 'mentor', 'student' targetted, OR anything they personally posted
+        where[Op.and] = where[Op.and] || [];
+        where[Op.and].push({
+          [Op.or]: [
+            { targetRole: { [Op.in]: ['all', 'mentor', 'student'] } },
+            { postedById: req.user.id }
+          ]
+        });
+      } else {
+        where.targetRole = { [Op.in]: ['all', req.user.role] };
+      }
     }
 
     const announcements = await Announcement.findAll({

@@ -25,7 +25,7 @@ const MentorDashboard = () => {
   const [submittingSession, setSubmittingSession] = useState(false);
 
   const [showAnnForm, setShowAnnForm] = useState(false);
-  const [annForm, setAnnForm] = useState({ title: "", content: "", category: "General", targetRole: "student" });
+  const [annForm, setAnnForm] = useState({ title: "", content: "", category: "General", targetRole: "all" });
   const [submittingAnn, setSubmittingAnn] = useState(false);
 
   const [showMeetForm, setShowMeetForm] = useState(false);
