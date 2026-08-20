@@ -29,7 +29,7 @@ const MentorDashboard = () => {
   const [submittingAnn, setSubmittingAnn] = useState(false);
 
   const [showMeetForm, setShowMeetForm] = useState(false);
-  const [meetForm, setMeetForm] = useState({ studentId: "", title: "", agenda: "", meetingLink: "", meetingDate: "", meetingTime: "" });
+  const [meetForm, setMeetForm] = useState({ studentIds: [], title: "", agenda: "", meetingLink: "", meetingDate: "", meetingTime: "" });
   const [submittingMeet, setSubmittingMeet] = useState(false);
 
   const fetchDashboardData = async () => {
@@ -111,18 +111,23 @@ const MentorDashboard = () => {
 
   const handleScheduleMeeting = async (e) => {
     e.preventDefault();
-    if (!meetForm.studentId || !meetForm.title || !meetForm.meetingDate || !meetForm.meetingTime) {
-      toast.error("Fill in student, title, date and time."); return;
+    if (!meetForm.studentIds || meetForm.studentIds.length === 0 || !meetForm.title || !meetForm.meetingDate || !meetForm.meetingTime) {
+      toast.error("Fill in students, title, date and time."); return;
     }
     setSubmittingMeet(true);
     try {
       const meetingDateTime = new Date(`${meetForm.meetingDate}T${meetForm.meetingTime}`);
-      await axios.post("/api/mentor/sessions", {
-        studentId: meetForm.studentId, notes: meetForm.title, actionItems: meetForm.agenda,
-        status: "scheduled", meetingLink: meetForm.meetingLink || null, meetingDate: meetingDateTime.toISOString()
-      });
-      toast.success("Meeting scheduled!");
-      setShowMeetForm(false); setMeetForm({ studentId: "", title: "", agenda: "", meetingLink: "", meetingDate: "", meetingTime: "" });
+      
+      // Schedule meeting for each selected student in parallel
+      await Promise.all(meetForm.studentIds.map(studentId => 
+        axios.post("/api/mentor/sessions", {
+          studentId, notes: meetForm.title, actionItems: meetForm.agenda,
+          status: "scheduled", meetingLink: meetForm.meetingLink || null, meetingDate: meetingDateTime.toISOString()
+        })
+      ));
+
+      toast.success("Meetings scheduled successfully!");
+      setShowMeetForm(false); setMeetForm({ studentIds: [], title: "", agenda: "", meetingLink: "", meetingDate: "", meetingTime: "" });
       const res = await axios.get("/api/mentor/sessions"); setSessions(res.data);
     } catch (err) { toast.error(err.response?.data?.message || "Failed to schedule"); }
     finally { setSubmittingMeet(false); }
@@ -359,13 +364,28 @@ const MentorDashboard = () => {
               <form onSubmit={handleScheduleMeeting} className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-5 space-y-4">
                 <h4 className="font-bold text-gray-900 dark:text-white text-sm">New Meeting</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Select Mentee *</label>
-                    <select value={meetForm.studentId} onChange={e => setMeetForm({ ...meetForm, studentId: e.target.value })} required
-                      className="w-full px-4 py-2.5 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl text-sm outline-none focus:border-indigo-500">
-                      <option value="">-- Choose mentee --</option>
-                      {mentees.map(m => <option key={m.id} value={m.id}>{m.name} ({m.rollNo || "N/A"})</option>)}
-                    </select>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Select Mentees *</label>
+                    <div className="flex flex-wrap gap-4 p-3.5 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl">
+                      {mentees.map(m => (
+                        <label key={m.id} className="flex items-center gap-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={meetForm.studentIds ? meetForm.studentIds.includes(m.id) : false}
+                            onChange={e => {
+                              const ids = meetForm.studentIds || [];
+                              if (e.target.checked) {
+                                setMeetForm({ ...meetForm, studentIds: [...ids, m.id] });
+                              } else {
+                                setMeetForm({ ...meetForm, studentIds: ids.filter(id => id !== m.id) });
+                              }
+                            }}
+                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                          />
+                          <span>{m.name} ({m.rollNo || "N/A"})</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Meeting Title *</label>

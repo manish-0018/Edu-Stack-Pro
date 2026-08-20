@@ -75,17 +75,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Manage Marks', icon: <BarChart3 />, path: '/marks', roles: ['teacher'] },
     { name: 'Assignments', icon: <ClipboardList />, path: '/assignments', roles: ['admin', 'teacher', 'student'] },
     { name: 'Quizzes', icon: <Brain />, path: '/quizzes', roles: ['admin', 'teacher', 'student'] },
-    { name: 'Announcements', icon: <Megaphone />, path: '/announcements', roles: ['admin', 'teacher', 'student', 'mentor'] },
-    { name: 'Subject Forums', icon: <MessageSquare />, path: '/forums', roles: ['admin', 'student', 'teacher', 'mentor'] },
+    { name: 'Announcements', icon: <Megaphone />, path: '/announcements', roles: ['admin', 'teacher', 'student'] },
+    { name: 'Subject Forums', icon: <MessageSquare />, path: '/forums', roles: ['admin', 'student', 'teacher'] },
     { name: 'My Portfolio', icon: <UserSquare2 />, path: '/portfolio', roles: ['student'] },
     { name: 'Placements', icon: <Briefcase />, path: '/placements', roles: ['admin', 'teacher', 'student'] },
     { name: 'Mentorship', icon: <Users2 />, path: '/mentorship', roles: ['admin', 'student'] },
     { name: 'Study Buddies', icon: <HeartHandshake />, path: '/buddies', roles: ['student'] },
-    { name: 'Resource Hub', icon: <PenTool />, path: '/resources', roles: ['admin', 'student', 'teacher', 'mentor'] },
+    { name: 'Resource Hub', icon: <PenTool />, path: '/resources', roles: ['admin', 'student', 'teacher'] },
     { name: 'Opportunities', icon: <Compass />, path: '/opportunities', roles: ['admin', 'student'] },
-    { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher', 'mentor'] },
-    { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian', 'mentor'] },
-    { name: 'Upgrade to Plus', icon: <Sparkles className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student', 'teacher', 'mentor', 'admin'] }
+    { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher'] },
+    { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian'] },
+    { name: 'Upgrade to Plus', icon: <Sparkles className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student', 'teacher', 'admin'] }
   ];
 
   return (
