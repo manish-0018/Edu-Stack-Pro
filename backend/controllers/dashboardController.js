@@ -1,4 +1,5 @@
 const { User, Class, Subject, AttendanceRecord, Attendance, Mark, RecoveryAssignment } = require('../models');
+const { Op } = require('sequelize');
 
 const getDashboardStats = async (req, res) => {
   try {
