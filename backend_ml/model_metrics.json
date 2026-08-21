@@ -1,7 +1,7 @@
 {
-  "model_name": "EduStack Pro Multi-Task Intelligence Engine",
-  "training_date": "2026-08-18 00:58:45",
-  "dataset_size": 1000,
+  "model_name": "EduStack Pro Intelligent Engine (Linear Regression + Gradient Boosting Classifier)",
+  "training_date": "2026-08-21 14:58:12",
+  "dataset_size": 2000,
   "features_used": [
     "attendance_pct",
     "assignment_completion_rate",
@@ -11,22 +11,80 @@
     "learning_activity_score"
   ],
   "regression": {
-    "mae": 2.6735757496229757,
-    "rmse": 3.2708199080955978,
-    "r2_score": 0.9578295521196668
+    "model": "Linear Regression",
+    "mae": 2.0148240844921714,
+    "rmse": 2.4442505038705615,
+    "r2_score": 0.9757201999045654
   },
   "classification": {
-    "accuracy": 0.925,
-    "precision": 0.9247685185185185,
-    "recall": 0.9240599979730414,
-    "f1_score": 0.9241790262077249
+    "model": "Gradient Boosting Classifier",
+    "accuracy": 0.965,
+    "precision": 0.9668021680216802,
+    "recall": 0.9649446430052063,
+    "f1_score": 0.9658358950396092
   },
   "feature_importances": {
-    "attendance_pct": 0.823111387319292,
-    "assignment_completion_rate": 0.06634793101768363,
-    "average_assignment_marks": 0.03669438498216108,
-    "average_quiz_marks": 0.04985980481176929,
-    "mid_sem_score": 0.0185738445126967,
-    "learning_activity_score": 0.005412647356397342
-  }
+    "attendance_pct": 0.7529169327926787,
+    "assignment_completion_rate": 0.07684472191839802,
+    "average_assignment_marks": 0.07034575817792588,
+    "average_quiz_marks": 0.0803976007000818,
+    "mid_sem_score": 0.01551743436451598,
+    "learning_activity_score": 0.003977552046399727
+  },
+  "regression_comparison": [
+    {
+      "model_name": "Random Forest Regressor",
+      "mae": 2.0980898673514488,
+      "rmse": 2.559655525069245,
+      "r2_score": 0.9733733380272533
+    },
+    {
+      "model_name": "Decision Tree Regressor",
+      "mae": 3.023790674576262,
+      "rmse": 3.7492635837742214,
+      "r2_score": 0.9428724463058374
+    },
+    {
+      "model_name": "Gradient Boosting Regressor",
+      "mae": 2.0561095199564465,
+      "rmse": 2.502097994958886,
+      "r2_score": 0.974557351987065
+    },
+    {
+      "model_name": "Linear Regression",
+      "mae": 2.0148240844921714,
+      "rmse": 2.4442505038705615,
+      "r2_score": 0.9757201999045654
+    }
+  ],
+  "classification_comparison": [
+    {
+      "model_name": "Random Forest Classifier",
+      "accuracy": 0.9625,
+      "precision": 0.9647127007782745,
+      "recall": 0.9622346159049352,
+      "f1_score": 0.9634160762325209
+    },
+    {
+      "model_name": "Decision Tree Classifier",
+      "accuracy": 0.955,
+      "precision": 0.9573165734423341,
+      "recall": 0.955786409715949,
+      "f1_score": 0.9564343542658805
+    },
+    {
+      "model_name": "Gradient Boosting Classifier",
+      "accuracy": 0.965,
+      "precision": 0.9668021680216802,
+      "recall": 0.9649446430052063,
+      "f1_score": 0.9658358950396092
+    },
+    {
+      "model_name": "Logistic Regression",
+      "accuracy": 0.9525,
+      "precision": 0.9544688074109703,
+      "recall": 0.9513945075038511,
+      "f1_score": 0.9527259387370473
+    }
+  ]
 }

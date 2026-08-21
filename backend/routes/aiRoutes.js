@@ -1,24 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { 
-  generateResponse, 
+const {
+  generateResponse,
   predictAcademicFuture,
+  getStudentInsights,
+  getAttendanceRisk,
+  getWeakSubjects,
+  getStudyPlan,
   getAtRiskWatchlist,
   getStudyRecommendations,
   semanticSearchResources,
   findStudyBuddyMatches,
   getModelMetrics,
-  triggerModelRetrain
+  triggerModelRetrain,
+  getClassAnalytics
 } = require('../controllers/aiController');
 
-// Secure all endpoints under auth protection middleware
+// All routes protected
 router.post('/ask', protect, generateResponse);
+
+// Student AI routes
 router.get('/predict', protect, predictAcademicFuture);
-router.get('/watchlist', protect, getAtRiskWatchlist);
+router.get('/insights', protect, getStudentInsights);
+router.get('/attendance-risk', protect, getAttendanceRisk);
+router.get('/weak-subjects', protect, getWeakSubjects);
+router.get('/study-plan', protect, getStudyPlan);
 router.get('/recommendations', protect, getStudyRecommendations);
-router.post('/search', protect, semanticSearchResources);
 router.get('/matches', protect, findStudyBuddyMatches);
+router.post('/search', protect, semanticSearchResources);
+
+// Teacher/Admin routes
+router.get('/watchlist', protect, getAtRiskWatchlist);
+router.get('/class-analytics', protect, getClassAnalytics);
+
+// Admin-only routes
 router.get('/metrics', protect, getModelMetrics);
 router.post('/retrain', protect, triggerModelRetrain);
 

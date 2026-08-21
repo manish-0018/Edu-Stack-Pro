@@ -29,6 +29,9 @@ import Portfolio from './pages/Portfolio';
 import Announcements from './pages/Announcements';
 import MentorDashboard from './pages/MentorDashboard';
 import PremiumUpgrade from './pages/PremiumUpgrade';
+import AIInsights from './pages/AIInsights';
+import AIClassInsights from './pages/AIClassInsights';
+import AIModelDashboard from './pages/AIModelDashboard';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -82,6 +85,9 @@ function App() {
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'mentor']}><Announcements /></ProtectedRoute>} />
           <Route path="upgrade" element={<ProtectedRoute><PremiumUpgrade /></ProtectedRoute>} />
+          <Route path="ai-insights" element={<ProtectedRoute allowedRoles={['student']}><AIInsights /></ProtectedRoute>} />
+          <Route path="ai-class-insights" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><AIClassInsights /></ProtectedRoute>} />
+          <Route path="ai-model" element={<ProtectedRoute allowedRoles={['admin']}><AIModelDashboard /></ProtectedRoute>} />
         </Route>
       </Routes>
     </Router>
