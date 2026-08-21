@@ -243,7 +243,31 @@ const getStudentInsights = async (req, res) => {
     try {
       const mlRes = await axios.post(`${ML_SERVICE_URL}/predict`, features, { timeout: 15000 });
       prediction = mlRes.data;
-    } catch (_) {}
+    } catch (err) {
+      console.error("AI Insight Predict Error:", err.message, "URL:", `${ML_SERVICE_URL}/predict`);
+      // Local fallback calculation
+      const expectedGrade = Math.min(Math.max(
+        (features.attendance_pct * 0.3) + (features.average_assignment_marks * 0.3) + (features.mid_sem_score * 0.4),
+        30.0), 100.0);
+      let risk = 'LOW';
+      const explanation = [];
+      if (features.attendance_pct < 75.0) explanation.push(`Attendance is below 75% threshold (${Math.round(features.attendance_pct)}%)`);
+      if (features.average_assignment_marks < 60.0) explanation.push(`Assignment performance is weak (${Math.round(features.average_assignment_marks)}%)`);
+      if (features.mid_sem_score < 50.0) explanation.push(`Mid-semester score is low (${Math.round(features.mid_sem_score)}%)`);
+      if (features.attendance_pct < 60.0 || expectedGrade < 50.0) risk = 'HIGH';
+      else if (features.attendance_pct < 75.0 || expectedGrade < 70.0) risk = 'MODERATE';
+      if (!explanation.length) explanation.push('Academic performance is stable and meets standards.');
+      prediction = {
+        insufficient_data: !hasRealData,
+        message: 'Not enough academic data yet. Add marks and attendance records to generate complete predictions.',
+        required: ['attendance records', 'marks (midSem / quiz / assignment)', 'at least one assignment submission'],
+        predicted_grade_pct: Math.round(expectedGrade * 100) / 100,
+        risk_level: risk,
+        confidence_score: 0.75,
+        explanation,
+        model_note: 'Local calculation fallback (ML service unreachable).'
+      };
+    }
 
     // 2. Attendance risk
     let attendanceRisk = null;
@@ -254,7 +278,22 @@ const getStudentInsights = async (req, res) => {
         threshold_pct: 75.0
       }, { timeout: 10000 });
       attendanceRisk = attRes.data;
-    } catch (_) {}
+    } catch (err) {
+      console.error("AI Insight Attendance Risk Error:", err.message);
+      // Local fallback
+      const current_pct = records.length > 0 ? (attended / records.length) * 100.0 : 75.0;
+      attendanceRisk = {
+        method: "Local Rule-Based Calculation",
+        current_pct: Math.round(current_pct * 100) / 100,
+        projected_pct: Math.round(current_pct * 100) / 100,
+        threshold_pct: 75.0,
+        risk_level: current_pct < 60.0 ? 'HIGH' : current_pct < 75.0 ? 'MODERATE' : 'LOW',
+        classes_attended: attended,
+        classes_total: records.length,
+        classes_needed_to_reach_threshold: current_pct < 75.0 ? Math.ceil((75 * records.length - 100 * attended) / 25) : 0,
+        message: current_pct < 75.0 ? "Attendance is below the required 75% threshold." : "Attendance is satisfactory."
+      };
+    }
 
     // 3. Weak subjects
     let weakSubjects = null;
@@ -268,7 +307,27 @@ const getStudentInsights = async (req, res) => {
       try {
         const wsRes = await axios.post(`${ML_SERVICE_URL}/predict/weak_subjects`, { subjects: subjectProfiles }, { timeout: 10000 });
         weakSubjects = wsRes.data;
-      } catch (_) {}
+      } catch (err) {
+        console.error("AI Insight Weak Subjects Error:", err.message);
+        // Local fallback
+        const profiles = subjectProfiles.map(s => {
+          const composite = (s.mid_sem_pct * 0.45) + (s.quiz_pct * 0.20) + (s.assignment_pct * 0.35);
+          return {
+            subject: s.name,
+            performance_level: composite < 55.0 ? "Weak" : composite < 72.0 ? "Average" : "Strong",
+            color: composite < 55.0 ? "red" : composite < 72.0 ? "orange" : "green",
+            composite_score: Math.round(composite),
+            breakdown: s,
+            advice: composite < 55.0 ? `Focus on ${s.name}.` : "Performance is satisfactory.",
+            explanation: `Composite score: ${Math.round(composite)}%`
+          };
+        });
+        weakSubjects = {
+          method: "Local Rule-Based Calculation",
+          profiles,
+          insufficient_data: false
+        };
+      }
     }
 
     // 4. Recommendations from DB
