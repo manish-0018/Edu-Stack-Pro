@@ -62,6 +62,12 @@ const buildFeaturesForStudent = async (studentId) => {
   const student = await User.findByPk(studentId);
   if (!student) return null;
 
+  // Fetch marks sheet entries (manual grades inputted by teacher)
+  const marks = await Mark.findAll({ 
+    where: { studentId },
+    include: [{ model: Subject, attributes: ['name'] }]
+  });
+
   // 1. Attendance
   const records = await AttendanceRecord.findAll({ where: { studentId } });
   let attended = 0;
@@ -69,7 +75,7 @@ const buildFeaturesForStudent = async (studentId) => {
   const hasAttendanceData = records.length > 0;
   const attendance_pct = hasAttendanceData ? (attended / records.length) * 100.0 : 75.0;
 
-  // 2. Assignments
+  // 2. Assignments (Submissions + Marks table entries)
   const studentSubjects = student.classId
     ? await Subject.findAll({ where: { classId: student.classId } })
     : [];
@@ -79,31 +85,43 @@ const buildFeaturesForStudent = async (studentId) => {
   const hasAssignmentData = allAssignments.length > 0;
   const assignment_completion_rate = hasAssignmentData ? (submissions.length / allAssignments.length) : null;
 
-  let totalAssMarks = 0, gradedAssCount = 0;
+  let totalAssPctSum = 0;
+  let assCount = 0;
   submissions.forEach(sub => {
     if (sub.status === 'graded' && sub.grade !== null && sub.grade !== undefined) {
-      totalAssMarks += sub.grade;
-      gradedAssCount++;
+      totalAssPctSum += sub.grade;
+      assCount++;
     }
   });
-  const average_assignment_marks = gradedAssCount > 0 ? (totalAssMarks / gradedAssCount) : null;
-
-  // 3. Quizzes
-  const quizAttempts = await QuizAttempt.findAll({ where: { studentId } });
-  const hasQuizData = quizAttempts.length > 0;
-  let totalQuizScore = 0;
-  quizAttempts.forEach(qa => { totalQuizScore += qa.score || 0; });
-  const average_quiz_marks = hasQuizData ? (totalQuizScore / quizAttempts.length) * 10.0 : null;
-
-  // 4. Marks (mid-sem) — normalize: midSem is out of 20 → percentage
-  const marks = await Mark.findAll({ 
-    where: { studentId },
-    include: [{ model: Subject, attributes: ['name'] }]
+  marks.forEach(m => {
+    if (m.assignment !== null) {
+      totalAssPctSum += (m.assignment / 40.0) * 100.0; // assignment is max 40
+      assCount++;
+    }
   });
+  const average_assignment_marks = assCount > 0 ? (totalAssPctSum / assCount) : null;
+
+  // 3. Quizzes (Quiz attempts + Marks table entries)
+  const quizAttempts = await QuizAttempt.findAll({ where: { studentId } });
+  let totalQuizPctSum = 0;
+  let quizCount = 0;
+  quizAttempts.forEach(qa => {
+    totalQuizPctSum += (qa.score || 0) * 10.0; // quiz is max 10
+    quizCount++;
+  });
+  marks.forEach(m => {
+    if (m.quiz !== null) {
+      totalQuizPctSum += (m.quiz / 10.0) * 100.0; // quiz is max 10
+      quizCount++;
+    }
+  });
+  const average_quiz_marks = quizCount > 0 ? (totalQuizPctSum / quizCount) : null;
+
+  // 4. Mid-Sem Scores (Marks table midSem column)
   let totalMidSem = 0, midSemCount = 0;
   marks.forEach(m => {
     if (m.midSem !== null) {
-      totalMidSem += (m.midSem / 20.0) * 100.0;  // normalize to percentage
+      totalMidSem += (m.midSem / 20.0) * 100.0; // midSem is max 20
       midSemCount++;
     }
   });
@@ -115,7 +133,7 @@ const buildFeaturesForStudent = async (studentId) => {
   const learning_activity_score = Math.min(completedTasks * 12.5, 100.0);
 
   // Cold-start: require at least attendance + marks OR assignments
-  const hasRealData = hasAttendanceData && (hasMarksData || hasAssignmentData);
+  const hasRealData = hasAttendanceData && (hasMarksData || assCount > 0);
 
   return {
     student,
