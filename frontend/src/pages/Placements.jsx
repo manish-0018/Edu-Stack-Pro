@@ -32,6 +32,37 @@ const Placements = () => {
   });
   const [savingListing, setSavingListing] = useState(false);
 
+  // AI Resume Scorer States
+  const [matchListingId, setMatchListingId] = useState('');
+  const [resumeText, setResumeText] = useState('');
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchResult, setMatchResult] = useState(null);
+
+  const handleAIMatch = async (e) => {
+    e.preventDefault();
+    if (!matchListingId) {
+      toast.error('Please select a company drive');
+      return;
+    }
+    if (!resumeText.trim()) {
+      toast.error('Please paste your resume text');
+      return;
+    }
+    setMatchLoading(true);
+    try {
+      const res = await axios.post('/api/placements/match-resume', {
+        resumeText,
+        companyListingId: matchListingId
+      });
+      setMatchResult(res.data);
+      toast.success('AI Resume Scoring Complete!');
+    } catch (err) {
+      toast.error('Failed to analyze resume');
+    } finally {
+      setMatchLoading(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -303,39 +334,123 @@ const Placements = () => {
           </h2>
 
           {user.role === 'student' ? (
-            <div className="overflow-x-auto pb-4">
-              <div className="flex gap-4 min-w-[800px]">
-                {['applied', 'exam_scheduled', 'interview_round', 'selected', 'rejected'].map(status => (
-                  <div key={status} className="flex-1 bg-gray-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-gray-100 dark:border-dark-border">
-                    <h3 className="font-bold text-sm uppercase tracking-wider mb-4 flex items-center justify-between text-gray-500">
-                      {status.replace('_', ' ')}
-                      <span className="bg-white dark:bg-dark-bg px-2 py-0.5 rounded-full text-xs">
-                        {applications.filter(a => a.status === status).length}
-                      </span>
-                    </h3>
-                    
-                    <div className="space-y-3">
-                      {applications.filter(a => a.status === status).map(app => (
-                        <div key={app.id} className="bg-white dark:bg-dark-card p-3 rounded-xl border border-gray-100 dark:border-dark-border shadow-sm hover:shadow-md transition-shadow">
-                          <h4 className="font-bold text-gray-900 dark:text-white text-sm">{app.Company?.name}</h4>
-                          <p className="text-xs text-primary-500 font-medium mb-2">{app.Company?.position}</p>
-                          
-                          {app.submissionText && (
-                            <div className="bg-gray-50 dark:bg-dark-bg p-2 rounded text-[10px] text-gray-500 italic mb-2 line-clamp-2">
-                              {app.submissionText}
-                            </div>
-                          )}
-                          
-                          <div className="text-[10px] text-gray-400 mt-2">
-                            {new Date(app.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
+            <>
+              {/* AI Resume Fit Matcher Card */}
+              <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-4 mb-6">
+                <div>
+                  <span className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-lg mb-2 inline-block">✨ Powered by AI</span>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI Resume Fit Matcher</h3>
+                  <p className="text-xs text-gray-400">Score your resume skills against active hiring drives to optimize your placement preparation.</p>
+                </div>
+
+                <form onSubmit={handleAIMatch} className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Select Hiring Drive</label>
+                    <select
+                      required
+                      value={matchListingId}
+                      onChange={e => setMatchListingId(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 focus:ring-primary-500 focus:outline-none"
+                    >
+                      <option value="">Choose Company Drive...</option>
+                      {listings.map(l => (
+                        <option key={l.id} value={l.id}>{l.name} - {l.position}</option>
                       ))}
-                    </div>
+                    </select>
                   </div>
-                ))}
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Paste Resume Text</label>
+                    <textarea
+                      required
+                      rows="4"
+                      value={resumeText}
+                      onChange={e => setResumeText(e.target.value)}
+                      placeholder="Paste skills, past projects, work history, or education details..."
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 focus:ring-primary-500 focus:outline-none placeholder-gray-400"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={matchLoading}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md transition-colors disabled:opacity-50"
+                  >
+                    {matchLoading ? 'Analyzing Alignment...' : 'Analyze Resume Fit'}
+                  </button>
+                </form>
+
+                {matchResult && (
+                  <div className="bg-indigo-50/50 dark:bg-indigo-950/20 p-5 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30 space-y-3">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-xl shrink-0">
+                        {matchResult.match_score}%
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white">AI Alignment Score</h4>
+                        <p className="text-[11px] text-gray-400">{matchResult.feedback}</p>
+                      </div>
+                    </div>
+
+                    {matchResult.matching_skills?.length > 0 && (
+                      <div>
+                        <strong className="text-[10px] uppercase text-emerald-600 dark:text-emerald-400 block mb-1">Matching Skills:</strong>
+                        <div className="flex flex-wrap gap-1.5">
+                          {matchResult.matching_skills.map(s => (
+                            <span key={s} className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold">{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {matchResult.missing_skills?.length > 0 && (
+                      <div>
+                        <strong className="text-[10px] uppercase text-orange-600 dark:text-orange-400 block mb-1">Recommended Skills to Add:</strong>
+                        <div className="flex flex-wrap gap-1.5">
+                          {matchResult.missing_skills.map(s => (
+                            <span key={s} className="bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 text-[10px] px-2 py-0.5 rounded font-bold">{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
+
+              <div className="overflow-x-auto pb-4">
+                <div className="flex gap-4 min-w-[800px]">
+                  {['applied', 'exam_scheduled', 'interview_round', 'selected', 'rejected'].map(status => (
+                    <div key={status} className="flex-1 bg-gray-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-gray-100 dark:border-dark-border">
+                      <h3 className="font-bold text-sm uppercase tracking-wider mb-4 flex items-center justify-between text-gray-500">
+                        {status.replace('_', ' ')}
+                        <span className="bg-white dark:bg-dark-bg px-2 py-0.5 rounded-full text-xs">
+                          {applications.filter(a => a.status === status).length}
+                        </span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        {applications.filter(a => a.status === status).map(app => (
+                          <div key={app.id} className="bg-white dark:bg-dark-card p-3 rounded-xl border border-gray-100 dark:border-dark-border shadow-sm hover:shadow-md transition-shadow">
+                            <h4 className="font-bold text-gray-900 dark:text-white text-sm">{app.Company?.name}</h4>
+                            <p className="text-xs text-primary-500 font-medium mb-2">{app.Company?.position}</p>
+                            
+                            {app.submissionText && (
+                              <div className="bg-gray-50 dark:bg-dark-bg p-2 rounded text-[10px] text-gray-500 italic mb-2 line-clamp-2">
+                                {app.submissionText}
+                              </div>
+                            )}
+                            
+                            <div className="text-[10px] text-gray-400 mt-2">
+                              {new Date(app.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           ) : (
             /* Admin/Teacher Dashboard List */
             <div className="space-y-4">

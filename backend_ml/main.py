@@ -585,6 +585,238 @@ async def retrain():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ResumeMatchInput(BaseModel):
+    resume_text: str
+    job_description: str
+
+class QuizGenerationInput(BaseModel):
+    topic: str
+
+
+LOCAL_QUIZ_LIBRARY = {
+    "dbms": {
+        "topic": "Database Management Systems",
+        "questions": [
+            {
+                "question": "Which of the following is used to uniquely identify a tuple in a relation?",
+                "options": ["Primary Key", "Foreign Key", "Composite Key", "Alternate Key"],
+                "correctAnswer": 0
+            },
+            {
+                "question": "Which SQL statement is used to remove all records from a table without logging individual row deletions?",
+                "options": ["DELETE", "DROP", "TRUNCATE", "REMOVE"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "In normalization, which normal form eliminates transitive dependencies?",
+                "options": ["1NF", "2NF", "3NF", "BCNF"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "What does ACID stand for in database transactions?",
+                "options": [
+                    "Atomicity, Consistency, Isolation, Durability",
+                    "Access, Control, Integration, Security",
+                    "Accuracy, Completeness, Indexing, Delivery",
+                    "Algorithm, Cache, Inheritance, Distribution"
+                ],
+                "correctAnswer": 0
+            },
+            {
+                "question": "Which join returns all rows when there is a match in either left or right table?",
+                "options": ["LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL OUTER JOIN"],
+                "correctAnswer": 3
+            }
+        ]
+    },
+    "python": {
+        "topic": "Python Programming",
+        "questions": [
+            {
+                "question": "Which data type in Python is mutable?",
+                "options": ["List", "Tuple", "String", "Integer"],
+                "correctAnswer": 0
+            },
+            {
+                "question": "How do you start a comment in Python?",
+                "options": ["//", "/*", "#", "--"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "What is the correct syntax to output the type of a variable in Python?",
+                "options": ["print(typeOf(x))", "print(type(x))", "print(typeof x)", "print(class(x))"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which method is used to add an item to the end of a list in Python?",
+                "options": ["add()", "insert()", "append()", "push()"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "What is the output of 3 * 1 ** 3 in Python?",
+                "options": ["9", "27", "3", "1"],
+                "correctAnswer": 2
+            }
+        ]
+    },
+    "os": {
+        "topic": "Operating Systems",
+        "questions": [
+            {
+                "question": "What is a deadlock?",
+                "options": [
+                    "A state where a process terminates abnormally",
+                    "A state where two or more processes are blocked waiting for each other",
+                    "A state where memory is exhausted",
+                    "A state where CPU usage reaches 100%"
+                ],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which scheduling algorithm has the risk of starvation?",
+                "options": ["Round Robin", "First Come First Served", "Shortest Job First (non-preemptive)", "Priority Scheduling"],
+                "correctAnswer": 3
+            },
+            {
+                "question": "What is virtual memory?",
+                "options": [
+                    "Memory located on a remote server",
+                    "RAM simulator built in software",
+                    "A technique that maps process virtual addresses to physical addresses, extending RAM onto disk",
+                    "Secondary cache memory"
+                ],
+                "correctAnswer": 2
+            },
+            {
+                "question": "What is thrashing?",
+                "options": [
+                    "Deleting temporary system files",
+                    "Excessive page swapping activity leading to low CPU utilization",
+                    "Fast execution of processes",
+                    "Killing unresponsive applications"
+                ],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which of the following is not a process state?",
+                "options": ["Running", "Blocked", "Ready", "Synchronized"],
+                "correctAnswer": 3
+            }
+        ]
+    }
+}
+
+
+@app.post("/match_resume")
+async def match_resume(data: ResumeMatchInput):
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        def clean_text(text):
+            text = text.lower()
+            text = re.sub(r'[^a-z0-9\s#+\-.]', ' ', text)
+            return text
+
+        cleaned_resume = clean_text(data.resume_text)
+        cleaned_job = clean_text(data.job_description)
+
+        skills_db = [
+            "python", "java", "javascript", "react", "angular", "vue", "node.js", "express",
+            "mongodb", "postgresql", "mysql", "sqlite", "sql", "nosql", "docker", "kubernetes",
+            "aws", "gcp", "azure", "html", "css", "git", "github", "machine learning",
+            "deep learning", "nlp", "django", "flask", "fastapi", "spring boot", "typescript"
+        ]
+
+        resume_skills = [s for s in skills_db if re.search(r'\b' + re.escape(s) + r'\b', cleaned_resume)]
+        job_skills = [s for s in skills_db if re.search(r'\b' + re.escape(s) + r'\b', cleaned_job)]
+
+        matching_skills = list(set(resume_skills) & set(job_skills))
+        missing_skills = list(set(job_skills) - set(resume_skills))
+
+        # TF-IDF Cosine Similarity
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform([cleaned_resume, cleaned_job])
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        match_score = round(float(similarity) * 100, 2)
+
+        if len(job_skills) > 0:
+            overlap_pct = (len(matching_skills) / len(job_skills)) * 100
+            match_score = round((match_score * 0.4) + (overlap_pct * 0.6), 2)
+        else:
+            match_score = 50.0
+
+        match_score = min(max(match_score, 10.0), 99.0)
+
+        if match_score >= 80:
+            feedback = "Excellent match! Your profile aligns closely with the core requirements of this drive. Apply immediately."
+        elif match_score >= 60:
+            feedback = "Good match. You have most of the required foundational skills. Consider brushing up on the missing skills before your interview."
+        else:
+            feedback = "Moderate match. The job description highlights several keywords/skills currently not prominent in your profile. Update your resume to emphasize relevant projects."
+
+        return {
+            "match_score": match_score,
+            "matching_skills": sorted([m.upper() for m in matching_skills]),
+            "missing_skills": sorted([m.upper() for m in missing_skills]),
+            "feedback": feedback
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/generate_quiz")
+async def generate_quiz(data: QuizGenerationInput):
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        topic_lower = data.topic.lower()
+        
+        if api_key:
+            try:
+                headers = {"Content-Type": "application/json"}
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                prompt = f"""Generate a multiple choice quiz on the topic: "{data.topic}".
+Return EXACTLY a JSON object with this structure, do not include any other markdown formatting or prefix, output raw JSON:
+{{
+  "topic": "{data.topic}",
+  "questions": [
+    {{
+      "question": "Question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0
+    }}
+  ]
+}}
+Generate exactly 5 high-quality conceptual questions.
+"""
+                payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                res = requests.post(url, headers=headers, json=payload, timeout=12)
+                if res.status_code == 200:
+                    resp_json = res.json()
+                    reply = resp_json['candidates'][0]['content']['parts'][0]['text']
+                    cleaned_reply = re.sub(r'^```json\s*', '', reply.strip())
+                    cleaned_reply = re.sub(r'\s*```$', '', cleaned_reply)
+                    quiz_data = json.loads(cleaned_reply)
+                    return quiz_data
+            except Exception:
+                pass
+
+        # Local library match
+        matched_key = "dbms"
+        if "python" in topic_lower or "oop" in topic_lower or "program" in topic_lower:
+            matched_key = "python"
+        elif "os" in topic_lower or "operating" in topic_lower or "system" in topic_lower:
+            matched_key = "os"
+            
+        selected_quiz = LOCAL_QUIZ_LIBRARY[matched_key]
+        return {
+            "topic": selected_quiz["topic"],
+            "questions": selected_quiz["questions"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "2.0.0", "models_loaded": True}

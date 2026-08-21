@@ -20,6 +20,41 @@ const Quizzes = () => {
   const [results, setResults] = useState([]);
   const timerRef = useRef(null);
 
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [activeAIQuiz, setActiveAIQuiz] = useState(null); // { topic, questions }
+  const [aiAnswers, setAiAnswers] = useState({}); // { index: selectedIndex }
+  const [aiResult, setAiResult] = useState(null); // { score, total }
+
+  const handleGenerateAIQuiz = async (e) => {
+    e.preventDefault();
+    if (!aiTopic.trim()) return;
+    setAiLoading(true);
+    try {
+      const res = await axios.post('/api/quizzes/generate-ai', { topic: aiTopic });
+      setActiveAIQuiz(res.data);
+      setAiAnswers({});
+      setAiResult(null);
+      toast.success('AI Practice Quiz Generated!');
+    } catch (err) {
+      toast.error('Failed to generate AI Quiz');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const submitAIQuiz = () => {
+    if (!activeAIQuiz) return;
+    let score = 0;
+    activeAIQuiz.questions.forEach((q, qi) => {
+      if (aiAnswers[qi] !== undefined && aiAnswers[qi] === q.correctAnswer) {
+        score++;
+      }
+    });
+    setAiResult({ score, total: activeAIQuiz.questions.length });
+    setActiveAIQuiz(null);
+  };
+
   const [form, setForm] = useState({ title: '', subjectId: '', timeLimitMinutes: 30, dueDate: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0, marks: 1 }] });
 
   useEffect(() => { fetchQuizzes(); fetchSubjects(); }, []);
@@ -92,6 +127,47 @@ const Quizzes = () => {
           </button>
         )}
       </div>
+
+      {/* AI Quiz Generator Card */}
+      {!isTeacher && !isAdmin && (
+        <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 text-white p-6 rounded-3xl shadow-xl border border-indigo-700/50">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <span className="bg-indigo-700/50 border border-indigo-500/30 text-xs uppercase tracking-wider font-extrabold px-3 py-1.5 rounded-lg mb-2 inline-block">✨ Powered by AI</span>
+              <h2 className="text-xl font-black mb-1">AI Practice Quiz Generator</h2>
+              <p className="text-indigo-200 text-sm max-w-xl">Enter any subject or topic (e.g. "DBMS Normalization", "Python OOP") to generate a dynamic 5-question multiple choice practice test instantly.</p>
+            </div>
+            <form onSubmit={handleGenerateAIQuiz} className="flex gap-2 w-full md:w-auto shrink-0">
+              <input
+                required
+                type="text"
+                value={aiTopic}
+                onChange={e => setAiTopic(e.target.value)}
+                placeholder="Enter topic..."
+                className="px-4 py-3 bg-white/10 hover:bg-white/15 border border-white/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder-indigo-300 text-white min-w-[200px]"
+              />
+              <button
+                type="submit"
+                disabled={aiLoading}
+                className="px-6 py-3 bg-white text-indigo-900 hover:bg-indigo-50 font-black rounded-xl text-sm shadow-md transition-all shrink-0 flex items-center gap-2 animate-pulse"
+              >
+                {aiLoading ? 'Generating...' : 'Generate Quiz'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* AI Result Banner */}
+      {aiResult && (
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white p-8 rounded-3xl shadow-xl text-center">
+          <Trophy className="w-12 h-12 mx-auto mb-3" />
+          <h2 className="text-3xl font-black mb-1">AI Practice Quiz Complete!</h2>
+          <p className="text-5xl font-black my-4">{aiResult.score} <span className="text-2xl font-normal opacity-75">/ {aiResult.total}</span></p>
+          <p className="text-lg opacity-90">{Math.round((aiResult.score / aiResult.total) * 100)}% Score (Practice Mode)</p>
+          <button onClick={() => setAiResult(null)} className="mt-5 px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-bold">Close</button>
+        </div>
+      )}
 
       {/* Result Banner */}
       {result && (
@@ -264,6 +340,40 @@ const Quizzes = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      {/* Active AI Quiz Attempt */}
+      {activeAIQuiz && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border dark:border-slate-800">
+            <div className="sticky top-0 bg-white dark:bg-slate-900 p-6 border-b dark:border-slate-800 flex justify-between items-center rounded-t-3xl">
+              <div>
+                <span className="text-xs uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-3.5 py-1.5 rounded-lg font-extrabold mb-1 inline-block">✨ AI Practice Mode</span>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">{activeAIQuiz.topic}</h2>
+              </div>
+              <button onClick={() => setActiveAIQuiz(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl">
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {activeAIQuiz.questions?.map((q, qi) => (
+                <div key={qi} className="p-5 bg-gray-50 dark:bg-slate-800 rounded-2xl">
+                  <p className="font-bold text-gray-900 dark:text-white mb-4">Q{qi + 1}. {q.question}</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {q.options.map((opt, oi) => (
+                      <button key={oi} onClick={() => setAiAnswers(p => ({ ...p, [qi]: oi }))}
+                        className={`text-left px-4 py-3 rounded-xl border-2 transition-all font-medium text-sm ${aiAnswers[qi] === oi ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'border-gray-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'}`}>
+                        {String.fromCharCode(65 + oi)}. {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button onClick={submitAIQuiz}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" /> Submit Practice Quiz
+              </button>
+            </div>
           </div>
         </div>
       )}

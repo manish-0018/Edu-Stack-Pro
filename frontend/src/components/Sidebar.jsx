@@ -66,9 +66,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard />, path: '/dashboard', roles: ['admin', 'teacher', 'student', 'mentor'] },
-    { name: 'AI Insights', icon: <Sparkles className="text-indigo-500" />, path: '/ai-insights', roles: ['student'] },
-    { name: 'AI Class Insights', icon: <BarChart3 className="text-indigo-500" />, path: '/ai-class-insights', roles: ['teacher', 'admin'] },
-    { name: 'AI Model Performance', icon: <Brain className="text-indigo-500" />, path: '/ai-model', roles: ['admin'] },
     { name: 'Users', icon: <Users />, path: '/users', roles: ['admin', 'teacher'] },
     { name: 'Classes', icon: <GraduationCap />, path: '/classes', roles: ['admin', 'teacher'] },
     { name: 'Subjects', icon: <BookOpen />, path: '/subjects', roles: ['admin', 'teacher'] },

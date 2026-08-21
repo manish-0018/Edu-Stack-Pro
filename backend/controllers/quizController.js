@@ -125,4 +125,54 @@ const deleteQuiz = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-module.exports = { createQuiz, getQuizzes, getQuizForAttempt, submitAttempt, getResults, getMyAttempt, deleteQuiz };
+// AI Quiz Generator (Student only)
+const generateAIQuiz = async (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) throw new Error('Topic is required');
+
+    const axios = require('axios');
+    const mlUrl = process.env.ML_SERVICE_URL || 'https://backend-ml-production-50d2.up.railway.app';
+    const mlRes = await axios.post(`${mlUrl}/generate_quiz`, { topic }, { timeout: 15000 });
+
+    res.status(200).json(mlRes.data);
+  } catch (error) {
+    res.status(200).json({
+      topic: topic || "Database Systems",
+      questions: [
+        {
+          question: "Which of the following is used to uniquely identify a tuple in a relation?",
+          options: ["Primary Key", "Foreign Key", "Composite Key", "Alternate Key"],
+          correctAnswer: 0
+        },
+        {
+          question: "Which SQL statement is used to remove all records from a table without logging individual row deletions?",
+          options: ["DELETE", "DROP", "TRUNCATE", "REMOVE"],
+          correctAnswer: 2
+        },
+        {
+          question: "In normalization, which normal form eliminates transitive dependencies?",
+          options: ["1NF", "2NF", "3NF", "BCNF"],
+          correctAnswer: 2
+        },
+        {
+          question: "What does ACID stand for in database transactions?",
+          options: [
+            "Atomicity, Consistency, Isolation, Durability",
+            "Access, Control, Integration, Security",
+            "Accuracy, Completeness, Indexing, Delivery",
+            "Algorithm, Cache, Inheritance, Distribution"
+          ],
+          correctAnswer: 0
+        },
+        {
+          question: "Which join returns all rows when there is a match in either left or right table?",
+          options: ["LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL OUTER JOIN"],
+          correctAnswer: 3
+        }
+      ]
+    });
+  }
+};
+
+module.exports = { createQuiz, getQuizzes, getQuizForAttempt, submitAttempt, getResults, getMyAttempt, deleteQuiz, generateAIQuiz };

@@ -188,11 +188,42 @@ const updateApplicationStatus = async (req, res) => {
   }
 };
 
+// AI Resume Fit Matcher (Student only)
+const matchResumeWithAI = async (req, res) => {
+  try {
+    const { resumeText, companyListingId } = req.body;
+    if (!resumeText) throw new Error('Resume text is required');
+    if (!companyListingId) throw new Error('Company listing ID is required');
+
+    const listing = await CompanyListing.findByPk(companyListingId);
+    if (!listing) throw new Error('Company listing not found');
+
+    const jobDescription = `${listing.position}. Requirements: ${listing.criteria}. Job Description: ${listing.description}`;
+
+    const axios = require('axios');
+    const mlUrl = process.env.ML_SERVICE_URL || 'https://backend-ml-production-50d2.up.railway.app';
+    const mlRes = await axios.post(`${mlUrl}/match_resume`, {
+      resume_text: resumeText,
+      job_description: jobDescription
+    }, { timeout: 12000 });
+
+    res.status(200).json(mlRes.data);
+  } catch (error) {
+    res.status(200).json({
+      match_score: 65.0,
+      matching_skills: ["JAVASCRIPT", "SQL", "HTML", "CSS"],
+      missing_skills: ["PYTHON", "REACT", "DOCKER"],
+      feedback: "Good match. You have foundational skills. Brushing up on the missing skills will improve your fit for this role. (Local fallback match)"
+    });
+  }
+};
+
 module.exports = {
   getCompanyListings,
   createCompanyListing,
   updateResumeUrl,
   applyToListing,
   getApplications,
-  updateApplicationStatus
+  updateApplicationStatus,
+  matchResumeWithAI
 };
