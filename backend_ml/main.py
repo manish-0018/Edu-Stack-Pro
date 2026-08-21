@@ -135,7 +135,12 @@ async def predict(data: PredictionInput):
         confidence_score = round(float(pred_proba[pred_risk_idx]), 4)
 
         # Feature-importance-based explanations (from actual model)
-        importances = regressor.feature_importances_
+        if hasattr(regressor, 'feature_importances_'):
+            importances = regressor.feature_importances_
+        elif hasattr(classifier, 'feature_importances_'):
+            importances = classifier.feature_importances_
+        else:
+            importances = [0.25, 0.15, 0.25, 0.15, 0.15, 0.05]
         feature_values = {
             'attendance_pct': data.attendance_pct,
             'assignment_completion_rate': data.assignment_completion_rate * 100,
