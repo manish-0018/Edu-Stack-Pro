@@ -33,18 +33,40 @@ const createAssignment = (req, res) => {
   });
 };
 
-// @desc   Get all assignments (filtered by role)
+// @desc   Get all assignments (filtered by role and tenant)
 const getAssignments = async (req, res) => {
   try {
     let where = {};
-    if (req.user.role === 'teacher') where.teacherId = req.user.id;
+    let subjectWhere = {};
+
+    if (req.user.role === 'teacher') {
+      where.teacherId = req.user.id;
+    } else if (req.user.role === 'student') {
+      if (!req.user.classId) return res.status(200).json([]);
+      subjectWhere.classId = req.user.classId;
+    }
 
     const assignments = await Assignment.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['name', 'code'] },
+        { 
+          model: Subject, 
+          attributes: ['name', 'code'],
+          where: subjectWhere,
+          include: req.user.role === 'admin' ? [
+            {
+              model: Class,
+              attributes: [],
+              where: { collegeId: req.user.collegeId }
+            }
+          ] : []
+        },
         { model: User, as: 'Teacher', attributes: ['name'] },
-        { model: AssignmentSubmission, required: false }
+        { 
+          model: AssignmentSubmission, 
+          required: false,
+          where: req.user.role === 'student' ? { studentId: req.user.id } : {}
+        }
       ],
       order: [['createdAt', 'DESC']]
     });

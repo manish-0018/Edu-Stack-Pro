@@ -438,7 +438,7 @@ export default function AIInsights() {
                 <input
                   type="number" min="1" max="120" value={examDays}
                   onChange={e => setExamDays(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div>
@@ -446,7 +446,7 @@ export default function AIInsights() {
                 <input
                   type="number" min="0.5" max="12" step="0.5" value={dailyHours}
                   onChange={e => setDailyHours(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full border rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
             </div>
