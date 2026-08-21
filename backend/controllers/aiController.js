@@ -75,7 +75,7 @@ const buildFeaturesForStudent = async (studentId) => {
   const hasAttendanceData = records.length > 0;
   const attendance_pct = hasAttendanceData ? (attended / records.length) * 100.0 : 75.0;
 
-  // 2. Assignments (Submissions + Marks table entries)
+  // 2. Assignments (Prioritize Marks sheet entry, fallback to online submissions)
   const studentSubjects = student.classId
     ? await Subject.findAll({ where: { classId: student.classId } })
     : [];
@@ -85,37 +85,59 @@ const buildFeaturesForStudent = async (studentId) => {
   const hasAssignmentData = allAssignments.length > 0;
   const assignment_completion_rate = hasAssignmentData ? (submissions.length / allAssignments.length) : null;
 
-  let totalAssPctSum = 0;
-  let assCount = 0;
-  submissions.forEach(sub => {
-    if (sub.status === 'graded' && sub.grade !== null && sub.grade !== undefined) {
-      totalAssPctSum += sub.grade;
-      assCount++;
-    }
-  });
+  // Check manual marks sheet first
+  let average_assignment_marks = null;
+  let hasManualAssignment = false;
+  let totalAssManualSum = 0;
+  let manualAssCount = 0;
   marks.forEach(m => {
     if (m.assignment !== null) {
-      totalAssPctSum += (m.assignment / 40.0) * 100.0; // assignment is max 40
-      assCount++;
+      totalAssManualSum += (m.assignment / 40.0) * 100.0;
+      manualAssCount++;
+      hasManualAssignment = true;
     }
   });
-  const average_assignment_marks = assCount > 0 ? (totalAssPctSum / assCount) : null;
 
-  // 3. Quizzes (Quiz attempts + Marks table entries)
+  if (hasManualAssignment) {
+    average_assignment_marks = totalAssManualSum / manualAssCount;
+  } else {
+    let totalAssPctSum = 0;
+    let assCount = 0;
+    submissions.forEach(sub => {
+      if (sub.status === 'graded' && sub.grade !== null && sub.grade !== undefined) {
+        totalAssPctSum += sub.grade;
+        assCount++;
+      }
+    });
+    average_assignment_marks = assCount > 0 ? (totalAssPctSum / assCount) : null;
+  }
+
+  // 3. Quizzes (Prioritize Marks sheet entry, fallback to online attempts)
   const quizAttempts = await QuizAttempt.findAll({ where: { studentId } });
-  let totalQuizPctSum = 0;
-  let quizCount = 0;
-  quizAttempts.forEach(qa => {
-    totalQuizPctSum += (qa.score || 0) * 10.0; // quiz is max 10
-    quizCount++;
-  });
+  
+  let average_quiz_marks = null;
+  let hasManualQuiz = false;
+  let totalQuizManualSum = 0;
+  let manualQuizCount = 0;
   marks.forEach(m => {
     if (m.quiz !== null) {
-      totalQuizPctSum += (m.quiz / 10.0) * 100.0; // quiz is max 10
-      quizCount++;
+      totalQuizManualSum += (m.quiz / 10.0) * 100.0;
+      manualQuizCount++;
+      hasManualQuiz = true;
     }
   });
-  const average_quiz_marks = quizCount > 0 ? (totalQuizPctSum / quizCount) : null;
+
+  if (hasManualQuiz) {
+    average_quiz_marks = totalQuizManualSum / manualQuizCount;
+  } else {
+    let totalQuizPctSum = 0;
+    let quizCount = 0;
+    quizAttempts.forEach(qa => {
+      totalQuizPctSum += (qa.score || 0) * 10.0;
+      quizCount++;
+    });
+    average_quiz_marks = quizCount > 0 ? (totalQuizPctSum / quizCount) : null;
+  }
 
   // 4. Mid-Sem Scores (Marks table midSem column)
   let totalMidSem = 0, midSemCount = 0;
