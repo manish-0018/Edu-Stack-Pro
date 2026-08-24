@@ -350,11 +350,11 @@ const Placements = () => {
                       required
                       value={matchListingId}
                       onChange={e => setMatchListingId(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 focus:ring-primary-500 focus:outline-none"
+                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 dark:text-white focus:ring-primary-500 focus:outline-none"
                     >
-                      <option value="">Choose Company Drive...</option>
+                      <option value="" className="text-gray-900 dark:text-white">Choose Company Drive...</option>
                       {listings.map(l => (
-                        <option key={l.id} value={l.id}>{l.name} - {l.position}</option>
+                        <option key={l.id} value={l.id} className="text-gray-900 dark:text-white">{l.name} - {l.position}</option>
                       ))}
                     </select>
                   </div>
@@ -367,7 +367,7 @@ const Placements = () => {
                       value={resumeText}
                       onChange={e => setResumeText(e.target.value)}
                       placeholder="Paste skills, past projects, work history, or education details..."
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 focus:ring-primary-500 focus:outline-none placeholder-gray-400"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 dark:text-white focus:ring-primary-500 focus:outline-none placeholder-gray-400"
                     />
                   </div>
 
