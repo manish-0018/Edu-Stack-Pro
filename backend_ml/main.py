@@ -945,6 +945,10 @@ Generate exactly 10 high-quality conceptual questions.
             "topic": selected_quiz["topic"],
             "questions": selected_quiz["questions"]
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class CareerRoadmapInput(BaseModel):
     resume_text: str
     grades_average: float
