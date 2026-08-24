@@ -626,6 +626,31 @@ LOCAL_QUIZ_LIBRARY = {
                 "question": "Which join returns all rows when there is a match in either left or right table?",
                 "options": ["LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "FULL OUTER JOIN"],
                 "correctAnswer": 3
+            },
+            {
+                "question": "What is a foreign key used for?",
+                "options": ["To uniquely identify a row", "To enforce referential integrity between tables", "To index text fields", "To store binary files"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which SQL constraint prevents duplicate values in a column but allows NULLs?",
+                "options": ["PRIMARY KEY", "UNIQUE", "NOT NULL", "CHECK"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "What is the default transaction isolation level in PostgreSQL?",
+                "options": ["Read Uncommitted", "Read Committed", "Repeatable Read", "Serializable"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "What type of index is commonly used for range queries in databases?",
+                "options": ["Hash Index", "B-Tree Index", "Bitmap Index", "GiST Index"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which normal form handles multi-valued dependencies?",
+                "options": ["3NF", "BCNF", "4NF", "5NF"],
+                "correctAnswer": 2
             }
         ]
     },
@@ -656,6 +681,31 @@ LOCAL_QUIZ_LIBRARY = {
                 "question": "What is the output of 3 * 1 ** 3 in Python?",
                 "options": ["9", "27", "3", "1"],
                 "correctAnswer": 2
+            },
+            {
+                "question": "What is the output of len([\"hello\", 2, 4, [1, 2]])?",
+                "options": ["4", "5", "6", "8"],
+                "correctAnswer": 0
+            },
+            {
+                "question": "Which keyword is used to handle exceptions in Python?",
+                "options": ["catch", "except", "throw", "handle"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "What does __init__ represent in a Python class?",
+                "options": ["Destructor method", "Constructor/Initializer method", "Static method", "Private property"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which of the following creates a dictionary in Python?",
+                "options": ["[]", "()", "{}", "set()"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "How do you import a module math in Python?",
+                "options": ["require math", "import math", "include math", "load math"],
+                "correctAnswer": 1
             }
         ]
     },
@@ -701,6 +751,86 @@ LOCAL_QUIZ_LIBRARY = {
                 "question": "Which of the following is not a process state?",
                 "options": ["Running", "Blocked", "Ready", "Synchronized"],
                 "correctAnswer": 3
+            },
+            {
+                "question": "What is a page fault?",
+                "options": ["An error in the source code", "When a requested page is not in RAM", "When the disk is full", "A cache hit"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which of the following is a synchronization tool to avoid race conditions?",
+                "options": ["Fork", "Semaphore", "Thread", "Pointer"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "What is the main purpose of the operating system kernel?",
+                "options": ["To design user interfaces", "To compile source files", "To manage system resources and hardware communication", "To host databases"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "What is context switching?",
+                "options": ["Changing desktop wallpaper", "Switching from user mode to kernel mode", "Saving state of an active process and loading another", "Renaming files"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "Which command in Linux is used to display currently running processes?",
+                "options": ["ls", "ps", "pwd", "grep"],
+                "correctAnswer": 1
+            }
+        ]
+    },
+    "dsa": {
+        "topic": "Data Structures & Algorithms",
+        "questions": [
+            {
+                "question": "What is the time complexity of BFS and DFS on a graph represented as an adjacency list?",
+                "options": ["O(V + E)", "O(V^2)", "O(E^2)", "O(VE)"],
+                "correctAnswer": 0
+            },
+            {
+                "question": "Which data structure is used to implement Breadth-First Search (BFS)?",
+                "options": ["Stack", "Queue", "Heap", "Hash Map"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which data structure is used to implement Depth-First Search (DFS)?",
+                "options": ["Queue", "Stack", "Priority Queue", "Linked List"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "What is the height of a balanced binary search tree with N nodes?",
+                "options": ["O(N)", "O(log N)", "O(N log N)", "O(1)"],
+                "correctAnswer": 1
+            },
+            {
+                "question": "Which traversal of a Binary Search Tree (BST) outputs the keys in sorted ascending order?",
+                "options": ["Pre-order", "Post-order", "In-order", "Level-order"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "Which algorithm is used to find the shortest path in a weighted graph with positive weights?",
+                "options": ["Prim's Algorithm", "Kruskal's Algorithm", "Dijkstra's Algorithm", "Floyd-Warshall Algorithm"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "What is a graph without any cycles called?",
+                "options": ["Directed Graph", "Bipartite Graph", "Acyclic Graph", "Connected Graph"],
+                "correctAnswer": 2
+            },
+            {
+                "question": "In a Min-Heap, where is the minimum element located?",
+                "options": ["Root node", "Leftmost leaf", "Rightmost leaf", "Middle child"],
+                "correctAnswer": 0
+            },
+            {
+                "question": "What is the maximum number of edges in a simple undirected graph with V vertices?",
+                "options": ["V(V - 1) / 2", "V^2", "V", "2V"],
+                "correctAnswer": 0
+            },
+            {
+                "question": "Which sorting algorithm has the best average-case time complexity?",
+                "options": ["Bubble Sort", "Selection Sort", "Merge Sort", "Insertion Sort"],
+                "correctAnswer": 2
             }
         ]
     }
@@ -787,7 +917,7 @@ Return EXACTLY a JSON object with this structure, do not include any other markd
     }}
   ]
 }}
-Generate exactly 5 high-quality conceptual questions.
+Generate exactly 10 high-quality conceptual questions.
 """
                 payload = {"contents": [{"parts": [{"text": prompt}]}]}
                 res = requests.post(url, headers=headers, json=payload, timeout=12)
@@ -807,6 +937,8 @@ Generate exactly 5 high-quality conceptual questions.
             matched_key = "python"
         elif "os" in topic_lower or "operating" in topic_lower or "system" in topic_lower:
             matched_key = "os"
+        elif any(k in topic_lower for k in ["dsa", "bfs", "dfs", "tree", "graph", "structure", "algorithm", "search", "sort"]):
+            matched_key = "dsa"
             
         selected_quiz = LOCAL_QUIZ_LIBRARY[matched_key]
         return {

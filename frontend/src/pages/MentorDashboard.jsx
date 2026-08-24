@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-import AiIntelligenceWatchlist from "../components/AiIntelligenceWatchlist";
 
 const MentorDashboard = () => {
   const { user } = useAuth();
@@ -149,7 +148,6 @@ const MentorDashboard = () => {
     { id: "mentees", label: `My Mentees (${mentees.length})` },
     { id: "shortage", label: `Attendance Alerts (${attendanceShortages.length})` },
     { id: "defaulters", label: `Defaulters (${attendanceShortages.length})` },
-    { id: "watchlist", label: `AI Watchlist` },
     { id: "leaves", label: `Leave Desk (${leaves.length})` },
     { id: "meetings", label: `Meetings (${scheduledMeetings.length})` },
     { id: "announcements", label: `Announcements` },
@@ -309,9 +307,6 @@ const MentorDashboard = () => {
             )}
           </div>
         )}
-
-        {activeTab === "watchlist" && <AiIntelligenceWatchlist user={user} />}
-
         {activeTab === "leaves" && (
           <div className="space-y-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Leave Requests Awaiting Review</h3>
