@@ -64,19 +64,20 @@ const Placements = () => {
   };
 
   // AI Career Planner Roadmap States & Handler
+  const [careerGoal, setCareerGoal] = useState('');
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [roadmapResult, setRoadmapResult] = useState(null);
 
   const handleGenerateRoadmap = async (e) => {
     e.preventDefault();
-    if (!resumeText.trim()) {
-      toast.error('Please paste your resume text in the Resume Matcher above first');
+    if (!careerGoal.trim()) {
+      toast.error('Please enter your career goal');
       return;
     }
     setRoadmapLoading(true);
     try {
       const res = await axios.post('/api/placements/generate-roadmap', {
-        resumeText
+        careerGoal
       });
       setRoadmapResult(res.data);
       toast.success('AI Career Learning Roadmap Generated!');
@@ -450,13 +451,26 @@ const Placements = () => {
                 </div>
 
                 {!roadmapResult ? (
-                  <button
-                    onClick={handleGenerateRoadmap}
-                    disabled={roadmapLoading}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {roadmapLoading ? 'Analyzing & Building Roadmap...' : '🎯 Generate AI Learning Roadmap'}
-                  </button>
+                  <form onSubmit={handleGenerateRoadmap} className="space-y-3">
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 block mb-1">What is your target career goal?</label>
+                      <input
+                        required
+                        type="text"
+                        value={careerGoal}
+                        onChange={e => setCareerGoal(e.target.value)}
+                        placeholder="e.g. Full Stack Dev, Web Dev, Software Engineer..."
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border rounded-xl bg-gray-50 dark:bg-dark-bg text-sm text-gray-900 dark:text-white focus:ring-primary-500 focus:outline-none placeholder-gray-400"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={roadmapLoading}
+                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {roadmapLoading ? 'Analyzing & Building Roadmap...' : '🎯 Generate AI Learning Roadmap'}
+                    </button>
+                  </form>
                 ) : (
                   <div className="space-y-4">
                     <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30">

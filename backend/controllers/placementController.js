@@ -221,8 +221,8 @@ const matchResumeWithAI = async (req, res) => {
 // AI Career Planner Roadmap (Student only)
 const generateRoadmapWithAI = async (req, res) => {
   try {
-    const { resumeText } = req.body;
-    if (!resumeText) throw new Error('Resume text is required');
+    const { careerGoal } = req.body;
+    if (!careerGoal) throw new Error('Career goal is required');
 
     const { Mark } = require('../models');
     const marks = await Mark.findAll({ where: { studentId: req.user.id } });
@@ -243,7 +243,7 @@ const generateRoadmapWithAI = async (req, res) => {
     const axios = require('axios');
     const mlUrl = process.env.ML_SERVICE_URL || 'https://backend-ml-production-50d2.up.railway.app';
     const mlRes = await axios.post(`${mlUrl}/generate_roadmap`, {
-      resume_text: resumeText,
+      career_goal: careerGoal,
       grades_average: gradesAverage
     }, { timeout: 12000 });
 
@@ -251,7 +251,7 @@ const generateRoadmapWithAI = async (req, res) => {
   } catch (error) {
     res.status(200).json({
       recommended_role: "Full Stack Web Developer",
-      fit_reason: "Your resume details highlight solid baseline skills, matching well with Web Development tracks. (Local fallback match)",
+      fit_reason: "Your target goal highlights solid baseline skills, matching well with Web Development tracks. (Local fallback match)",
       roadmap: [
         { week: 1, topic: "Advanced JavaScript & ES6+", resources: ["MDN JavaScript Guide", "JavaScript.info"] },
         { week: 2, topic: "React.js State Management & Hooks", resources: ["Official React Docs", "Scrimba React Course"] },

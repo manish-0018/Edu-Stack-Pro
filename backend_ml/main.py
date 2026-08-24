@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import requests
+import re
 
 app = FastAPI(title="EduStack Pro AI Intelligence Service", version="2.0.0")
 
@@ -950,7 +951,7 @@ Generate exactly 10 high-quality conceptual questions.
 
 
 class CareerRoadmapInput(BaseModel):
-    resume_text: str
+    career_goal: str
     grades_average: float
 
 class AssignmentGradingInput(BaseModel):
@@ -968,11 +969,12 @@ async def generate_roadmap(data: CareerRoadmapInput):
             try:
                 headers = {"Content-Type": "application/json"}
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-                prompt = f"""You are a professional Career Advisor. Based on the student's resume text: "{data.resume_text}" and their class grade average: {data.grades_average}/100, suggest a suitable career role they fit best (e.g. Full Stack Developer, Data Analyst, Cloud Engineer, etc.) and generate a tailored week-by-week learning roadmap for the next 8 weeks.
+                prompt = f"""You are a professional Career Advisor. The student has specified their career target goal as: "{data.career_goal}". Their current class grade average is: {data.grades_average}/100.
+Suggest a suitable career role matching their target goal and generate a tailored week-by-week learning roadmap for the next 8 weeks.
 Return EXACTLY a JSON object with this structure, do not include any other markdown formatting or prefix, output raw JSON:
 {{
   "recommended_role": "Suggested Career Role",
-  "fit_reason": "Explanation of why they fit this role based on resume and grades.",
+  "fit_reason": "Explanation of why they fit this role based on their career goal and academic performance.",
   "roadmap": [
     {{
       "week": 1,
@@ -996,10 +998,10 @@ Ensure the roadmap is practical and spans exactly 8 weeks.
                 pass
 
         # Fallback Local Roadmap
-        resume_lower = data.resume_text.lower()
-        if any(w in resume_lower for w in ["react", "js", "html", "css", "web"]):
+        goal_lower = data.career_goal.lower()
+        if any(w in goal_lower for w in ["web", "dev", "react", "frontend", "backend", "full stack", "fullstack", "javascript", "node"]):
             recommended_role = "Full Stack Web Developer"
-            fit_reason = "Based on your technical profile expressing interest in frontend technologies (HTML/CSS/JS) and solid course performance, a role in web development aligns perfectly."
+            fit_reason = f"Based on your expressed goal of '{data.career_goal}' and solid academic performance, we have designed a web application development learning path for you."
             roadmap = [
                 {"week": 1, "topic": "Advanced JavaScript & ES6+", "resources": ["MDN JavaScript Guide", "JavaScript.info"]},
                 {"week": 2, "topic": "React.js State Management & Hooks", "resources": ["Official React Docs", "Scrimba React Course"]},
