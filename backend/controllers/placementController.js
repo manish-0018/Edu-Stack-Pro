@@ -218,6 +218,54 @@ const matchResumeWithAI = async (req, res) => {
   }
 };
 
+// AI Career Planner Roadmap (Student only)
+const generateRoadmapWithAI = async (req, res) => {
+  try {
+    const { resumeText } = req.body;
+    if (!resumeText) throw new Error('Resume text is required');
+
+    const { Mark } = require('../models');
+    const marks = await Mark.findAll({ where: { studentId: req.user.id } });
+    let totalMarks = 0;
+    let counts = 0;
+    marks.forEach(m => {
+      let avg = 0;
+      let items = 0;
+      if (m.midSem !== null) { avg += (m.midSem * 2); items++; }
+      if (m.endSem !== null) { avg += (m.endSem * 2); items++; }
+      if (items > 0) {
+        totalMarks += (avg / items);
+        counts++;
+      }
+    });
+    const gradesAverage = counts > 0 ? (totalMarks / counts) : 75.0;
+
+    const axios = require('axios');
+    const mlUrl = process.env.ML_SERVICE_URL || 'https://backend-ml-production-50d2.up.railway.app';
+    const mlRes = await axios.post(`${mlUrl}/generate_roadmap`, {
+      resume_text: resumeText,
+      grades_average: gradesAverage
+    }, { timeout: 12000 });
+
+    res.status(200).json(mlRes.data);
+  } catch (error) {
+    res.status(200).json({
+      recommended_role: "Full Stack Web Developer",
+      fit_reason: "Your resume details highlight solid baseline skills, matching well with Web Development tracks. (Local fallback match)",
+      roadmap: [
+        { week: 1, topic: "Advanced JavaScript & ES6+", resources: ["MDN JavaScript Guide", "JavaScript.info"] },
+        { week: 2, topic: "React.js State Management & Hooks", resources: ["Official React Docs", "Scrimba React Course"] },
+        { week: 3, topic: "Tailwind CSS & Responsive Layouts", resources: ["TailwindCSS Docs", "Refactoring UI"] },
+        { week: 4, topic: "Node.js & Express REST APIs", resources: ["Express.js Documentation", "FreeCodeCamp Backend Guide"] },
+        { week: 5, topic: "Databases (MongoDB / PostgreSQL)", resources: ["MongoDB University", "Postgres Tutorial"] },
+        { week: 6, topic: "Git, GitHub & Deployment (Vercel/Render)", resources: ["GitHub Learning Lab", "Netlify Deployment Guide"] },
+        { week: 7, topic: "Testing (Jest / React Testing Library)", resources: ["Testing Library Guide", "Jest Crash Course"] },
+        { week: 8, topic: "Portfolio Building & Mock Interviews", resources: ["LeetCode Easy Problems", "FrontEnd Mentor Projects"] }
+      ]
+    });
+  }
+};
+
 module.exports = {
   getCompanyListings,
   createCompanyListing,
@@ -225,5 +273,6 @@ module.exports = {
   applyToListing,
   getApplications,
   updateApplicationStatus,
-  matchResumeWithAI
+  matchResumeWithAI,
+  generateRoadmapWithAI
 };

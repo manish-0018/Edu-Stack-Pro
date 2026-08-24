@@ -80,6 +80,30 @@ const Assignments = () => {
     } catch (err) { toast.error('Grading failed'); }
   };
 
+  const [gradingAiLoading, setGradingAiLoading] = useState({});
+
+  const handleAutoGradeSubmission = async (subId) => {
+    setGradingAiLoading(prev => ({ ...prev, [subId]: true }));
+    try {
+      const res = await axios.post(`/api/assignments/submissions/${subId}/grade-ai`);
+      const { suggested_grade, feedback } = res.data;
+      
+      setGrading(prev => ({
+        ...prev,
+        [subId]: {
+          ...prev[subId],
+          grade: suggested_grade,
+          feedback: feedback
+        }
+      }));
+      toast.success('AI Grading suggestion loaded!');
+    } catch (err) {
+      toast.error('Failed to query AI Grading service');
+    } finally {
+      setGradingAiLoading(prev => ({ ...prev, [subId]: false }));
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -248,18 +272,24 @@ const Assignments = () => {
                     <Upload className="w-4 h-4" /> View Submitted File
                   </a>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   <input type="number" placeholder="Grade" value={grading[sub.id]?.grade || ''}
                     onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], grade: e.target.value } }))}
-                    className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm" />
+                    className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm text-gray-900 dark:text-white" />
                   <input type="text" placeholder="Feedback" value={grading[sub.id]?.feedback || ''}
                     onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], feedback: e.target.value } }))}
-                    className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm" />
+                    className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm text-gray-900 dark:text-white" />
                 </div>
-                <button onClick={() => gradeSubmission(sub.id)}
-                  className="mt-2 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
-                  <Star className="w-4 h-4" /> Save Grade
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleAutoGradeSubmission(sub.id)} disabled={gradingAiLoading[sub.id]}
+                    className="flex-1 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
+                    {gradingAiLoading[sub.id] ? 'Auto-Grading...' : '✨ Auto-Grade with AI'}
+                  </button>
+                  <button onClick={() => gradeSubmission(sub.id)}
+                    className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors">
+                    <Star className="w-4 h-4" /> Save Grade
+                  </button>
+                </div>
               </div>
             ))}
           </div>

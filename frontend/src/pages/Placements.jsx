@@ -63,6 +63,30 @@ const Placements = () => {
     }
   };
 
+  // AI Career Planner Roadmap States & Handler
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [roadmapResult, setRoadmapResult] = useState(null);
+
+  const handleGenerateRoadmap = async (e) => {
+    e.preventDefault();
+    if (!resumeText.trim()) {
+      toast.error('Please paste your resume text in the Resume Matcher above first');
+      return;
+    }
+    setRoadmapLoading(true);
+    try {
+      const res = await axios.post('/api/placements/generate-roadmap', {
+        resumeText
+      });
+      setRoadmapResult(res.data);
+      toast.success('AI Career Learning Roadmap Generated!');
+    } catch (err) {
+      toast.error('Failed to generate learning roadmap');
+    } finally {
+      setRoadmapLoading(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -413,6 +437,59 @@ const Placements = () => {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+
+              {/* AI Career Planner & Roadmap Card */}
+              <div className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm space-y-4 mb-6">
+                <div>
+                  <span className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-lg mb-2 inline-block">✨ Powered by AI</span>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">AI Career Planner & Roadmap</h3>
+                  <p className="text-xs text-gray-400">Generate a custom week-by-week preparation roadmap and job role recommendation from your credentials.</p>
+                </div>
+
+                {!roadmapResult ? (
+                  <button
+                    onClick={handleGenerateRoadmap}
+                    disabled={roadmapLoading}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {roadmapLoading ? 'Analyzing & Building Roadmap...' : '🎯 Generate AI Learning Roadmap'}
+                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30">
+                      <span className="text-[10px] uppercase bg-indigo-600 text-white font-extrabold px-2 py-0.5 rounded mb-1.5 inline-block">RECOMMENDED PATHWAY</span>
+                      <h4 className="font-extrabold text-gray-900 dark:text-white text-md mb-1">{roadmapResult.recommended_role}</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">{roadmapResult.fit_reason}</p>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <strong className="text-xs uppercase text-gray-400 block border-b pb-1">8-Week Preparation Checklist:</strong>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        {roadmapResult.roadmap?.map((item, idx) => (
+                          <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-dark-bg/40 rounded-xl border border-gray-100 dark:border-dark-border/40 text-xs">
+                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black shrink-0">W{item.week}</div>
+                            <div className="space-y-1.5 flex-1">
+                              <h5 className="font-bold text-gray-900 dark:text-white">{item.topic}</h5>
+                              <div className="flex flex-wrap gap-2 text-[10px]">
+                                {item.resources?.map((r, ri) => (
+                                  <span key={ri} className="bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded font-medium">{r}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setRoadmapResult(null)}
+                      className="w-full py-2 border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 text-xs font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg"
+                    >
+                      Clear & Regenerate
+                    </button>
                   </div>
                 )}
               </div>

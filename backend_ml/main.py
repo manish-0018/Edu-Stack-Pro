@@ -945,6 +945,143 @@ Generate exactly 10 high-quality conceptual questions.
             "topic": selected_quiz["topic"],
             "questions": selected_quiz["questions"]
         }
+class CareerRoadmapInput(BaseModel):
+    resume_text: str
+    grades_average: float
+
+class AssignmentGradingInput(BaseModel):
+    assignment_title: str
+    assignment_description: str
+    student_submission_text: str
+    max_marks: int
+
+
+@app.post("/generate_roadmap")
+async def generate_roadmap(data: CareerRoadmapInput):
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            try:
+                headers = {"Content-Type": "application/json"}
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                prompt = f"""You are a professional Career Advisor. Based on the student's resume text: "{data.resume_text}" and their class grade average: {data.grades_average}/100, suggest a suitable career role they fit best (e.g. Full Stack Developer, Data Analyst, Cloud Engineer, etc.) and generate a tailored week-by-week learning roadmap for the next 8 weeks.
+Return EXACTLY a JSON object with this structure, do not include any other markdown formatting or prefix, output raw JSON:
+{{
+  "recommended_role": "Suggested Career Role",
+  "fit_reason": "Explanation of why they fit this role based on resume and grades.",
+  "roadmap": [
+    {{
+      "week": 1,
+      "topic": "Topic of study",
+      "resources": ["Resource 1 Link/Name", "Resource 2 Link/Name"]
+    }}
+  ]
+}}
+Ensure the roadmap is practical and spans exactly 8 weeks.
+"""
+                payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                res = requests.post(url, headers=headers, json=payload, timeout=12)
+                if res.status_code == 200:
+                    resp_json = res.json()
+                    reply = resp_json['candidates'][0]['content']['parts'][0]['text']
+                    cleaned_reply = re.sub(r'^```json\s*', '', reply.strip())
+                    cleaned_reply = re.sub(r'\s*```$', '', cleaned_reply)
+                    roadmap_data = json.loads(cleaned_reply)
+                    return roadmap_data
+            except Exception:
+                pass
+
+        # Fallback Local Roadmap
+        resume_lower = data.resume_text.lower()
+        if any(w in resume_lower for w in ["react", "js", "html", "css", "web"]):
+            recommended_role = "Full Stack Web Developer"
+            fit_reason = "Based on your technical profile expressing interest in frontend technologies (HTML/CSS/JS) and solid course performance, a role in web development aligns perfectly."
+            roadmap = [
+                {"week": 1, "topic": "Advanced JavaScript & ES6+", "resources": ["MDN JavaScript Guide", "JavaScript.info"]},
+                {"week": 2, "topic": "React.js State Management & Hooks", "resources": ["Official React Docs", "Scrimba React Course"]},
+                {"week": 3, "topic": "Tailwind CSS & Responsive Layouts", "resources": ["TailwindCSS Docs", "Refactoring UI"]},
+                {"week": 4, "topic": "Node.js & Express REST APIs", "resources": ["Express.js Documentation", "FreeCodeCamp Backend Guide"]},
+                {"week": 5, "topic": "Databases (MongoDB / PostgreSQL)", "resources": ["MongoDB University", "Postgres Tutorial"]},
+                {"week": 6, "topic": "Git, GitHub & Deployment (Vercel/Render)", "resources": ["GitHub Learning Lab", "Netlify Deployment Guide"]},
+                {"week": 7, "topic": "Testing (Jest / React Testing Library)", "resources": ["Testing Library Guide", "Jest Crash Course"]},
+                {"week": 8, "topic": "Portfolio Building & Mock Interviews", "resources": ["LeetCode Easy Problems", "FrontEnd Mentor Projects"]}
+            ]
+        else:
+            recommended_role = "Software Engineer (DSA Focus)"
+            fit_reason = "Your analytical resume combined with computational performance points strongly towards core software engineering roles. Deepening your algorithms base is recommended."
+            roadmap = [
+                {"week": 1, "topic": "Data Structures Basics (Arrays, Lists, Stacks)", "resources": ["GeeksforGeeks DSA Guide", "LeetCode Beginners Card"]},
+                {"week": 2, "topic": "Trees & Binary Search Trees (BST)", "resources": ["MyCodeSchool BST Series", "LeetCode Tree Tag"]},
+                {"week": 3, "topic": "Graph Algorithms (BFS & DFS)", "resources": ["William Fiset Graph Playlist", "HackerRank Graph Challenges"]},
+                {"week": 4, "topic": "Recursion & Backtracking Basics", "resources": ["MIT Introduction to Algorithms", "LeetCode Backtracking"]},
+                {"week": 5, "topic": "Dynamic Programming Foundations", "resources": ["Abdul Bari DP Lectures", "LeetCode DP Tag"]},
+                {"week": 6, "topic": "System Design Foundations", "resources": ["Grokking System Design", "ByteByteGo YouTube Channel"]},
+                {"week": 7, "topic": "Object Oriented Analysis & SOLID Design", "resources": ["Refactoring.Guru OOP Guide", "Clean Code Book"]},
+                {"week": 8, "topic": "Coding Round Simulations & Mock Interviews", "resources": ["LeetCode Top Interview 150", "Pramp Mock Platform"]}
+            ]
+
+        return {
+            "recommended_role": recommended_role,
+            "fit_reason": fit_reason,
+            "roadmap": roadmap
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/grade_assignment")
+async def grade_assignment(data: AssignmentGradingInput):
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            try:
+                headers = {"Content-Type": "application/json"}
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                prompt = f"""You are an automated university academic grading assistant.
+Assignment Title: "{data.assignment_title}"
+Assignment Description: "{data.assignment_description}"
+Student's Submission Text: "{data.student_submission_text}"
+Maximum Marks: {data.max_marks}
+
+Evaluate the student's submission against the assignment description and title. Rate their effort, accuracy, completeness, and correctness.
+Return EXACTLY a JSON object with this structure, do not include any other markdown formatting or prefix, output raw JSON:
+{{
+  "suggested_grade": 8, // Must be an integer between 0 and {data.max_marks}
+  "feedback": "Constructive academic feedback detailing strengths, areas of improvement, and grading justification."
+}}
+Be professional and output exactly the JSON format.
+"""
+                payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                res = requests.post(url, headers=headers, json=payload, timeout=12)
+                if res.status_code == 200:
+                    resp_json = res.json()
+                    reply = resp_json['candidates'][0]['content']['parts'][0]['text']
+                    cleaned_reply = re.sub(r'^```json\s*', '', reply.strip())
+                    cleaned_reply = re.sub(r'\s*```$', '', cleaned_reply)
+                    grading_data = json.loads(cleaned_reply)
+                    return grading_data
+            except Exception:
+                pass
+
+        # Fallback Local Grading
+        words_submission = set(re.findall(r'\b\w+\b', data.student_submission_text.lower()))
+        words_description = set(re.findall(r'\b\w+\b', data.assignment_description.lower()))
+        stop_words = {'and', 'or', 'the', 'a', 'an', 'with', 'to', 'for', 'in', 'of', 'at', 'by', 'on', 'is', 'are', 'was', 'were', 'be', 'been'}
+        words_submission = words_submission - stop_words
+        words_description = words_description - stop_words
+        
+        overlap = words_submission & words_description
+        overlap_ratio = len(overlap) / max(len(words_description), 1)
+        
+        suggested_grade = round(overlap_ratio * data.max_marks * 1.3)
+        suggested_grade = min(max(suggested_grade, int(data.max_marks * 0.3)), data.max_marks)
+        
+        feedback = f"Automated grading based on textual similarity and core keyword overlap. Match ratio: {round(overlap_ratio * 100)}%. The submission covers several key concepts of the assignment. (Local fallback match)"
+
+        return {
+            "suggested_grade": suggested_grade,
+            "feedback": feedback
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -7,7 +7,8 @@ const {
   applyToListing,
   getApplications,
   updateApplicationStatus,
-  matchResumeWithAI
+  matchResumeWithAI,
+  generateRoadmapWithAI
 } = require('../controllers/placementController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,9 @@ router.route('/')
 
 router.route('/match-resume')
   .post(protect, authorize('student'), matchResumeWithAI);
+
+router.route('/generate-roadmap')
+  .post(protect, authorize('student'), generateRoadmapWithAI);
 
 router.route('/resume')
   .put(protect, authorize('student'), updateResumeUrl);
