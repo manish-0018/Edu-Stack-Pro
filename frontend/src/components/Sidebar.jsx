@@ -80,6 +80,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'My Portfolio', icon: <UserSquare2 />, path: '/portfolio', roles: ['student'] },
     { name: 'Placements', icon: <Briefcase />, path: '/placements', roles: ['admin', 'teacher', 'student'] },
     { name: 'Mentorship', icon: <Users2 />, path: '/mentorship', roles: ['admin', 'student'] },
+    { name: 'Mentor Advising', icon: <Users />, path: '/advising', roles: ['student'] },
     { name: 'Study Buddies', icon: <HeartHandshake />, path: '/buddies', roles: ['student'] },
     { name: 'Resource Hub', icon: <PenTool />, path: '/resources', roles: ['admin', 'student', 'teacher'] },
     { name: 'Opportunities', icon: <Compass />, path: '/opportunities', roles: ['admin', 'student'] },

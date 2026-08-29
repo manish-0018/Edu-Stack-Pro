@@ -6,7 +6,10 @@ const {
   getMenteesLeaves,
   updateMenteeLeaveStatus,
   getMentorshipSessions,
-  createMentorshipSession
+  createMentorshipSession,
+  updateMentorshipSession,
+  deleteMentorshipSession,
+  getStudentAdvisingView
 } = require('../controllers/mentorController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -34,5 +37,12 @@ router.route('/leaves/:id')
 router.route('/sessions')
   .get(protect, restrictToMentor, getMentorshipSessions)
   .post(protect, restrictToMentor, createMentorshipSession);
+
+router.route('/sessions/:id')
+  .put(protect, restrictToMentor, updateMentorshipSession)
+  .delete(protect, restrictToMentor, deleteMentorshipSession);
+
+router.route('/student-view')
+  .get(protect, getStudentAdvisingView);
 
 module.exports = router;

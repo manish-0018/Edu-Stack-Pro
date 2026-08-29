@@ -204,7 +204,97 @@ const createMentorshipSession = async (req, res) => {
       meetingDate: meetingDate || null
     });
 
+    // Targeted notification only for the student
+    try {
+      const { Notification } = require('../models');
+      await Notification.create({
+        userId: studentId,
+        title: status === 'scheduled' ? '📅 New Meeting Scheduled' : '📝 New Advising Log Added',
+        message: status === 'scheduled'
+          ? `Your mentor ${req.user.name} has scheduled a meeting: "${notes}" for ${new Date(meetingDate).toLocaleString()}.`
+          : `Your mentor ${req.user.name} has logged a new advising/counseling session: "${notes}".`,
+        type: 'info',
+        isRead: false
+      });
+    } catch (err) {
+      console.error("Failed to trigger student advising notification:", err);
+    }
+
     res.status(201).json(session);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update Mentorship Session status (e.g. End Meeting)
+const updateMentorshipSession = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes, actionItems } = req.body;
+    const session = await MentorshipSession.findByPk(id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    if (session.mentorId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. You do not own this session.' });
+    }
+    await session.update({
+      status: status || session.status,
+      notes: notes || session.notes,
+      actionItems: actionItems || session.actionItems
+    });
+    res.status(200).json(session);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Delete Mentorship Session (e.g. Cancel Meeting)
+const deleteMentorshipSession = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const session = await MentorshipSession.findByPk(id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    if (session.mentorId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. You do not own this session.' });
+    }
+    await session.destroy();
+    res.status(200).json({ id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get advising view for student (returns mentor profile and advising/meeting logs)
+const getStudentAdvisingView = async (req, res) => {
+  try {
+    const mentor = await User.findOne({
+      where: {
+        role: 'mentor',
+        course: req.user.course,
+        collegeId: req.user.collegeId
+      },
+      attributes: ['name', 'email', 'course']
+    });
+
+    const sessions = await MentorshipSession.findAll({
+      where: { studentId: req.user.id },
+      include: [
+        {
+          model: User,
+          as: 'Mentor',
+          attributes: ['name', 'email']
+        }
+      ],
+      order: [['sessionDate', 'DESC']]
+    });
+
+    res.status(200).json({
+      mentor: mentor || null,
+      sessions
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -216,5 +306,8 @@ module.exports = {
   getMenteesLeaves,
   updateMenteeLeaveStatus,
   getMentorshipSessions,
-  createMentorshipSession
+  createMentorshipSession,
+  updateMentorshipSession,
+  deleteMentorshipSession,
+  getStudentAdvisingView
 };

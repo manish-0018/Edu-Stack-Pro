@@ -29,6 +29,7 @@ import Portfolio from './pages/Portfolio';
 import Announcements from './pages/Announcements';
 import MentorDashboard from './pages/MentorDashboard';
 import PremiumUpgrade from './pages/PremiumUpgrade';
+import StudentAdvising from './pages/StudentAdvising';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -81,6 +82,7 @@ function App() {
           <Route path="quizzes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Quizzes /></ProtectedRoute>} />
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'mentor']}><Announcements /></ProtectedRoute>} />
+          <Route path="advising" element={<ProtectedRoute allowedRoles={['student']}><StudentAdvising /></ProtectedRoute>} />
           <Route path="upgrade" element={<ProtectedRoute><PremiumUpgrade /></ProtectedRoute>} />
         </Route>
       </Routes>

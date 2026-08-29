@@ -75,6 +75,17 @@ const MentorDashboard = () => {
     } catch { toast.update(toastId, { render: "Failed to send.", type: "error", isLoading: false, autoClose: 3000 }); }
   };
 
+  const handleEndMeeting = async (sessionId) => {
+    const toastId = toast.loading("Ending meeting...");
+    try {
+      await axios.put(`/api/mentor/sessions/${sessionId}`, { status: "completed" });
+      toast.update(toastId, { render: "Meeting ended and logged as counseling session!", type: "success", isLoading: false, autoClose: 3000 });
+      fetchDashboardData();
+    } catch {
+      toast.update(toastId, { render: "Failed to end meeting.", type: "error", isLoading: false, autoClose: 3000 });
+    }
+  };
+
   const handleAddSession = async (e) => {
     e.preventDefault();
     if (!selectedStudent || !notes) { toast.error("Select student and provide notes."); return; }
@@ -433,12 +444,18 @@ const MentorDashboard = () => {
                         {m.meetingDate && <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(m.meetingDate).toLocaleString()}</p>}
                         {m.actionItems && <p className="text-xs text-gray-400 mt-0.5">Agenda: {m.actionItems}</p>}
                       </div>
-                      {m.meetingLink && (
-                        <a href={m.meetingLink} target="_blank" rel="noreferrer"
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
-                          <Link2 className="w-3.5 h-3.5" /> Join Meeting
-                        </a>
-                      )}
+                      <div className="flex gap-2 shrink-0">
+                        {m.meetingLink && (
+                          <a href={m.meetingLink} target="_blank" rel="noreferrer"
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+                            <Link2 className="w-3.5 h-3.5" /> Join Meeting
+                          </a>
+                        )}
+                        <button onClick={() => handleEndMeeting(m.id)}
+                          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+                          <Check className="w-3.5 h-3.5" /> End Meeting
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
