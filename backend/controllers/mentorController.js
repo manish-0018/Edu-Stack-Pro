@@ -28,7 +28,7 @@ const getMentees = async (req, res) => {
       where: {
         role: 'student',
         course: { [Op.iLike]: course },
-        collegeId:
+        collegeId
       },
       attributes: ['id', 'name', 'email', 'rollNo', 'course']
     });
