@@ -12,6 +12,13 @@ const statusColor = {
   late: 'bg-orange-100 text-orange-700',
 };
 
+const getFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const backendUrl = import.meta.env.VITE_API_URL || 'https://backend-production-a649.up.railway.app';
+  return `${backendUrl}${url}`;
+};
+
 const Assignments = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'teacher';
@@ -73,35 +80,20 @@ const Assignments = () => {
   };
 
   const gradeSubmission = async (subId) => {
+    const currentAssignment = assignments.find(a => a.id === showSubmissions);
+    const maxMarks = currentAssignment ? currentAssignment.maxMarks : 100;
+    const gradeVal = Number(grading[subId]?.grade || 0);
+
+    if (gradeVal < 0 || gradeVal > maxMarks) {
+      toast.error(`Grade must be between 0 and ${maxMarks}`);
+      return;
+    }
+
     try {
       await axios.put(`/api/assignments/submissions/${subId}/grade`, grading[subId]);
       toast.success('Graded!');
       fetchSubmissions(showSubmissions);
     } catch (err) { toast.error('Grading failed'); }
-  };
-
-  const [gradingAiLoading, setGradingAiLoading] = useState({});
-
-  const handleAutoGradeSubmission = async (subId) => {
-    setGradingAiLoading(prev => ({ ...prev, [subId]: true }));
-    try {
-      const res = await axios.post(`/api/assignments/submissions/${subId}/grade-ai`);
-      const { suggested_grade, feedback } = res.data;
-      
-      setGrading(prev => ({
-        ...prev,
-        [subId]: {
-          ...prev[subId],
-          grade: suggested_grade,
-          feedback: feedback
-        }
-      }));
-      toast.success('AI Grading suggestion loaded!');
-    } catch (err) {
-      toast.error('Failed to query AI Grading service');
-    } finally {
-      setGradingAiLoading(prev => ({ ...prev, [subId]: false }));
-    }
   };
 
   return (
@@ -148,7 +140,7 @@ const Assignments = () => {
                   <p className="text-gray-600 dark:text-gray-400 text-sm mb-2 ml-13">{a.description}</p>
                   {a.fileUrl && (
                     <div className="mb-3 ml-13">
-                      <a href={a.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-violet-600 dark:text-violet-400 font-black hover:underline bg-violet-50 dark:bg-violet-950/20 px-3 py-1.5 rounded-lg border border-violet-100 dark:border-violet-900/30">
+                      <a href={getFileUrl(a.fileUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-violet-600 dark:text-violet-400 font-black hover:underline bg-violet-50 dark:bg-violet-950/20 px-3 py-1.5 rounded-lg border border-violet-100 dark:border-violet-900/30">
                         <Upload className="w-3.5 h-3.5 rotate-180" /> View Assignment PDF
                       </a>
                     </div>
@@ -267,29 +259,23 @@ const Assignments = () => {
                   <span className={`text-xs px-2 py-1 rounded-full font-bold ${statusColor[sub.status]}`}>{sub.status}</span>
                 </div>
                 {sub.fileUrl && (
-                  <a href={sub.fileUrl} target="_blank" rel="noreferrer"
+                  <a href={getFileUrl(sub.fileUrl)} target="_blank" rel="noreferrer"
                     className="text-sm text-violet-600 hover:underline flex items-center gap-1 mb-3">
                     <Upload className="w-4 h-4" /> View Submitted File
                   </a>
                 )}
                 <div className="grid grid-cols-2 gap-2 mb-2">
-                  <input type="number" placeholder="Grade" value={grading[sub.id]?.grade || ''}
+                  <input type="number" placeholder="Grade" min="0" max={assignments.find(a => a.id === showSubmissions)?.maxMarks || 100} value={grading[sub.id]?.grade || ''}
                     onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], grade: e.target.value } }))}
                     className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm text-gray-900 dark:text-white" />
                   <input type="text" placeholder="Feedback" value={grading[sub.id]?.feedback || ''}
                     onChange={e => setGrading(p => ({ ...p, [sub.id]: { ...p[sub.id], feedback: e.target.value } }))}
                     className="px-3 py-2 border rounded-xl dark:bg-slate-800 dark:border-slate-700 text-sm text-gray-900 dark:text-white" />
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleAutoGradeSubmission(sub.id)} disabled={gradingAiLoading[sub.id]}
-                    className="flex-1 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50">
-                    {gradingAiLoading[sub.id] ? 'Auto-Grading...' : '✨ Auto-Grade with AI'}
-                  </button>
-                  <button onClick={() => gradeSubmission(sub.id)}
-                    className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors">
-                    <Star className="w-4 h-4" /> Save Grade
-                  </button>
-                </div>
+                <button onClick={() => gradeSubmission(sub.id)}
+                  className="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors">
+                  <Star className="w-4 h-4" /> Save Grade
+                </button>
               </div>
             ))}
           </div>

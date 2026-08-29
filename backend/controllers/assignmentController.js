@@ -112,8 +112,19 @@ const gradeSubmission = async (req, res) => {
   try {
     const { id } = req.params; // submissionId
     const { grade, feedback } = req.body;
-    const submission = await AssignmentSubmission.findByPk(id);
+    const submission = await AssignmentSubmission.findOne({
+      where: { id },
+      include: [{ model: Assignment }]
+    });
     if (!submission) return res.status(404).json({ message: 'Submission not found' });
+
+    if (submission.Assignment) {
+      const maxMarks = submission.Assignment.maxMarks;
+      if (grade < 0 || grade > maxMarks) {
+        return res.status(400).json({ message: `Grade cannot exceed max marks of ${maxMarks}` });
+      }
+    }
+
     submission.grade = grade;
     submission.feedback = feedback || '';
     submission.status = 'graded';
