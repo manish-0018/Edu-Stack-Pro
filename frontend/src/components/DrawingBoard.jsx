@@ -245,7 +245,10 @@ const DrawingBoard = ({ canvasRef, socket, sessionId }) => {
       </div>
 
       {/* Canvas */}
-      <div className="flex-1 w-full h-full cursor-crosshair relative overflow-hidden bg-white rounded-b-2xl md:rounded-bl-none">
+      <div 
+        className="flex-1 w-full h-full relative overflow-hidden bg-white rounded-b-2xl md:rounded-bl-none" 
+        style={{ cursor: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>') 12 12, crosshair` }}
+      >
         <canvas
           ref={canvasRef}
           onMouseDown={startDrawing}
@@ -256,6 +259,7 @@ const DrawingBoard = ({ canvasRef, socket, sessionId }) => {
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           className="absolute inset-0 touch-none w-full h-full"
+          style={{ cursor: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>') 12 12, crosshair` }}
         />
       </div>
     </div>
