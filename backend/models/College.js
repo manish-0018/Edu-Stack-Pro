@@ -52,6 +52,11 @@ const College = sequelize.define('College', {
   isEndSemAdmitCardEnabled: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  upiId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'yourupi@upi'
   }
 });
 

@@ -430,16 +430,32 @@ const PremiumUpgrade = () => {
             ) : (
               <div className="space-y-4">
                 {user?.role === 'admin' && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                     <label className="block text-[10px] font-bold text-gray-400 uppercase">Receive Money to (Merchant UPI ID)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. yourname@okaxis"
-                      value={customMerchantUpi}
-                      onChange={e => setCustomMerchantUpi(e.target.value)}
-                      className="w-full px-3 py-2 border border-amber-300 dark:border-amber-700/50 rounded-xl dark:bg-slate-800 focus:ring-1 focus:ring-amber-500 outline-none text-xs font-bold text-amber-600 dark:text-amber-400"
-                    />
-                    <span className="text-[9px] text-gray-400 block leading-tight">To save permanently, edit <code>DEVELOPER_UPI_ID</code> in backend <code>.env</code> file.</span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. yourname@okaxis"
+                        value={customMerchantUpi}
+                        onChange={e => setCustomMerchantUpi(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-amber-300 dark:border-amber-700/50 rounded-xl dark:bg-slate-800 focus:ring-1 focus:ring-amber-500 outline-none text-xs font-bold text-amber-600 dark:text-amber-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await axios.post('/api/auth/payment-config', { upiId: customMerchantUpi });
+                            toast.success("UPI ID saved for your college successfully!");
+                            setUpiConfigId(customMerchantUpi);
+                          } catch (err) {
+                            toast.error("Failed to save UPI ID");
+                          }
+                        }}
+                        className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold whitespace-nowrap shadow-sm"
+                      >
+                        Save UPI
+                      </button>
+                    </div>
                   </div>
                 )}
 

@@ -1,4 +1,4 @@
-const { User, Class, College, CourseRollConfig } = require('../models');
+const { User, Class, College, CourseRollConfig, Transaction } = require('../models');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT
@@ -300,6 +300,78 @@ const updateCollege = async (req, res) => {
   }
 };
 
+const getPaymentConfig = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user || !user.collegeId) {
+      return res.status(200).json({ upiId: 'yourupi@upi' });
+    }
+    const college = await College.findByPk(user.collegeId);
+    res.status(200).json({ upiId: college ? college.upiId : 'yourupi@upi' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const updatePaymentConfig = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admins only.' });
+    }
+    const { upiId } = req.body;
+    if (!upiId) return res.status(400).json({ message: 'UPI ID is required' });
+
+    const college = await College.findByPk(req.user.collegeId);
+    if (!college) return res.status(404).json({ message: 'College not found' });
+
+    college.upiId = upiId;
+    await college.save();
+
+    res.status(200).json({ message: 'Payment config updated successfully', upiId });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const upgradeUser = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.isPremium = true;
+    await user.save();
+
+    // Create a transaction record
+    const { amount, paymentMethod } = req.body;
+    const crypto = require('crypto');
+    const transactionId = 'TXN' + crypto.randomBytes(6).toString('hex').toUpperCase();
+
+    const txn = await Transaction.create({
+      studentId: user.id,
+      amount: amount || 2.00,
+      paymentMethod: paymentMethod || 'UPI',
+      transactionId,
+      status: 'completed'
+    });
+
+    res.status(200).json({ message: 'Upgraded successfully', user, transaction: txn });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getTransactions = async (req, res) => {
+  try {
+    const txns = await Transaction.findAll({
+      where: { studentId: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+    res.status(200).json(txns);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -307,6 +379,10 @@ module.exports = {
   resetPassword,
   getColleges,
   createCollege,
-  updateCollege
+  updateCollege,
+  getPaymentConfig,
+  updatePaymentConfig,
+  upgradeUser,
+  getTransactions
 };
 
