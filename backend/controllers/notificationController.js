@@ -42,9 +42,9 @@ const createNotification = async (req, res) => {
   try {
     const { userId, title, message, type } = req.body;
     
-    // Only allow teachers and admins to send notifications
-    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Only teachers or admins can send notifications.' });
+    // Only allow teachers, admins, and mentors to send notifications
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin' && req.user.role !== 'mentor') {
+      return res.status(403).json({ message: 'Access denied. Only teachers, mentors, or admins can send notifications.' });
     }
 
     const notification = await Notification.create({
