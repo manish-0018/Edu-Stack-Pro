@@ -27,8 +27,8 @@ const getMentees = async (req, res) => {
     const mentees = await User.findAll({
       where: {
         role: 'student',
-        course,
-        collegeId
+        course: { [Op.iLike]: course },
+        collegeId:
       },
       attributes: ['id', 'name', 'email', 'rollNo', 'course']
     });
@@ -273,7 +273,7 @@ const getStudentAdvisingView = async (req, res) => {
     const mentor = await User.findOne({
       where: {
         role: 'mentor',
-        course: req.user.course,
+        course: { [Op.iLike]: req.user.course },
         collegeId: req.user.collegeId
       },
       attributes: ['name', 'email', 'course']

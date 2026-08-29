@@ -246,7 +246,7 @@ const getDashboardStats = async (req, res) => {
       const classMentor = await User.findOne({
         where: {
           collegeId: studentUser.collegeId,
-          course: studentUser.course,
+          course: { [Op.iLike]: studentUser.course },
           role: 'mentor'
         },
         attributes: ['name', 'email']
