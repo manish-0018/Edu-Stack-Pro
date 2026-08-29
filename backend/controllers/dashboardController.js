@@ -263,6 +263,26 @@ const getDashboardStats = async (req, res) => {
         };
       }
 
+      // Fetch College Admin specifically (role = 'admin') for same college
+      const collegeAdmin = await User.findOne({
+        where: {
+          collegeId: studentUser.collegeId,
+          role: 'admin'
+        },
+        attributes: ['name', 'email']
+      });
+
+      // Add admin as special entry in the Faculty & Instructors list
+      if (collegeAdmin) {
+        teachersMap[collegeAdmin.email] = {
+          name: collegeAdmin.name,
+          email: collegeAdmin.email,
+          subjectName: 'College Administrator',
+          subjectCode: 'ADMIN',
+          role: 'admin'
+        };
+      }
+
       stats.myTeachers = Object.values(teachersMap);
       // Keep classMentor null — no longer shown in welcome banner
       stats.classMentor = null;

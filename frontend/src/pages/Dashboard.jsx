@@ -1424,16 +1424,34 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {stats.myTeachers.map((t, idx) => {
                   const isMentor = t.role === 'mentor';
+                  const isAdmin = t.role === 'admin';
+                  let cardClass = "bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border";
+                  let avatarClass = "bg-gradient-to-br from-primary-500 to-indigo-600";
+                  let badgeClass = "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 border-primary-100 dark:border-primary-900/30";
+                  let avatarIcon = t.name ? t.name.charAt(0).toUpperCase() : '?';
+
+                  if (isMentor) {
+                    cardClass = "bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/30";
+                    avatarClass = "bg-gradient-to-br from-purple-500 to-violet-600";
+                    badgeClass = "text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800/30";
+                    avatarIcon = "🧑‍🏫";
+                  } else if (isAdmin) {
+                    cardClass = "bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800/30";
+                    avatarClass = "bg-gradient-to-br from-rose-500 to-pink-600";
+                    badgeClass = "text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800/30";
+                    avatarIcon = "🛡️";
+                  }
+
                   return (
-                  <div key={idx} className={`p-4 rounded-xl border flex items-start gap-3 hover:shadow-md transition-shadow ${isMentor ? 'bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/30' : 'bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border'}`}>
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm ${isMentor ? 'bg-gradient-to-br from-purple-500 to-violet-600' : 'bg-gradient-to-br from-primary-500 to-indigo-600'}`}>
-                      {isMentor ? '🧑‍🏫' : t.name.charAt(0).toUpperCase()}
+                  <div key={idx} className={`p-4 rounded-xl border flex items-start gap-3 hover:shadow-md transition-shadow ${cardClass}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm ${avatarClass}`}>
+                      {avatarIcon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">{t.name}</h4>
                       <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-1">{t.email}</p>
-                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${isMentor ? 'text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800/30' : 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 border-primary-100 dark:border-primary-900/30'}`}>
-                        {isMentor ? '🎓 Class Mentor' : `${t.subjectName} (${t.subjectCode})`}
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+                        {isMentor ? '🎓 Class Mentor' : isAdmin ? '🛡️ Administrator' : `${t.subjectName} (${t.subjectCode})`}
                       </span>
                     </div>
                   </div>
