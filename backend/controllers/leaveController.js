@@ -63,6 +63,10 @@ const updateLeaveStatus = async (req, res) => {
 
     if (!leaveRequest) throw new Error('Leave request not found');
 
+    if (req.user.role !== 'mentor') {
+      throw new Error('Access denied. Only mentors can approve or reject leave requests.');
+    }
+
     if (req.user.collegeId && leaveRequest.Student?.collegeId !== req.user.collegeId) {
       throw new Error('Access denied. Cross-college action blocked.');
     }

@@ -66,7 +66,7 @@ function App() {
           <Route path="subjects" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><ManageSubjects /></ProtectedRoute>} />
           <Route path="attendance/mark" element={<ProtectedRoute allowedRoles={['teacher']}><MarkAttendance /></ProtectedRoute>} />
           <Route path="attendance/view" element={<ProtectedRoute><ViewAttendance /></ProtectedRoute>} />
-          <Route path="leave" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
+           <Route path="leave" element={<ProtectedRoute allowedRoles={['student', 'mentor']}><LeaveRequests /></ProtectedRoute>} />
           <Route path="marks" element={<ProtectedRoute allowedRoles={['teacher']}><ManageMarks /></ProtectedRoute>} />
           <Route path="recovery" element={<ProtectedRoute><RecoveryAssignments /></ProtectedRoute>} />
           <Route path="placements" element={<ProtectedRoute><Placements /></ProtectedRoute>} />
@@ -74,12 +74,12 @@ function App() {
           <Route path="opportunities" element={<ProtectedRoute allowedRoles={['admin', 'student']}><Opportunities /></ProtectedRoute>} />
           <Route path="store" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><NotesMarketplace /></ProtectedRoute>} />
           <Route path="buddies" element={<ProtectedRoute allowedRoles={['student']}><StudyBuddies /></ProtectedRoute>} />
-          <Route path="forums" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Forums /></ProtectedRoute>} />
+          <Route path="forums" element={<ProtectedRoute allowedRoles={['teacher', 'student']}><Forums /></ProtectedRoute>} />
           <Route path="resources" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><ResourceHub /></ProtectedRoute>} />
           <Route path="library" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'guardian']}><Library /></ProtectedRoute>} />
           <Route path="workspace/:type/:id" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
-          <Route path="assignments" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Assignments /></ProtectedRoute>} />
-          <Route path="quizzes" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}><Quizzes /></ProtectedRoute>} />
+          <Route path="assignments" element={<ProtectedRoute allowedRoles={['teacher', 'student']}><Assignments /></ProtectedRoute>} />
+          <Route path="quizzes" element={<ProtectedRoute allowedRoles={['teacher', 'student']}><Quizzes /></ProtectedRoute>} />
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'mentor']}><Announcements /></ProtectedRoute>} />
           <Route path="advising" element={<ProtectedRoute allowedRoles={['student']}><StudentAdvising /></ProtectedRoute>} />

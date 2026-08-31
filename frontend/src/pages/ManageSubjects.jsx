@@ -11,7 +11,7 @@ const ManageSubjects = () => {
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newSubject, setNewSubject] = useState({ name: '', code: '', classId: '', teacherId: '', type: 'theory', credits: 3, course: '' });
+  const [newSubject, setNewSubject] = useState({ name: '', code: '', classId: '', teacherId: '', type: 'theory', credits: 3, course: user.course || '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +43,7 @@ const ManageSubjects = () => {
         Teacher: teachers.find(t => t.id === res.data.teacherId)
       };
       setSubjects([...subjects, createdSubject]);
-      setNewSubject({ name: '', code: '', classId: '', teacherId: '', type: 'theory', credits: 3, course: '' });
+      setNewSubject({ name: '', code: '', classId: '', teacherId: '', type: 'theory', credits: 3, course: user.course || '' });
       toast.success('Subject created');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create subject');
@@ -102,15 +102,19 @@ const ManageSubjects = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Course</label>
-              <select required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg" value={newSubject.course} onChange={(e) => setNewSubject({ ...newSubject, course: e.target.value })}>
-                <option value="">Select Course</option>
-                <option value="BCA">BCA</option>
-                <option value="BSc Computer Science">BSc Computer Science</option>
-                <option value="BTech CSE">BTech CSE</option>
-                <option value="BTech Mechanical">BTech Mechanical</option>
-                <option value="BBA">BBA</option>
-                <option value="MBA">MBA</option>
-              </select>
+              {user.course ? (
+                <input type="text" readOnly required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg font-semibold cursor-not-allowed uppercase" value={user.course} />
+              ) : (
+                <select required className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg dark:bg-dark-bg" value={newSubject.course} onChange={(e) => setNewSubject({ ...newSubject, course: e.target.value })}>
+                  <option value="">Select Course</option>
+                  <option value="BCA">BCA</option>
+                  <option value="BSc Computer Science">BSc Computer Science</option>
+                  <option value="BTech CSE">BTech CSE</option>
+                  <option value="BTech Mechanical">BTech Mechanical</option>
+                  <option value="BBA">BBA</option>
+                  <option value="MBA">MBA</option>
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Teacher</label>
@@ -159,7 +163,7 @@ const ManageSubjects = () => {
                 <td className="p-4 font-medium">{s.code}</td>
                 <td className="p-4">{s.name}</td>
                 <td className="p-4">
-                  {user.role === 'admin' ? (
+                  {user.role === 'admin' && !user.course ? (
                     <select
                       className="px-2 py-1 border rounded-lg dark:bg-dark-bg dark:border-dark-border text-xs normal-case font-semibold"
                       value={s.course || ''}

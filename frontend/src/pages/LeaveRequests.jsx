@@ -121,7 +121,7 @@ const LeaveRequests = () => {
               <th className="p-4 font-medium">Dates</th>
               <th className="p-4 font-medium">Reason & Certificate</th>
               <th className="p-4 font-medium">Status</th>
-              {user.role !== 'student' && <th className="p-4 font-medium text-right">Actions</th>}
+              {user.role === 'mentor' && <th className="p-4 font-medium text-right">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -162,7 +162,7 @@ const LeaveRequests = () => {
                   </span>
                   {r.Approver && <div className="text-xs text-gray-400 mt-1">by {r.Approver.name}</div>}
                 </td>
-                {user.role !== 'student' && (
+                {user.role === 'mentor' && (
                   <td className="p-4 text-right space-x-2">
                     {r.status === 'pending' && (
                       <>

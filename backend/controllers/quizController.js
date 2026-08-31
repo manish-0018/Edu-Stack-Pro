@@ -28,16 +28,37 @@ const createQuiz = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-// @desc Get all quizzes
 const getQuizzes = async (req, res) => {
   try {
     let where = {};
-    if (req.user.role === 'teacher') where.teacherId = req.user.id;
+    const { Class } = require('../models');
+    
+    let subjectInclude = {
+      model: Subject,
+      attributes: ['name', 'code'],
+      required: true,
+      include: []
+    };
+
+    if (req.user.role === 'student') {
+      subjectInclude.where = { classId: req.user.classId };
+    } else if (req.user.role === 'teacher') {
+      where.teacherId = req.user.id;
+    }
+
+    if (req.user.collegeId) {
+      subjectInclude.include.push({
+        model: Class,
+        where: { collegeId: req.user.collegeId },
+        required: true,
+        attributes: []
+      });
+    }
 
     const quizzes = await Quiz.findAll({
       where,
       include: [
-        { model: Subject, attributes: ['name', 'code'] },
+        subjectInclude,
         { model: User, as: 'Teacher', attributes: ['name'] },
         { model: QuizAttempt, required: false }
       ],
@@ -50,13 +71,22 @@ const getQuizzes = async (req, res) => {
 // @desc Get quiz for attempt (questions without correct answers)
 const getQuizForAttempt = async (req, res) => {
   try {
+    const { Class } = require('../models');
     const quiz = await Quiz.findByPk(req.params.id, {
       include: [
         { model: QuizQuestion, attributes: ['id', 'question', 'options', 'marks'] },
-        { model: Subject, attributes: ['name'] }
+        { 
+          model: Subject, 
+          attributes: ['name'],
+          include: [{ model: Class, attributes: ['collegeId'] }]
+        }
       ]
     });
     if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+    if (req.user.collegeId && quiz.Subject?.Class?.collegeId !== req.user.collegeId) {
+      return res.status(403).json({ message: 'Access denied. Quiz belongs to another college.' });
+    }
 
     // Check if already attempted
     const existing = await QuizAttempt.findOne({ where: { quizId: quiz.id, studentId: req.user.id } });
