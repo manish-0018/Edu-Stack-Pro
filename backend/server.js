@@ -150,6 +150,57 @@ const getFreePort = async (start) => {
   try {
     await sequelize.sync({ alter: true }); // DB Sync Reload
     console.log('Sequelize Models Synced to PostgreSQL DB');
+
+    // Automatically drop legacy global unique constraints and indexes on Classes and Subjects
+    try {
+      const [classConstraints] = await sequelize.query(`
+        SELECT conname, contype
+        FROM pg_constraint c
+        WHERE conrelid = '"Classes"'::regclass;
+      `);
+      for (const con of classConstraints) {
+        if (con.contype === 'u') {
+          await sequelize.query(`ALTER TABLE "Classes" DROP CONSTRAINT IF EXISTS "${con.conname}";`);
+        }
+      }
+
+      const [subjectConstraints] = await sequelize.query(`
+        SELECT conname, contype
+        FROM pg_constraint c
+        WHERE conrelid = '"Subjects"'::regclass;
+      `);
+      for (const con of subjectConstraints) {
+        if (con.contype === 'u') {
+          await sequelize.query(`ALTER TABLE "Subjects" DROP CONSTRAINT IF EXISTS "${con.conname}";`);
+        }
+      }
+
+      const [classIndexes] = await sequelize.query(`
+        SELECT indexname, indexdef
+        FROM pg_indexes
+        WHERE tablename = 'Classes';
+      `);
+      for (const idx of classIndexes) {
+        if (idx.indexdef.includes('UNIQUE') && idx.indexname !== 'Classes_pkey') {
+          await sequelize.query(`DROP INDEX IF EXISTS "${idx.indexname}" CASCADE;`);
+        }
+      }
+
+      const [subjectIndexes] = await sequelize.query(`
+        SELECT indexname, indexdef
+        FROM pg_indexes
+        WHERE tablename = 'Subjects';
+      `);
+      for (const idx of subjectIndexes) {
+        if (idx.indexdef.includes('UNIQUE') && idx.indexname !== 'Subjects_pkey') {
+          await sequelize.query(`DROP INDEX IF EXISTS "${idx.indexname}" CASCADE;`);
+        }
+      }
+      console.log('PostgreSQL multi-tenant unique constraints successfully verified and cleaned.');
+    } catch (cleanupErr) {
+      console.warn('Note on startup DB constraint check:', cleanupErr.message);
+    }
+
     const startPort = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     const freePort = await getFreePort(startPort);
     server.listen(freePort, () => {

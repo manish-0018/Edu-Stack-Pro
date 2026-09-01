@@ -24,12 +24,13 @@ const getClasses = async (req, res) => {
 const createClass = async (req, res) => {
   try {
     const { name, description } = req.body;
-    if (!name) throw new Error('Please add a class name');
+    if (!name || !name.trim()) throw new Error('Please add a class name');
 
+    const { Op } = require('sequelize');
     // Scope class check to the college and course
     const classExists = await Class.findOne({ 
       where: { 
-        name, 
+        name: { [Op.iLike]: name.trim() }, 
         collegeId: req.user.collegeId || null,
         course: req.user.course || null
       } 
@@ -37,14 +38,17 @@ const createClass = async (req, res) => {
     if (classExists) throw new Error('Class already exists in this course/college');
 
     const newClass = await Class.create({ 
-      name, 
-      description,
+      name: name.trim(), 
+      description: description ? description.trim() : null,
       collegeId: req.user.collegeId || null,
       course: req.user.course || null
     });
     res.status(201).json(newClass);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    const errMsg = error.errors && error.errors.length > 0 
+      ? error.errors.map(e => e.message).join(', ') 
+      : error.message;
+    res.status(400).json({ message: errMsg });
   }
 };
 
