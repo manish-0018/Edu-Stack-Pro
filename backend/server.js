@@ -196,7 +196,12 @@ const getFreePort = async (start) => {
           await sequelize.query(`DROP INDEX IF EXISTS "${idx.indexname}" CASCADE;`);
         }
       }
-      console.log('PostgreSQL multi-tenant unique constraints successfully verified and cleaned.');
+
+      // Ensure year and section columns exist
+      await sequelize.query(`ALTER TABLE "Classes" ADD COLUMN IF NOT EXISTS "year" VARCHAR(255);`);
+      await sequelize.query(`ALTER TABLE "Classes" ADD COLUMN IF NOT EXISTS "section" VARCHAR(255);`);
+
+      console.log('PostgreSQL multi-tenant unique constraints and section schema successfully verified.');
     } catch (cleanupErr) {
       console.warn('Note on startup DB constraint check:', cleanupErr.message);
     }

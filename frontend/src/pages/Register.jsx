@@ -235,17 +235,21 @@ const Register = () => {
             {formData.role === 'student' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign Class</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign Class & Section</label>
                   <select
                     required
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
                     value={formData.classId}
                     onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
                   >
-                    <option value="">Select Class</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    <option value="">Select Class & Section</option>
+                    {classes
+                      .filter(c => !formData.course || !c.course || c.course.toLowerCase() === formData.course.toLowerCase())
+                      .map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {(!formData.course && c.course) ? `(${c.course})` : ''}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>

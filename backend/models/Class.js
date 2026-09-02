@@ -26,6 +26,14 @@ const Class = sequelize.define('Class', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  year: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  section: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   latitude: {
     type: DataTypes.DOUBLE,
     allowNull: true

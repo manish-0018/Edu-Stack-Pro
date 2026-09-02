@@ -3,7 +3,7 @@ const { Class } = require('../models');
 const getClasses = async (req, res) => {
   try {
     let whereClause = {};
-    const { collegeId } = req.query;
+    const { collegeId, course } = req.query;
 
     if (req.user && req.user.collegeId) {
       whereClause.collegeId = req.user.collegeId;
@@ -14,7 +14,19 @@ const getClasses = async (req, res) => {
       whereClause.collegeId = collegeId;
     }
 
-    const classes = await Class.findAll({ where: whereClause });
+    if (course) {
+      whereClause.course = course;
+    }
+
+    const classes = await Class.findAll({ 
+      where: whereClause,
+      order: [
+        ['course', 'ASC'],
+        ['year', 'ASC'],
+        ['section', 'ASC'],
+        ['name', 'ASC']
+      ]
+    });
     res.status(200).json(classes);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -23,25 +35,60 @@ const getClasses = async (req, res) => {
 
 const createClass = async (req, res) => {
   try {
-    const { name, description } = req.body;
-    if (!name || !name.trim()) throw new Error('Please add a class name');
+    let { name, description, course, year, section } = req.body;
+
+    const assignedCourse = req.user.course || course || null;
+    year = year ? year.trim() : null;
+    section = section ? section.trim() : null;
+
+    // Standardize class name if year and section are provided
+    if (year && section && (!name || name.trim() === year || name.trim() === '')) {
+      name = `${year} - ${section}`;
+    } else if (!name || !name.trim()) {
+      if (year && section) {
+        name = `${year} - ${section}`;
+      } else if (year) {
+        name = year;
+      } else {
+        throw new Error('Please provide class name or year and section');
+      }
+    }
+    name = name.trim();
 
     const { Op } = require('sequelize');
-    // Scope class check to the college and course
-    const classExists = await Class.findOne({ 
-      where: { 
-        name: { [Op.iLike]: name.trim() }, 
-        collegeId: req.user.collegeId || null,
-        course: req.user.course || null
-      } 
-    });
-    if (classExists) throw new Error('Class already exists in this course/college');
+
+    // Duplicate check scoped to college and course/branch
+    let duplicateWhere = {
+      collegeId: req.user.collegeId || null,
+      course: assignedCourse
+    };
+
+    if (year && section) {
+      duplicateWhere[Op.or] = [
+        { name: { [Op.iLike]: name } },
+        { 
+          [Op.and]: [
+            { year: { [Op.iLike]: year } },
+            { section: { [Op.iLike]: section } }
+          ]
+        }
+      ];
+    } else {
+      duplicateWhere.name = { [Op.iLike]: name };
+    }
+
+    const classExists = await Class.findOne({ where: duplicateWhere });
+    if (classExists) {
+      throw new Error(`Section "${name}" already exists in ${assignedCourse || 'this college'}`);
+    }
 
     const newClass = await Class.create({ 
-      name: name.trim(), 
+      name, 
       description: description ? description.trim() : null,
       collegeId: req.user.collegeId || null,
-      course: req.user.course || null
+      course: assignedCourse,
+      year,
+      section
     });
     res.status(201).json(newClass);
   } catch (error) {
