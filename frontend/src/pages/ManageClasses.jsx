@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Trash2, Plus, Layers, GraduationCap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const COURSES = [
   'BTech CSE',
@@ -21,6 +22,7 @@ const ManageClasses = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBranchFilter, setSelectedBranchFilter] = useState('ALL');
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [formData, setFormData] = useState({
     course: user?.course || 'BTech CSE',
@@ -79,15 +81,15 @@ const ManageClasses = () => {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Are you sure you want to permanently delete "${name}"? This will remove all associated subjects, students, and attendance records.`)) {
-      try {
-        await axios.delete(`/api/classes/${id}`);
-        setClasses(classes.filter((c) => c.id !== id));
-        toast.success(`Class "${name}" has been deleted.`);
-      } catch (err) {
-        toast.error('Failed to delete class');
-      }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await axios.delete(`/api/classes/${deleteTarget.id}`);
+      setClasses(classes.filter((c) => c.id !== deleteTarget.id));
+      toast.success(`Class "${deleteTarget.name}" has been deleted.`);
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error('Failed to delete class');
     }
   };
 
@@ -296,8 +298,8 @@ const ManageClasses = () => {
                 {user.role === 'admin' && (
                   <td className="p-4 text-right">
                     <button
-                      onClick={() => handleDelete(c.id, c.name)}
-                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
+                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       title="Delete Section"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -317,6 +319,16 @@ const ManageClasses = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Class Section?"
+        message="Are you sure you want to permanently delete this class section? This will remove all associated subjects, students, and attendance records."
+        itemName={deleteTarget?.name}
+        confirmText="Delete Section"
+      />
     </div>
   );
 };

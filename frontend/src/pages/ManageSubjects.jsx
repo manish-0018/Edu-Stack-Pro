@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Trash2, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
+import ConfirmModal from '../components/ConfirmModal';
 
 const ManageSubjects = () => {
   const { user } = useAuth();
@@ -11,6 +11,7 @@ const ManageSubjects = () => {
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [newSubject, setNewSubject] = useState({ name: '', code: '', classId: '', teacherId: '', type: 'theory', credits: 3, course: user.course || '' });
 
   useEffect(() => {
@@ -50,15 +51,15 @@ const ManageSubjects = () => {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Are you sure you want to permanently delete subject "${name}"? This action is irreversible and will remove all associated attendance logs and internal marks records.`)) {
-      try {
-        await axios.delete(`/api/subjects/${id}`);
-        setSubjects(subjects.filter((s) => s.id !== id));
-        toast.success(`Subject "${name}" has been successfully deleted.`);
-      } catch (err) {
-        toast.error('Failed to delete subject');
-      }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await axios.delete(`/api/subjects/${deleteTarget.id}`);
+      setSubjects(subjects.filter((s) => s.id !== deleteTarget.id));
+      toast.success(`Subject "${deleteTarget.name}" has been deleted.`);
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error('Failed to delete subject');
     }
   };
 
@@ -191,7 +192,11 @@ const ManageSubjects = () => {
                 <td className="p-4">{s.Teacher?.name}</td>
                 {user.role === 'admin' && (
                   <td className="p-4 text-right">
-                    <button onClick={() => handleDelete(s.id, s.name)} className="text-red-500 hover:text-red-700 p-2">
+                    <button
+                      onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
+                      className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Delete Subject"
+                    >
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </td>
@@ -201,6 +206,16 @@ const ManageSubjects = () => {
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Subject?"
+        message="Are you sure you want to permanently delete this subject? This action is irreversible and will remove all associated attendance logs and internal marks records."
+        itemName={deleteTarget?.name}
+        confirmText="Delete Subject"
+      />
     </div>
   );
 };

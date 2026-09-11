@@ -3,12 +3,14 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Trash2, Save, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const ManageUsers = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [roleFilter, setRoleFilter] = useState(user.role === 'teacher' ? 'student' : '');
   const [editEmails, setEditEmails] = useState({}); // Stores temporary text updates for parent emails
 
@@ -76,15 +78,15 @@ const ManageUsers = () => {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Are you sure you want to permanently delete the user account for "${name}"? This action is irreversible and will remove all associated attendance logs and academic records from the database.`)) {
-      try {
-        await axios.delete(`/api/users/${id}`);
-        toast.success(`User account for "${name}" has been successfully deleted.`);
-        setUsers(users.filter((user) => user.id !== id));
-      } catch (err) {
-        toast.error('Failed to delete user');
-      }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await axios.delete(`/api/users/${deleteTarget.id}`);
+      toast.success(`User account for "${deleteTarget.name}" has been successfully deleted.`);
+      setUsers(users.filter((user) => user.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error('Failed to delete user');
     }
   };
 
@@ -250,8 +252,9 @@ const ManageUsers = () => {
                   {user.role === 'admin' && (
                     <td className="p-4 text-right">
                       <button
-                        onClick={() => handleDelete(u.id, u.name)}
-                        className="text-red-500 hover:text-red-700 p-2"
+                        onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
+                        className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title="Delete User Account"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -363,6 +366,16 @@ const ManageUsers = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete User Account?"
+        message="Are you sure you want to permanently delete this user account? This action is irreversible and will remove all associated attendance logs and academic records from the database."
+        itemName={deleteTarget?.name}
+        confirmText="Delete Account"
+      />
     </div>
   );
 };
