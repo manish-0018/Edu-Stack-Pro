@@ -266,7 +266,10 @@ const ManageUsers = () => {
           </table>
         </div>
         {users.length === 0 && (
-          <div className="p-8 text-center text-gray-500">No users found.</div>
+          <div className="p-12 text-center text-gray-400">
+            <p className="font-semibold text-gray-600 dark:text-gray-300">No users registered yet</p>
+            <p className="text-xs text-gray-400 mt-1">When students or staff create accounts, they will appear right here 🎓</p>
+          </div>
         )}
       </div>
 
@@ -348,8 +351,8 @@ const ManageUsers = () => {
                         <td className="py-3 text-center font-medium">{sub.attended}/{sub.total}</td>
                         <td className="py-3 text-center font-bold">{sub.percentage}%</td>
                         <td className="py-3 text-right">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isSafe ? 'bg-green-50 text-green-700 dark:bg-green-950/20' : 'bg-red-50 text-red-700 dark:bg-red-950/20'}`}>
-                            {isSafe ? 'Safe' : 'Defaulter'}
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${isSafe ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/20'}`}>
+                            {isSafe ? '✓ On Track' : '🌱 Needs Support'}
                           </span>
                         </td>
                       </tr>
@@ -357,7 +360,7 @@ const ManageUsers = () => {
                   })}
                   {(!selectedStudent.subjects || selectedStudent.subjects.length === 0) && (
                     <tr>
-                      <td colSpan="5" className="text-center py-4 text-gray-400">No subjects or attendance records found.</td>
+                      <td colSpan="5" className="text-center py-6 text-gray-400">No subjects or attendance records found yet.</td>
                     </tr>
                   )}
                 </tbody>

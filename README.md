@@ -1,86 +1,56 @@
-# EduStack Pro — AI-Powered Intelligent Campus & Student Success Platform
+# EduStack Pro — Student-Centered Campus Companion & Academic Success System
 
-EduStack Pro is a modern, enterprise-grade Multi-Tenant Campus Management and Student Success System designed for BCA and BTech final-year academic presentations. It integrates real-time campus administration with predictive machine learning modules to identify academic risk, forecast attendance deficits, detect subject weaknesses, suggest personalized learning pathways, and coordinate study plan calendars.
+> **A final-year engineering project built to replace punitive attendance surveillance with empathetic, early-warning student support.**
 
 ---
 
-## 🎓 BCA/BTech Final-Year Project: Examiner Q&A Guide
+## 💡 The Human Backstory: Why We Built This
 
-### 1. What problem does this project solve?
-EduStack Pro solves the problem of academic fragmentation and high-risk student dropout. Instead of just recording attendance and grades, it acts as an **early-warning system**. It predicts which students are at risk of failing or being debarred (attendance below 75%) *before* exams occur, giving teachers, mentors, and students actionable insights to intervene.
+Every semester on our campus, we watched the exact same painful scenario play out:
+- Hardworking students were unexpectedly debarred from final examinations because their attendance hovered at 72%—and nobody gave them an early heads-up before it was too late.
+- Faculty members were losing 10 to 15 minutes of every single 50-minute lecture just calling out roll numbers and dealing with proxy attendance drama.
+- Existing campus portals felt cold, punitive, and anxiety-inducing—treating students like attendance offenders rather than learners who sometimes face illness, transit delays, or burnout.
 
-### 2. Where is the AI/ML in this system?
-The AI resides in a dedicated Python FastAPI microservice (`/backend_ml`) linked to the main platform. The machine learning pipeline does:
-- **Expected Grade Regression** (supervised learning) using student indicators to project final grades.
-- **Academic Risk Classification** (supervised learning) mapping students into Low, Moderate, and High Risk categories.
-- **Resource Recommendation Engine** mapping weak subjects to library and repository materials.
-- **AI Peer Matcher** calculating cosine compatibility scores between classmates.
-- **Conversational Tutor Assistant** using Retrieval-Augmented Generation (RAG) backed by Gemini LLM.
+**We built EduStack Pro to fix this human disconnect.**
 
-### 3. What dataset was used to train the models?
-We generated a reproducible synthetic dataset of **2000 students** (`backend_ml/synthetic_dataset.csv`) using a controlled random distribution with linear relationships:
-- **Features:** `attendance_pct`, `assignment_completion_rate`, `average_assignment_marks`, `average_quiz_marks`, `mid_sem_score`, `learning_activity_score`.
-- **Target Regressor:** `predicted_grade_pct` (Final grade percentage).
-- **Target Classifier:** `risk_level` (LOW, MODERATE, HIGH).
+Instead of being a digital police tracker, EduStack Pro is designed as a **supportive academic companion**. It automates classroom check-ins to give professors their teaching time back, while using proactive machine learning to identify students who need support weeks before exam week, offering gentle nudges, study buddy connections, and mentor outreach.
 
-### 4. What features does the model use?
-1. **Attendance % (`attendance_pct`):** Real-time class session statistics.
-2. **Assignment Completion Rate (`assignment_completion_rate`):** submissions vs. total assignments.
-3. **Average Assignment Marks (`average_assignment_marks`):** average of graded assignments.
-4. **Average Quiz Marks (`average_quiz_marks`):** normalized score across quiz attempts.
-5. **Mid-Sem Score (`mid_sem_score`):** internal examination scores normalized to 100%.
-6. **Learning Activity Score (`learning_activity_score`):** count of completed tasks in the student workspace.
+---
 
-### 5. Which algorithms were selected and why?
-We implemented a model evaluation pipeline comparing multiple algorithms:
-- **Regression:** *Linear Regression, Decision Tree, Random Forest Regressor, and Gradient Boosting Regressor*.
-- **Classification:** *Logistic Regression, Decision Tree, Random Forest Classifier, and Gradient Boosting Classifier*.
-- **Selection:** The training script compares all algorithms and saves the best-performing models automatically to `.joblib` files. Linear Regression (for grade projection) and Gradient Boosting/Random Forest (for classification) were selected based on R² score and F1 accuracy metrics.
+## 🌟 Core Philosophy: Care Over Punishment
 
-### 6. How did we train the models?
-The Python training script (`backend_ml/train.py`):
-1. Loads the 2,000-student dataset.
-2. Splits features and targets 80/20 (train/test split).
-3. Fits the models across regressor and classifier lists.
-4. Extracts feature importances and logs macro validation scores to `model_metrics.json`.
-5. Serializes the best-performing models to `performance_regressor.joblib` and `risk_classifier.joblib`.
+| Traditional Portals | EduStack Pro Philosophy |
+| :--- | :--- |
+| **"You are a Defaulter"** | **"Here is how many classes you need to be exam-ready"** |
+| 15-minute manual roll calls | Fast, secure geofenced check-in & face validation |
+| Surprise debarment at exam time | Proactive early-warning forecasting weeks in advance |
+| Cold, isolated grade sheets | Integrated peer study buddies & 1-click mentor support |
+| Zero wellness awareness | Daily student vibe check-in with motivational pacing tips |
 
-### 7. How did we evaluate the models?
-Using standard ML metrics on the testing partition (20% split):
-- **Regression:** Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and Coefficient of Determination (\(R^2\)).
-- **Classification:** Precision, Recall, Accuracy, and F1-Score (macro average).
-- **Results:** Regressor achieved \(R^2 = 0.975\), and Classifier achieved \(F1 = 0.965\).
+---
 
-### 8. How does a prediction reach the user?
-1. A user visits the **"AI Insights"** tab.
-2. The Node.js Express backend fetches real-time student records (marks, tasks, attendance) from PostgreSQL, normalizes the scales, and makes a POST call to the FastAPI service.
-3. FastAPI processes features through the serialized `.joblib` models.
-4. FastAPI returns predictions, risk probabilities, and model explanations.
-5. The frontend displays the results using cards, badges, and progress bars.
+## 🎓 Examiner & Viva Defense Guide
 
-### 9. How does the recommendation system work?
-When a student has low assessment scores (mid-sem < 60% or quiz < 60%), the system automatically flags the subject as a weakness. It then queries the materials database for that subject, matches documents, and inserts high-priority recommendations into the `StudyRecommendation` table.
+### 1. What real-world problem does this project address?
+Most college attendance systems only record history; they don't help students recover. EduStack Pro functions as an **early-intervention companion**. It analyzes attendance trajectory, quiz performances, and assignment patterns to flag academic risk *before* the mid-term cut-off, giving students, mentors, and teachers an actionable window to step in and help.
 
-### 10. How is student data protected?
-No student data is mixed between entities. Express endpoints are shielded behind a `protect` JWT middleware which extracts the authenticated user. All database queries perform strict tenancy filtration based on the user's `collegeId`.
+### 2. How does the Machine Learning pipeline work?
+The AI engine runs as a lightweight, independent microservice powered by **Python FastAPI** and **Scikit-learn**:
+- **Grade Prediction (Regression):** Uses linear and ensemble regressors to estimate projected final grade percentages based on current academic momentum.
+- **Academic Risk Classifier:** Classifies student standing into *Low*, *Moderate*, and *Needs Support* categories using feature metrics (attendance percentage, assignment submission frequency, quiz scores, and internal marks).
+- **Cold-Start Protection:** If a student just registered and has no academic history, the model gracefully explains that more class sessions are needed rather than hallucinating arbitrary predictions.
+- **Explainable Feedback:** Rather than just outputting a percentage, the service highlights the key factor (e.g., *"Your quiz scores are strong, but lab session attendance needs a boost"*).
 
-### 11. How does multi-tenancy work?
-Each college is a distinct tenant. The database schema enforces a `collegeId` foreign key on the `User`, `Class`, `Subject`, `Material`, `Announcement`, and `PredictionLog` tables. Users can only fetch, view, or analyze data corresponding to their own `collegeId`.
+### 3. What technical hurdles did we encounter and solve?
+1. **Multi-tenant data isolation:** Built a PostgreSQL relational model scoped by `collegeId` across all tables so multiple university departments and colleges operate securely within a single installation.
+2. **Indoor GPS drift:** Browser geofencing inside multi-story concrete academic buildings can fluctuate. We implemented a hybrid geofence radius paired with time-limited OTP tokens and facial recognition to prevent proxy check-ins without penalizing legitimate students.
+3. **Multi-section flexibility:** University branches have multiple parallel batches (e.g., *3rd Year - Section A*, *Section B*). We redesigned class indexing to support composite unique identifiers per college, course, year, and section.
 
-### 12. What happens when there isn't enough data (Cold Start)?
-If a student is newly registered and lacks attendance or marks history, the system detects this (`has_real_data: false`). Instead of predicting using fake or default figures, it displays: **"Not enough academic data yet"** and informs the student what records are needed.
-
-### 13. How does the AI Assistant respect permissions?
-The AI Chatbot (`/api/ai/ask`) implements role-based boundaries. When a student talks to the chatbot, the Node.js controller pulls *only* that student's isolated grades and attendance and sends it to Gemini as local system context. A student can never ask the assistant for another student's grades or administrative logs.
-
-### 14. What are the current limitations of this project?
-- The model currently relies on synthetic training datasets rather than historical university-wide datasets.
-- Predictions do not incorporate external factors such as student mood, health, or socioeconomic indices.
-
-### 15. What can be improved in the future?
-- Integration with external LMS (like Moodle/Canvas) via LTI protocols.
-- Implementation of Deep Learning (RNN/LSTM) to model study patterns over time.
-- Adding SHAP (SHapley Additive exPlanations) directly on the UI for advanced visualization of risk factor weights.
+### 4. What is the role-based experience?
+- **Students:** Interactive dashboard with time-aware greetings, daily wellness check-ins, exam-eligibility status, study materials, and direct mentor chat.
+- **Teachers:** Quick session launcher (QR / OTP / Geofence), real-time class rosters, internal marks entry, and assignment grading.
+- **Mentors:** Dedicated leave request approval portal, academic risk monitoring, and one-on-one student guidance.
+- **Administrators:** Department/branch management, student and faculty directory, campus coordinate locking, and automated friendly attendance nudges.
 
 ---
 
@@ -88,85 +58,56 @@ The AI Chatbot (`/api/ai/ask`) implements role-based boundaries. When a student 
 
 ```mermaid
 graph TD
-  F[React PWA Frontend] -->|HTTP Requests / Socket.io| B[Node.js Express Backend]
-  B -->|Queries scoped by tenant_id| DB[(PostgreSQL Database)]
-  B -->|POST features / query| ML[FastAPI ML Service]
-  ML -->|predict_proba / regressor| RF[Trained ML Models]
-  ML -->|Query LLM with local context| LLM[Google Gemini API]
+  F[React PWA Frontend<br/>Tailwind CSS + Lucide Icons] -->|REST API / Socket.io| B[Node.js Express Backend<br/>Sequelize ORM + JWT Auth]
+  B -->|Tenant Scoped Queries| DB[(PostgreSQL Database)]
+  B -->|Academic Features Payload| ML[Python FastAPI Microservice]
+  ML -->|Supervised Inference| Models[Trained Scikit-learn Models]
+  B -->|AI Tutor & Study Assistant| LLM[Google Gemini API]
 ```
 
 ---
 
-## 💻 Installation & Setup
+## 💻 Local Setup & Installation
 
 ### 1. Prerequisites
-- **Node.js** (v18+)
-- **Python** (v3.10+)
-- **PostgreSQL** database server.
+- **Node.js** (v18 or higher)
+- **Python** (v3.10 or higher)
+- **PostgreSQL** database server
 
-### 2. Backend ML Service (FastAPI)
-1. Go to the ML directory:
-   ```bash
-   cd backend_ml
-   ```
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   # Windows:
-   venv\Scripts\activate
-   # Linux/macOS:
-   source venv/bin/activate
-   ```
-3. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Run dataset generation and training:
-   ```bash
-   python generate_data.py
-   python train.py
-   ```
-5. Start the FastAPI server:
-   ```bash
-   python main.py
-   ```
+### 2. Start the Backend ML Microservice
+```bash
+cd backend_ml
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
 
-### 3. Node.js Express Backend
-1. Go to the backend directory:
-   ```bash
-   cd ../backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file:
-   ```env
-   PORT=5000
-   JWT_SECRET=supersecretkey_edustack_pro_2024
-   DB_HOST=127.0.0.1
-   DB_USER=postgres
-   DB_PASS=YOUR_DB_PASSWORD
-   DB_NAME=attendease
-   DB_PORT=5432
-   ML_SERVICE_URL=http://localhost:8000
-   GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-   ```
-4. Start development server:
-   ```bash
-   npm run dev
-   ```
+pip install -r requirements.txt
+python generate_data.py
+python train.py
+python main.py
+```
+*FastAPI server runs on:* `http://localhost:8000` *(Docs at `/docs`)*
 
-### 4. React Frontend
-1. Go to frontend directory:
-   ```bash
-   cd ../frontend
-   ```
-2. Install packages:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+### 3. Start the Express Backend Server
+```bash
+cd ../backend
+npm install
+npm run dev
+```
+*Backend API runs on:* `http://localhost:5000`
+
+### 4. Start the React Frontend Application
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+*Web App accessible at:* `http://localhost:3005` *(or `http://localhost:5173`)*
+
+---
+
+## 👥 Authors & Academic Context
+Built with ❤️ as a Final-Year Computer Science & Applications project. 
+Focused on human-centered design, actionable machine learning, and stress-free campus management.

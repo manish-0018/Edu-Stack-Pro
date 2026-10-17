@@ -54,7 +54,14 @@ const LeaveRequests = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Leave Requests</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Leave Requests</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {user.role === 'student'
+              ? 'Taking time off for health, family, or college events? Submit your application here.'
+              : 'Review and approve student leave requests with care and understanding.'}
+          </p>
+        </div>
         {user.role === 'student' && (
           <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2">
             <Plus className="w-5 h-5" /> New Request
@@ -181,7 +188,14 @@ const LeaveRequests = () => {
           </tbody>
         </table>
         {requests.length === 0 && (
-          <div className="p-8 text-center text-gray-500">No leave requests found.</div>
+          <div className="p-12 text-center text-gray-400">
+            <p className="font-semibold text-gray-600 dark:text-gray-300">No leave requests found</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {user.role === 'student'
+                ? "You haven't submitted any leave applications yet. Need time off? Click 'New Request'."
+                : "All clear! Everyone is present and learning today 🌟"}
+            </p>
+          </div>
         )}
       </div>
     </div>

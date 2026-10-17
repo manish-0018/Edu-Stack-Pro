@@ -8,6 +8,7 @@ import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
 import AiIntelligenceWatchlist from '../components/AiIntelligenceWatchlist';
 import SmartCheckinModal from '../components/SmartCheckinModal';
+import StudentWellnessWidget from '../components/StudentWellnessWidget';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
@@ -33,6 +34,13 @@ ChartJS.register(
   Legend,
   ArcElement
 );
+
+const getTimeBasedGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+};
 
 const StatCard = ({ title, value, subtitle, icon, color, to }) => {
   const content = (
@@ -639,9 +647,9 @@ const Dashboard = () => {
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl font-bold">Welcome back, {user?.role === 'admin' ? 'Admin' : 'Sir'} 👋</h1>
+                <h1 className="text-2xl font-bold">{getTimeBasedGreeting()}, {user?.name?.split(' ')[0] || (user?.role === 'admin' ? 'Administrator' : 'Professor')} 👋</h1>
                 <p className="text-primary-200 text-sm mt-1">
-                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • Ready for an inspiring day on campus.
                 </p>
               </div>
               <div className="flex flex-col gap-3">
@@ -651,14 +659,14 @@ const Dashboard = () => {
                     <div className="text-[10px] text-primary-200 font-semibold uppercase">Students</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-2xl font-black text-red-300">{defaultersCount}</div>
-                    <div className="text-[10px] text-primary-200 font-semibold uppercase">Defaulters</div>
+                    <div className="text-2xl font-black text-amber-300">{defaultersCount}</div>
+                    <div className="text-[10px] text-primary-200 font-semibold uppercase">Needs Support</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
                     <div className="text-2xl font-black text-green-300">
                       {totalStudents > 0 ? Math.round((safeCount / totalStudents) * 100) : 0}%
                     </div>
-                    <div className="text-[10px] text-primary-200 font-semibold uppercase">Compliance</div>
+                    <div className="text-[10px] text-primary-200 font-semibold uppercase">On Track</div>
                   </div>
                 </div>
                 
@@ -667,17 +675,17 @@ const Dashboard = () => {
                   {user?.role === 'admin' && (
                     <button 
                       onClick={async () => {
-                      const loadingToast = toast.loading("Scanning and sending auto-warnings...");
+                      const loadingToast = toast.loading("Sending friendly attendance nudges...");
                       try {
                         const res = await axios.post('/api/warnings/trigger');
-                        toast.update(loadingToast, { render: res.data.message, type: "success", isLoading: false, autoClose: 4000 });
+                        toast.update(loadingToast, { render: res.data.message || "Attendance reminders sent!", type: "success", isLoading: false, autoClose: 4000 });
                       } catch(e) { 
-                        toast.update(loadingToast, { render: e.response?.data?.message || "Failed to run auto-warnings", type: "error", isLoading: false, autoClose: 4000 }); 
+                        toast.update(loadingToast, { render: e.response?.data?.message || "Failed to send reminders", type: "error", isLoading: false, autoClose: 4000 }); 
                       }
                     }}
-                    className="bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors backdrop-blur-md border border-white/10"
+                    className="bg-amber-500/80 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors backdrop-blur-md border border-white/10"
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" /> Auto-Warnings
+                      <AlertTriangle className="w-3.5 h-3.5" /> Send Friendly Nudges
                     </button>
                   )}
                   <button 
@@ -687,14 +695,14 @@ const Dashboard = () => {
                         const url = window.URL.createObjectURL(new Blob([res.data]));
                         const link = document.createElement('a');
                         link.href = url;
-                        link.setAttribute('download', 'defaulters_report.csv');
+                        link.setAttribute('download', 'support_needed_report.csv');
                         document.body.appendChild(link);
                         link.click();
                       } catch(e) { toast.error("Download failed"); }
                     }}
                     className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors backdrop-blur-md border border-white/10"
                   >
-                    <Download className="w-3.5 h-3.5" /> Defaulters CSV
+                    <Download className="w-3.5 h-3.5" /> Support List CSV
                   </button>
                   <button 
                     onClick={async () => {
@@ -721,7 +729,7 @@ const Dashboard = () => {
             <StatCard
               title="Total Students"
               value={stats.totalStudents || 0}
-              subtitle={`${defaultersCount} defaulters requiring action`}
+              subtitle={`${defaultersCount} students may need attendance guidance`}
               icon={<Users className="text-blue-600" />}
               color="bg-blue-100 dark:bg-blue-900/30"
               to="/users"
@@ -992,17 +1000,17 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">🎓 Student</span>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                  <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
                     (stats.theoryPercentage || 0) >= 75
-                      ? 'bg-green-500/30 text-green-200'
-                      : 'bg-red-500/30 text-red-200'
+                      ? 'bg-emerald-500/30 text-emerald-200'
+                      : 'bg-amber-500/30 text-amber-200'
                   }`}>
-                    {(stats.theoryPercentage || 0) >= 75 ? '✓ Theory Eligible' : '⚠ Theory Defaulter'}
+                    {(stats.theoryPercentage || 0) >= 75 ? '✓ On Track for Exams' : '🌱 Needs Catch-Up'}
                   </span>
                 </div>
-                <h1 className="text-2xl font-bold">Welcome back, {user?.name?.split(' ')[0]} 👋</h1>
+                <h1 className="text-2xl font-bold">{getTimeBasedGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
                 <p className="text-primary-200 text-sm mt-1">
-                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • Showing up today makes tomorrow easier.
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {user?.College?.name && (
@@ -1028,14 +1036,14 @@ const Dashboard = () => {
                 {/* Gamified Badges */}
                 <div className="flex gap-2 mt-4">
                   {(stats.attendancePercentage || 0) >= 90 && (
-                    <div className="flex items-center gap-1 bg-yellow-400/20 text-yellow-200 px-2 py-1 rounded-md text-xs font-bold border border-yellow-400/30" title="Attendance Titan: >= 90% Attendance">
-                      👑 Titan
+                    <div className="flex items-center gap-1 bg-yellow-400/20 text-yellow-200 px-2 py-1 rounded-md text-xs font-bold border border-yellow-400/30" title="Attendance Star: >= 90% Attendance">
+                      👑 Attendance Star
                     </div>
                   )}
 
                   {(stats.attendancePercentage || 0) === 100 && (
                     <div className="flex items-center gap-1 bg-purple-400/20 text-purple-200 px-2 py-1 rounded-md text-xs font-bold border border-purple-400/30" title="Flawless: 100% Attendance">
-                      💎 Flawless
+                      💎 100% Perfect
                     </div>
                   )}
                 </div>
@@ -1043,13 +1051,13 @@ const Dashboard = () => {
               <div className="flex gap-3 flex-wrap">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
                   <div className={`text-2xl font-black ${
-                    (stats.theoryPercentage || 0) >= 75 ? 'text-green-300' : 'text-red-300'
+                    (stats.theoryPercentage || 0) >= 75 ? 'text-green-300' : 'text-amber-300'
                   }`}>{stats.theoryPercentage || 0}%</div>
                   <div className="text-[10px] text-primary-200 font-semibold uppercase">Theory</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
                   <div className={`text-2xl font-black ${
-                    (stats.labPercentage || 0) >= 60 ? 'text-green-300' : 'text-red-300'
+                    (stats.labPercentage || 0) >= 60 ? 'text-green-300' : 'text-amber-300'
                   }`}>{stats.labPercentage || 0}%</div>
                   <div className="text-[10px] text-primary-200 font-semibold uppercase">Lab</div>
                 </div>
@@ -1061,35 +1069,42 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Dean's Attendance Shortage & Debarment Alert Banner */}
+          {/* Student Wellness & Daily Vibe Widget */}
+          <StudentWellnessWidget studentName={user?.name?.split(' ')[0]} />
+
+          {/* Supportive Attendance Recovery & Exam Eligibility Notice */}
           {((stats.attendancePercentage || 0) < 70) && (
             <div className={`p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm border-l-8 ${
               (stats.attendancePercentage || 0) < 50
-                ? 'bg-red-500/10 border-red-500 dark:bg-red-950/20 text-red-700 dark:text-red-400'
+                ? 'bg-rose-500/10 border-rose-500 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
                 : (stats.attendancePercentage || 0) < 60
-                ? 'bg-rose-500/10 border-rose-500 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400'
-                : 'bg-amber-500/10 border-amber-500 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400'
+                ? 'bg-amber-500/10 border-amber-500 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300'
+                : 'bg-indigo-500/10 border-indigo-500 dark:bg-indigo-950/20 text-indigo-800 dark:text-indigo-300'
             }`}>
               <div className={`p-3 rounded-xl shrink-0 ${
-                (stats.attendancePercentage || 0) < 60 ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
+                (stats.attendancePercentage || 0) < 60 ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600'
               }`}>
                 <AlertTriangle className="w-6 h-6 animate-pulse" />
               </div>
               <div className="flex-1">
                 <h3 className="text-md font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  {((stats.attendancePercentage || 0) < 60) ? '🚨 EXAM DEBARMENT WARNING' : '⚠️ DEAN ATTENDANCE SHORTAGE NOTICE'}
-                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[9px] font-bold rounded-full uppercase tracking-wider animate-pulse">Critical</span>
+                  {((stats.attendancePercentage || 0) < 60) ? '📢 Attendance Recovery Action Plan' : '💡 Exam Eligibility Reminder'}
+                  <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                    Action Recommended
+                  </span>
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                  Your overall attendance is currently <strong className="text-gray-900 dark:text-white">{stats.attendancePercentage || 0}%</strong>, which is below the safe threshold of <strong>70%</strong>. 
-                  {((stats.attendancePercentage || 0) < 50) ? (
-                    <strong> Exams are approaching next week! You are officially DEBARRED from both Mid-Sem (req. 60%) and End-Sem (req. 50%) exams. All Hall Tickets are LOCKED.</strong>
-                  ) : ((stats.attendancePercentage || 0) < 60) ? (
-                    <strong> Exams are approaching next week! You are officially DEBARRED from Mid-Sem exams (req. 60%). Your Mid-Sem Hall Ticket is LOCKED.</strong>
-                  ) : (
-                    " Exams are approaching! You must maintain >= 60% (Mid-Sem) / 50% (End-Sem) or you will be barred from examinations."
-                  )}
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                  Your current attendance is <strong className="text-gray-900 dark:text-white">{stats.attendancePercentage || 0}%</strong> (eligibility: 60% for Mid-Sem, 75% for End-Sem).
+                  Don't stress—you can get back on track! Attend upcoming lectures consistently, submit any pending Medical or Duty Leave slips to your mentor, or speak with your class coordinator to ensure you qualify for hall tickets.
                 </p>
+                <div className="flex gap-4 mt-3">
+                  <Link to="/leaves" className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                    Submit Leave / Medical Slip →
+                  </Link>
+                  <Link to="/mentorship" className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                    Connect with Mentor →
+                  </Link>
+                </div>
               </div>
             </div>
           )}
@@ -1125,9 +1140,9 @@ const Dashboard = () => {
                 <AlertCircle className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-md font-bold text-amber-900 dark:text-amber-300">Defaulter Grace Period Active</h3>
+                <h3 className="text-md font-bold text-amber-900 dark:text-amber-300">Attendance Catch-Up Window Active</h3>
                 <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                  Your attendance has dropped below 75%. You have a grace period until <strong>{new Date(stats.gracePeriodEnds).toLocaleDateString()}</strong> to raise your attendance or submit Duty Leave/Medical requests before parents are automatically alerted.
+                  Your attendance has dipped below 75%. You have a recovery window until <strong>{new Date(stats.gracePeriodEnds).toLocaleDateString()}</strong> to attend upcoming sessions or submit Duty Leave/Medical requests.
                 </p>
               </div>
             </div>
