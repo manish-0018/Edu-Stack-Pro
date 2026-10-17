@@ -7,7 +7,6 @@ import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
 import AiIntelligenceWatchlist from '../components/AiIntelligenceWatchlist';
 import SmartCheckinModal from '../components/SmartCheckinModal';
-import StudentWellnessWidget from '../components/StudentWellnessWidget';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
@@ -1067,9 +1066,6 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-
-          {/* Student Wellness & Daily Vibe Widget */}
-          <StudentWellnessWidget studentName={user?.name?.split(' ')[0]} />
 
           {/* Supportive Attendance Recovery & Exam Eligibility Notice */}
           {((stats.attendancePercentage || 0) < 70) && (
