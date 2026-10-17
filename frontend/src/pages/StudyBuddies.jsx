@@ -153,7 +153,9 @@ const StudyBuddies = () => {
     try {
       const res = await axios.get('/api/subjects');
       setSubjects(res.data);
-    } catch (err) { }
+    } catch (err) {
+      console.error('Failed to fetch subjects', err);
+    }
   };
 
   const fetch1on1 = async () => {
@@ -372,7 +374,7 @@ const StudyBuddies = () => {
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 className="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="">Select a subject...</option>
+                <option value="">{subjects.length === 0 ? 'No subjects found' : 'Select a subject...'}</option>
                 {subjects.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
               </select>
               <button
@@ -452,7 +454,7 @@ const StudyBuddies = () => {
           <AdBanner />
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Upcoming Study Groups</h2>
-            <button onClick={() => setShowGroupModal(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2">
+            <button onClick={() => { fetchSubjects(); setShowGroupModal(true); }} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2">
               <Plus className="w-4 h-4" /> Create Group
             </button>
           </div>
@@ -965,9 +967,12 @@ const StudyBuddies = () => {
                   onChange={e => setNewGroup({...newGroup, subjectId: e.target.value})}
                   className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                 >
-                  <option value="">Select Subject</option>
+                  <option value="">{subjects.length === 0 ? 'No subjects found' : 'Select Subject'}</option>
                   {subjects.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
                 </select>
+                {subjects.length === 0 && (
+                  <p className="text-xs text-amber-500 mt-1 font-medium">No subjects found for your class/course.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Topic / Title</label>

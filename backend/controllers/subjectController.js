@@ -1,4 +1,5 @@
 const { Subject, Class, User } = require('../models');
+const { Op } = require('sequelize');
 
 const getSubjects = async (req, res) => {
   try {
@@ -6,16 +7,32 @@ const getSubjects = async (req, res) => {
     if (req.user.role === 'teacher') {
       whereClause.teacherId = req.user.id;
     } else if (req.user.role === 'student') {
-      whereClause.classId = req.user.classId;
+      if (req.user.classId) {
+        whereClause.classId = req.user.classId;
+      } else if (req.user.course) {
+        whereClause.course = req.user.course;
+      }
     }
 
-    let classWhere = {};
+    const classConditions = [];
     if (req.user.collegeId) {
-      classWhere.collegeId = req.user.collegeId;
+      classConditions.push({
+        [Op.or]: [
+          { collegeId: req.user.collegeId },
+          { collegeId: null }
+        ]
+      });
     }
     if (req.user.course) {
-      classWhere.course = req.user.course;
+      classConditions.push({
+        [Op.or]: [
+          { course: req.user.course },
+          { course: null }
+        ]
+      });
     }
+
+    const classWhere = classConditions.length > 0 ? { [Op.and]: classConditions } : undefined;
 
     let subjects = await Subject.findAll({
       where: whereClause,
@@ -24,7 +41,7 @@ const getSubjects = async (req, res) => {
           model: Class, 
           where: classWhere,
           required: true,
-          attributes: ['name', 'course'] 
+          attributes: ['name', 'course', 'collegeId'] 
         },
         { model: User, as: 'Teacher', attributes: ['name'] }
       ]
@@ -52,10 +69,10 @@ const createSubject = async (req, res) => {
     // Scoping validation on class
     const targetClass = await Class.findByPk(classId);
     if (!targetClass) throw new Error('Target class not found');
-    if (req.user.collegeId && targetClass.collegeId !== req.user.collegeId) {
+    if (req.user.collegeId && targetClass.collegeId && targetClass.collegeId !== req.user.collegeId) {
       throw new Error('Access denied. Class belongs to another college.');
     }
-    if (req.user.course && targetClass.course !== req.user.course) {
+    if (req.user.course && targetClass.course && targetClass.course !== req.user.course) {
       throw new Error('Access denied. Class belongs to another department.');
     }
 
@@ -84,10 +101,10 @@ const updateSubject = async (req, res) => {
     });
     if (!subjectData) throw new Error('Subject not found');
 
-    if (req.user.collegeId && subjectData.Class?.collegeId !== req.user.collegeId) {
+    if (req.user.collegeId && subjectData.Class?.collegeId && subjectData.Class.collegeId !== req.user.collegeId) {
       throw new Error('Access denied. Cross-college modification blocked.');
     }
-    if (req.user.course && subjectData.Class?.course !== req.user.course) {
+    if (req.user.course && subjectData.Class?.course && subjectData.Class.course !== req.user.course) {
       throw new Error('Access denied. Cross-department modification blocked.');
     }
 
@@ -105,10 +122,10 @@ const deleteSubject = async (req, res) => {
     });
     if (!subjectData) throw new Error('Subject not found');
 
-    if (req.user.collegeId && subjectData.Class?.collegeId !== req.user.collegeId) {
+    if (req.user.collegeId && subjectData.Class?.collegeId && subjectData.Class.collegeId !== req.user.collegeId) {
       throw new Error('Access denied. Cross-college modification blocked.');
     }
-    if (req.user.course && subjectData.Class?.course !== req.user.course) {
+    if (req.user.course && subjectData.Class?.course && subjectData.Class.course !== req.user.course) {
       throw new Error('Access denied. Cross-department modification blocked.');
     }
 
