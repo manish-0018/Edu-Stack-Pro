@@ -1,9 +1,8 @@
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Menu, Sun, Moon, User as UserIcon, LogOut, Bell, Check, Palette, FileText } from 'lucide-react';
+import { Menu, Sun, Moon, User as UserIcon, LogOut, Bell, Check, Palette } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { generateResume } from '../utils/generateResume';
 
 const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useAuth();
@@ -165,15 +164,6 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
 
           {dropdownOpen && (
             <div className="absolute right-0 w-48 py-2 mt-2 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-lg shadow-xl">
-              {user?.role === 'student' && (
-                <button
-                  onClick={() => { generateResume(); setDropdownOpen(false); }}
-                  className="flex items-center w-full gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  <FileText className="w-4 h-4 text-indigo-500" />
-                  Download Resume
-                </button>
-              )}
               <button
                 onClick={logout}
                 className="flex items-center w-full gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"

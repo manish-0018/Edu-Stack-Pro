@@ -24,7 +24,6 @@ import {
   Library as LibraryIcon,
   ClipboardList,
   Brain,
-  UserSquare2,
   Megaphone,
   Download,
   Sparkles
@@ -77,7 +76,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Quizzes', icon: <Brain />, path: '/quizzes', roles: ['teacher', 'student'] },
     { name: 'Announcements', icon: <Megaphone />, path: '/announcements', roles: ['admin', 'teacher', 'student'] },
     { name: 'Subject Forums', icon: <MessageSquare />, path: '/forums', roles: ['student', 'teacher'] },
-    { name: 'My Portfolio', icon: <UserSquare2 />, path: '/portfolio', roles: ['student'] },
     { name: 'Placements', icon: <Briefcase />, path: '/placements', roles: ['admin', 'teacher', 'student'] },
     { name: 'Mentorship', icon: <Users2 />, path: '/mentorship', roles: ['admin', 'student'] },
     { name: 'Mentor Advising', icon: <Users />, path: '/advising', roles: ['student'] },

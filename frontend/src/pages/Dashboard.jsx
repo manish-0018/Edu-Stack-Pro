@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, FileText, CheckSquare, Mail, Award, CheckCircle, XCircle, Brain, Download, X } from 'lucide-react';
-import KanbanBoard from '../components/KanbanBoard';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
 import AiIntelligenceWatchlist from '../components/AiIntelligenceWatchlist';
@@ -1647,8 +1646,6 @@ const Dashboard = () => {
                     <div className="mb-8">
                       <AdvancedAnalytics stats={stats} />
                     </div>
-          
-          <KanbanBoard />
         </div>
       )}
       {/* Student Detailed Attendance Modal (Admin/Teacher view) */}
