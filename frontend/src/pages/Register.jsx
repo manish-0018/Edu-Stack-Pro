@@ -88,10 +88,6 @@ const Register = () => {
       return;
     }
     if (formData.role === 'student') {
-      if (!formData.classId) {
-        toast.error('Please select a class');
-        return;
-      }
       if (!formData.parentEmail) {
         toast.error('Please enter a parent email');
         return;
@@ -244,42 +240,22 @@ const Register = () => {
             )}
 
             {formData.role === 'student' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign Class & Section</label>
-                  <select
-                    required
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
-                    value={formData.classId}
-                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
-                  >
-                    <option value="">Select Class & Section</option>
-                    {classes
-                      .filter(c => !formData.course || !c.course || c.course.toLowerCase() === formData.course.toLowerCase())
-                      .map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {(!formData.course && c.course) ? `(${c.course})` : ''}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parent's Email Address</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="email"
-                      required
-                      className="appearance-none block w-full pl-10 px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
-                      placeholder="parent@example.com"
-                      value={formData.parentEmail}
-                      onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
-                    />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parent's Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
                   </div>
+                  <input
+                    type="email"
+                    required
+                    className="appearance-none block w-full pl-10 px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-bg dark:text-white transition-shadow"
+                    placeholder="parent@example.com"
+                    value={formData.parentEmail}
+                    onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
+                  />
                 </div>
-              </>
+              </div>
             )}
           </div>
 
