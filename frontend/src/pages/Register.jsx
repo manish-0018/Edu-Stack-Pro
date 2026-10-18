@@ -67,10 +67,24 @@ const Register = () => {
     fetchClasses();
   }, [formData.collegeId]);
 
+  const defaultCourses = ['BCA', 'BSc Computer Science', 'BTech CSE', 'BTech Mechanical', 'BBA', 'MBA'];
+  const availableCourses = Array.from(new Set([
+    ...defaultCourses,
+    ...classes.map(c => c.course).filter(Boolean)
+  ]));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.collegeId) {
       toast.error('Please select a college');
+      return;
+    }
+    if (['student', 'teacher', 'mentor', 'admin'].includes(formData.role) && !formData.course) {
+      toast.error('Please select a course / department');
+      return;
+    }
+    if ((formData.role === 'admin' || formData.role === 'teacher' || formData.role === 'mentor') && !formData.accessCode) {
+      toast.error('Please enter administrative access code');
       return;
     }
     if (formData.role === 'student') {
@@ -212,7 +226,7 @@ const Register = () => {
               </div>
             )}
 
-            {(formData.role === 'student' || formData.role === 'mentor' || formData.role === 'admin') && (
+            {(formData.role === 'student' || formData.role === 'teacher' || formData.role === 'mentor' || formData.role === 'admin') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course / Department</label>
                 <select
@@ -222,12 +236,9 @@ const Register = () => {
                   onChange={(e) => setFormData({ ...formData, course: e.target.value })}
                 >
                   <option value="">Select Course</option>
-                  <option value="BCA">BCA</option>
-                  <option value="BSc Computer Science">BSc Computer Science</option>
-                  <option value="BTech CSE">BTech CSE</option>
-                  <option value="BTech Mechanical">BTech Mechanical</option>
-                  <option value="BBA">BBA</option>
-                  <option value="MBA">MBA</option>
+                  {availableCourses.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </div>
             )}
