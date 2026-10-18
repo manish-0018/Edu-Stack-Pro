@@ -193,19 +193,19 @@ const endSession = async (req, res) => {
 
                 // Email alert to Student
                 await transporter.sendMail({
-                  from: '"Edu Stack Pro Attendance" <attendance@edustack.edu>',
+                  from: '"EduStack Pro Attendance" <attendance@edustack.edu>',
                   to: student.email,
-                  subject: `Edu Stack Pro - Absence Alert: ${subjectName}`,
-                  text: `Dear ${student.name},\n\nYou were marked ABSENT for the ${subjectName} class held on ${date}.\n\nIf you believe this is an error, please contact your subject teacher.\n\nBest regards,\nEdu Stack Pro Team`
+                  subject: `EduStack Pro - Absence Alert: ${subjectName}`,
+                  text: `Dear ${student.name},\n\nYou were marked ABSENT for the ${subjectName} class held on ${date}.\n\nIf you believe this is an error, please contact your subject teacher.\n\nBest regards,\nEduStack Pro Team`
                 });
 
                 // Email alert to Parent
                 if (student.parentEmail && student.parentEmail !== student.email) {
                   await transporter.sendMail({
-                    from: '"Edu Stack Pro Attendance" <attendance@edustack.edu>',
+                    from: '"EduStack Pro Attendance" <attendance@edustack.edu>',
                     to: student.parentEmail,
-                    subject: `Edu Stack Pro - Absence Warning: ${student.name}`,
-                    text: `Dear Parent,\n\nThis is to inform you that your ward ${student.name} was marked ABSENT for their ${subjectName} class held on ${date}.\n\nPlease ensure they attend classes regularly to maintain the required attendance percentage.\n\nBest regards,\nEdu Stack Pro Team`
+                    subject: `EduStack Pro - Absence Warning: ${student.name}`,
+                    text: `Dear Parent,\n\nThis is to inform you that your ward ${student.name} was marked ABSENT for their ${subjectName} class held on ${date}.\n\nPlease ensure they attend classes regularly to maintain the required attendance percentage.\n\nBest regards,\nEduStack Pro Team`
                   });
                 }
               } catch (singleErr) {

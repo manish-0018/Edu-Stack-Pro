@@ -4,7 +4,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@attendease.com', // or whatever the admin email is
+        email: 'admin@edustack.edu', // or whatever the admin email is
         password: 'password'
       })
     });

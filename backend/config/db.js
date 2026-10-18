@@ -9,7 +9,7 @@ const sequelize = new Sequelize({
   password: process.env.DB_PASSWORD,
   host: process.env.DB_HOST,
   port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME,
+  database: process.env.DB_NAME || 'edustack_pro',
   logging: false, // set to console.log to see SQL queries
 });
 

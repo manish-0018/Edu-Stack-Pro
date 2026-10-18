@@ -1,6 +1,6 @@
 {
-  "appId": "com.attendease.app",
-  "appName": "Edu Stack Pro",
+  "appId": "com.edustackpro.app",
+  "appName": "EduStack Pro",
   "webDir": "dist",
   "server": {
     "url": "https://frontend-production-519c.up.railway.app",
