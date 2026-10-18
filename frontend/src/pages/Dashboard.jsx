@@ -10,7 +10,6 @@ import SmartCheckinModal from '../components/SmartCheckinModal';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'react-toastify';
-import AdBanner from '../components/AdBanner';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -989,7 +988,6 @@ const Dashboard = () => {
       ) : (
         // STUDENT DASHBOARD LAYOUT
         <div className="space-y-6">
-          <AdBanner />
           {/* ── Student Hero Header ───────────────────────────────── */}
           <div className="bg-gradient-to-br from-primary-600 via-violet-700 to-purple-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
