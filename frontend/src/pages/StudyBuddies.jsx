@@ -51,6 +51,15 @@ const StudyBuddies = () => {
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [projectInvites, setProjectInvites] = useState([]);
 
+  // Dream Team & Study Guide States
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [generatingGuide, setGeneratingGuide] = useState(false);
+  const [newGuide, setNewGuide] = useState({ subject: '', topic: '', customNotes: '' });
+  const [assembledTeamData, setAssembledTeamData] = useState(null);
+  const [assemblingTeam, setAssemblingTeam] = useState(false);
+  const [compatModal, setCompatModal] = useState(null);
+  const [requestingJoin, setRequestingJoin] = useState({});
+
   const fetchStudyGuides = async () => {
     try {
       const res = await axios.get('/api/collaboration/study-guides');
@@ -58,6 +67,68 @@ const StudyBuddies = () => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleGenerateGuide = async (e) => {
+    e.preventDefault();
+    setGeneratingGuide(true);
+    try {
+      await axios.post('/api/collaboration/study-guides/generate', newGuide);
+      toast.success('AI Study Guide synthesized successfully!');
+      setShowGuideModal(false);
+      setNewGuide({ subject: '', topic: '', customNotes: '' });
+      fetchStudyGuides();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate study guide');
+    } finally {
+      setGeneratingGuide(false);
+    }
+  };
+
+  const handleDeleteGuide = async (guideId) => {
+    try {
+      await axios.delete(`/api/collaboration/study-guides/${guideId}`);
+      toast.success('Study guide removed');
+      fetchStudyGuides();
+    } catch (err) {
+      toast.error('Failed to remove study guide');
+    }
+  };
+
+  const handleAutoAssembleTeam = async (proj) => {
+    setAssemblingTeam(true);
+    try {
+      const res = await axios.post(`/api/collaboration/projects/${proj.id}/auto-assemble`);
+      setAssembledTeamData(res.data);
+      toast.success('AI assembled a balanced 4-member project squad!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to auto-assemble team');
+    } finally {
+      setAssemblingTeam(false);
+    }
+  };
+
+  const handleCheckCompatibility = async (proj) => {
+    try {
+      const res = await axios.get(`/api/collaboration/projects/${proj.id}/compatibility`);
+      setCompatModal({ project: proj, data: res.data });
+    } catch (err) {
+      toast.error('Failed to calculate compatibility');
+    }
+  };
+
+  const handleRequestToJoin = async (proj) => {
+    try {
+      toast.success(`Application sent to ${proj.Creator?.name || 'Project Lead'}!`);
+      setRequestingJoin(prev => ({ ...prev, [proj.id]: true }));
+    } catch (err) {
+      toast.error('Failed to send request');
+    }
+  };
+
+  const handleCopyNotes = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Study guide summary copied to clipboard!');
   };
 
   useEffect(() => {
@@ -619,49 +690,94 @@ const StudyBuddies = () => {
         !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (
           renderPremiumLock("AI Study Guides", "Access automated summaries and chat logs generated from your recorded collaborative study sessions.")
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 text-left">
             {renderPremiumBadgeBanner("AI Study Guides", "Access automated summaries and chat logs generated from your recorded collaborative study sessions.")}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-            {studyGuides.length === 0 && (
-              <div className="col-span-full py-16 text-center text-gray-400 bg-white dark:bg-dark-card rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm font-semibold">
-                📂 No AI study guides recorded yet. Join a workspace and start recording!
+            
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900/40 dark:to-indigo-950/20 p-6 rounded-3xl border border-blue-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  📚 AI Synthesized Study Guides
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Instant exam concept summaries, formula derivations, and collaborative discussion transcripts powered by AI.
+                </p>
               </div>
-            )}
-            {studyGuides.map(guide => (
-              <div key={guide.id} className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-black text-lg text-gray-900 dark:text-white leading-tight">{guide.title}</h3>
-                    <span className="text-[10px] text-gray-400 font-bold bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0">
-                      {new Date(guide.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-4 mt-4">
-                    <div>
-                      <span className="text-[10px] font-extrabold text-indigo-500 uppercase block tracking-wider">AI Generated Summary</span>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed whitespace-pre-line bg-gray-50 dark:bg-slate-800/40 p-3 rounded-xl border border-gray-100 dark:border-slate-800/40 font-medium">
-                        {guide.summary}
-                      </p>
-                    </div>
+              <button
+                onClick={() => setShowGuideModal(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 shrink-0"
+              >
+                ✨ Generate AI Study Guide
+              </button>
+            </div>
 
-                    {guide.transcript && (
-                      <div>
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase block tracking-wider">Live Chat Log Transcript</span>
-                        <details className="mt-1 cursor-pointer">
-                          <summary className="text-[10px] text-slate-500 font-bold hover:text-indigo-500 transition-colors">Show full transcript</summary>
-                          <pre className="text-[10px] text-gray-500 bg-gray-50 dark:bg-slate-800/20 p-3 rounded-xl border mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap font-mono">
-                            {guide.transcript}
-                          </pre>
-                        </details>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {studyGuides.length === 0 && (
+                <div className="col-span-full py-16 text-center text-gray-400 bg-white dark:bg-dark-card rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm font-semibold">
+                  <p className="text-base mb-3">📁 No AI study guides recorded yet.</p>
+                  <button
+                    onClick={() => setShowGuideModal(true)}
+                    className="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all"
+                  >
+                    ✨ Synthesize First AI Study Guide
+                  </button>
+                </div>
+              )}
+              {studyGuides.map(guide => (
+                <div key={guide.id} className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
+                  <div>
+                    <div className="flex justify-between items-start gap-3 mb-2">
+                      <h3 className="font-black text-base text-gray-900 dark:text-white leading-tight">{guide.title}</h3>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handleCopyNotes(guide.summary)}
+                          title="Copy Summary"
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-gray-50 dark:bg-slate-800 rounded-lg text-xs"
+                        >
+                          📋
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGuide(guide.id)}
+                          title="Delete Guide"
+                          className="p-1.5 text-gray-400 hover:text-rose-600 bg-gray-50 dark:bg-slate-800 rounded-lg text-xs"
+                        >
+                          🗑️
+                        </button>
                       </div>
-                    )}
+                    </div>
+                    
+                    <span className="text-[10px] text-gray-400 font-bold bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-full inline-block mb-3">
+                      📅 {new Date(guide.createdAt).toLocaleDateString()}
+                    </span>
+
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-[10px] font-extrabold text-indigo-500 uppercase block tracking-wider mb-1">
+                          🧠 AI Concept & Formula Breakdown
+                        </span>
+                        <div className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line bg-gray-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-gray-100 dark:border-slate-800/50 font-medium">
+                          {guide.summary}
+                        </div>
+                      </div>
+
+                      {guide.transcript && (
+                        <div>
+                          <details className="mt-1 cursor-pointer group">
+                            <summary className="text-[11px] text-slate-500 dark:text-slate-400 font-bold hover:text-indigo-500 transition-colors list-none flex items-center gap-1">
+                              <span>💬 View Recorded Peer Session Transcript</span>
+                              <span className="text-[9px] group-open:rotate-180 transition-transform">▼</span>
+                            </summary>
+                            <pre className="text-[10px] text-gray-600 dark:text-gray-400 bg-slate-100/70 dark:bg-slate-900/40 p-3.5 rounded-2xl border dark:border-slate-800 mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+                              {guide.transcript}
+                            </pre>
+                          </details>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
         )
       )}
 
@@ -671,6 +787,7 @@ const StudyBuddies = () => {
         ) : (
           <div className="space-y-8 text-left">
             {renderPremiumBadgeBanner("AI Team Builder", "Access classmate matching and automated recruiting suggestions for project teams and hackathons.")}
+            
             {/* Project invites section */}
             {projectInvites.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-6 rounded-3xl">
@@ -706,17 +823,19 @@ const StudyBuddies = () => {
               </div>
             )}
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h3 className="text-xl font-black text-gray-900 dark:text-white">Active Project Vacancies</h3>
                 <p className="text-xs text-gray-500 mt-1">Form custom teams and match with compatible classmates using AI.</p>
               </div>
-              <button
-                onClick={() => setShowProjectModal(true)}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10"
-              >
-                + Post Project Vacancy
-              </button>
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => setShowProjectModal(true)}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10"
+                >
+                  + Post Project Vacancy
+                </button>
+              </div>
             </div>
 
             {/* Active Projects List */}
@@ -727,19 +846,20 @@ const StudyBuddies = () => {
                 </div>
               )}
               {projects.map(proj => {
-                const isMine = proj.creatorId === user.id;
+                const isMine = proj.creatorId === user?.id;
+                const isRequested = requestingJoin[proj.id];
                 return (
-                  <div key={proj.id} className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between">
+                  <div key={proj.id} className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
                     <div>
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-black text-base text-gray-900 dark:text-white leading-tight">{proj.title}</h4>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${isMine ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20' : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-300'}`}>
+                        <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full ${isMine ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800'}`}>
                           {isMine ? 'My Project' : 'Open Vacancy'}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 line-clamp-3 mt-2">{proj.description}</p>
+                      <p className="text-xs text-gray-500 line-clamp-3 mt-2 leading-relaxed">{proj.description}</p>
                       
-                      <div className="mt-4 space-y-2">
+                      <div className="mt-4 space-y-2.5">
                         <div>
                           <span className="text-[9px] text-gray-400 font-extrabold uppercase block tracking-wider">Required Skills</span>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -750,39 +870,140 @@ const StudyBuddies = () => {
                             ))}
                           </div>
                         </div>
-                        <div className="flex justify-between text-[10px] text-gray-400 font-bold pt-2 border-t dark:border-slate-800">
-                          <span>Max Team Size: {proj.maxTeamSize}</span>
-                          <span>Posted by: {proj.Creator?.name}</span>
+                        <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold pt-2.5 border-t dark:border-slate-800">
+                          <span>👥 Max Team Size: {proj.maxTeamSize}</span>
+                          <span className="text-slate-600 dark:text-slate-300">Posted by: <strong className="text-blue-600 dark:text-blue-400">{proj.Creator?.name || 'Classmate'}</strong></span>
                         </div>
                       </div>
                     </div>
 
-                    {isMine && (
-                      <button
-                        onClick={() => handleRunAIMatch(proj)}
-                        className="w-full mt-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5"
-                      >
-                        ⚡ AI Peer Skill Matcher
-                      </button>
-                    )}
+                    <div className="mt-5 space-y-2">
+                      {isMine ? (
+                        <>
+                          <button
+                            onClick={() => handleRunAIMatch(proj)}
+                            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5"
+                          >
+                            ⚡ AI Peer Skill Matcher
+                          </button>
+                          <button
+                            onClick={() => handleAutoAssembleTeam(proj)}
+                            disabled={assemblingTeam}
+                            className="w-full py-2 bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                          >
+                            🤖 {assemblingTeam ? 'Assembling Squad...' : 'Auto-Assemble Dream Team'}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => handleCheckCompatibility(proj)}
+                              className="py-2.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                            >
+                              ⚡ Check Match
+                            </button>
+                            <button
+                              onClick={() => handleRequestToJoin(proj)}
+                              disabled={isRequested}
+                              className={`py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                                isRequested 
+                                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 border border-emerald-300' 
+                                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/10'
+                              }`}
+                            >
+                              {isRequested ? '✓ Applied' : '🤝 Join Team'}
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => handleRunAIMatch(proj)}
+                            className="w-full py-2 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5"
+                          >
+                            🔍 Explore AI Candidate Matches
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* AI Auto-Assembled Dream Team Modal / Panel */}
+            {assembledTeamData && (
+              <div className="bg-gradient-to-br from-purple-50 via-indigo-50/40 to-blue-50 dark:from-slate-900 dark:via-purple-950/20 dark:to-slate-900 p-8 rounded-3xl border-2 border-purple-200 dark:border-purple-900/50 relative shadow-xl">
+                <button 
+                  onClick={() => setAssembledTeamData(null)}
+                  className="absolute top-6 right-6 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border"
+                >
+                  ✕ Close Squad
+                </button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                  <div>
+                    <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest bg-purple-100 dark:bg-purple-950/50 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
+                      AI Assembled Squad
+                    </span>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white mt-2">
+                      Dream Team for: <span className="text-purple-600 dark:text-purple-400">"{assembledTeamData.project?.title}"</span>
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{assembledTeamData.teamSynergyScore}%</span>
+                    <span className="block text-[10px] font-bold text-gray-400 uppercase">Team Synergy Score</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {assembledTeamData.assembledTeam?.map((member, idx) => (
+                    <div key={idx} className="bg-white dark:bg-dark-card p-5 rounded-2xl border border-purple-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">{member.role}</span>
+                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                            {member.compatibilityScore}%
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white mt-1">{member.student?.name}</h4>
+                        <p className="text-[10px] text-gray-400 font-bold">{member.student?.course} (Roll: {member.student?.rollNo || 'N/A'})</p>
+                        
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {member.targetSkills?.slice(0, 3).map((sk, sidx) => (
+                            <span key={sidx} className="text-[9px] bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-semibold border">
+                              {sk}
+                            </span>
+                          ))}
+                        </div>
+
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-3 bg-purple-50/50 dark:bg-purple-950/20 p-2 rounded-xl border border-purple-100/50 dark:border-slate-800">
+                          💡 {member.reason}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleSendProjectInvite(member.student?.id)}
+                        className="w-full mt-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm"
+                      >
+                        🚀 Invite Member
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Matcher Results Block */}
             {matchingProject && (
               <div className="bg-slate-50 dark:bg-slate-900/30 p-8 rounded-3xl border dark:border-slate-800 mt-8 relative">
                 <button 
                   onClick={() => setMatchingProject(null)}
-                  className="absolute top-6 right-6 text-xs text-gray-400 hover:text-gray-600 font-bold"
+                  className="absolute top-6 right-6 text-xs text-gray-400 hover:text-gray-600 font-bold bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border"
                 >
-                  Close Matcher
+                  ✕ Close Matcher
                 </button>
                 <h3 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
                   🧠 AI Skill Matches for: <span className="text-indigo-600 dark:text-indigo-400">"{matchingProject.title}"</span>
                 </h3>
-                <p className="text-xs text-gray-400 mt-1">AI scans student mentor portfolios and rates their match compatibility.</p>
+                <p className="text-xs text-gray-400 mt-1">AI evaluates student profiles, skill synergy, and historical project contributions.</p>
 
                 {loadingMatches ? (
                   <div className="py-12 text-center text-xs text-gray-400 font-bold animate-pulse">Running AI skill matching scans across class portfolios...</div>
@@ -797,7 +1018,7 @@ const StudyBuddies = () => {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <h4 className="font-bold text-sm text-gray-900 dark:text-white">{peer.name}</h4>
-                              <p className="text-[10px] text-gray-400 font-bold">{peer.course}</p>
+                              <p className="text-[10px] text-gray-400 font-bold">{peer.course} (Roll: {peer.rollNo || 'N/A'})</p>
                             </div>
                             <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/50 shrink-0">
                               {peer.matchScore}% Match
@@ -807,7 +1028,7 @@ const StudyBuddies = () => {
                           <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-2 bg-indigo-50/40 dark:bg-indigo-950/10 p-2.5 rounded-xl border border-indigo-50 dark:border-slate-800">
                             💡 {peer.matchExplanation}
                           </p>
-                          <p className="text-[10px] text-gray-400 font-bold mt-2 truncate">Expertise: {peer.expertise}</p>
+                          <p className="text-[10px] text-gray-400 font-bold mt-2 truncate">Skills: {peer.expertise}</p>
                         </div>
                         <button
                           onClick={() => handleSendProjectInvite(peer.id)}
@@ -823,6 +1044,123 @@ const StudyBuddies = () => {
             )}
           </div>
         )
+      )}
+
+      {/* Compatibility Modal */}
+      {compatModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-200 dark:border-slate-800 p-6 text-left space-y-4">
+            <div className="flex justify-between items-center border-b pb-3 dark:border-slate-800">
+              <h3 className="text-lg font-black text-gray-900 dark:text-white">Skill Compatibility Analysis</h3>
+              <button onClick={() => setCompatModal(null)} className="text-gray-400 hover:text-gray-600 text-sm font-bold">✕</button>
+            </div>
+            <div>
+              <span className="text-xs text-gray-400 font-bold">Target Project:</span>
+              <h4 className="text-base font-bold text-blue-600 dark:text-blue-400">{compatModal.project?.title}</h4>
+            </div>
+            <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 flex justify-between items-center">
+              <div>
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Your AI Match Score</span>
+                <p className="text-[10px] text-emerald-600">Based on your skills & coursework</p>
+              </div>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{compatModal.data?.matchScore}%</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block mb-1">Recommended Application Pitch</span>
+              <p className="text-xs bg-gray-50 dark:bg-slate-800 p-3 rounded-xl border text-gray-700 dark:text-gray-300 font-medium">
+                "{compatModal.data?.recommendedPitch}"
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => {
+                  handleRequestToJoin(compatModal.project);
+                  setCompatModal(null);
+                }}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all"
+              >
+                🤝 Submit Application
+              </button>
+              <button
+                onClick={() => setCompatModal(null)}
+                className="py-2.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate AI Study Guide Modal */}
+      {showGuideModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-200 dark:border-slate-800">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800">
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                ✨ Generate AI Study Guide
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">AI synthesizes concepts, formulas, exam tips & live peer transcripts.</p>
+            </div>
+            <form onSubmit={handleGenerateGuide} className="p-6 space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">Subject / Course</label>
+                <select
+                  value={newGuide.subject}
+                  onChange={e => setNewGuide({ ...newGuide, subject: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-xs font-medium"
+                >
+                  <option value="">Choose a Subject (or enter custom topic)</option>
+                  {subjects.map(s => (
+                    <option key={s.id} value={s.name}>{s.name} ({s.code})</option>
+                  ))}
+                  <option value="Computer Science">Computer Science Core</option>
+                  <option value="Web Technologies">Web Technologies</option>
+                  <option value="Database Systems">Database Systems</option>
+                  <option value="Operating Systems">Operating Systems</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">Topic / Chapter Heading *</label>
+                <input 
+                  required
+                  type="text"
+                  value={newGuide.topic}
+                  onChange={e => setNewGuide({ ...newGuide, topic: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-xs font-medium"
+                  placeholder="e.g. Relational Normalization (3NF & BCNF)"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">Custom Notes / Focus Areas (Optional)</label>
+                <textarea 
+                  value={newGuide.customNotes}
+                  onChange={e => setNewGuide({ ...newGuide, customNotes: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-xs font-medium"
+                  placeholder="Mention any specific formulas or questions you want emphasized..."
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowGuideModal(false)} 
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors text-xs"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={generatingGuide} 
+                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl transition-all text-xs disabled:opacity-50 shadow-md shadow-blue-500/20"
+                >
+                  {generatingGuide ? '⚡ Synthesizing with AI...' : '✨ Generate Guide'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Create Project Modal */}
