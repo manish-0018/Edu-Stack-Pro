@@ -18,6 +18,14 @@ const ProjectInvite = sequelize.define('ProjectInvite', {
   status: {
     type: DataTypes.STRING,
     defaultValue: 'pending', // pending, accepted, rejected
+  },
+  type: {
+    type: DataTypes.STRING,
+    defaultValue: 'invite', // 'invite' (sent by creator) or 'application' (sent by student)
+  },
+  message: {
+    type: DataTypes.TEXT,
+    allowNull: true,
   }
 });
 

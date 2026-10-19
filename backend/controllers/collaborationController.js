@@ -1,4 +1,4 @@
-const { Message, StudyGroup, StudyGroupParticipant, ForumPost, ForumReply, User, Subject, StudyRequest, Notification, ProjectPosting, ProjectInvite, StudyGuide } = require('../models');
+const { Message, StudyGroup, StudyGroupParticipant, ForumPost, ForumReply, User, Subject, StudyRequest, Notification, ProjectPosting, ProjectInvite, ProjectMessage, StudyGuide } = require('../models');
 const { Op } = require('sequelize');
 
 // ========================
@@ -290,7 +290,10 @@ const getProjects = async (req, res) => {
   try {
     const whereClause = {};
     if (req.user.collegeId) {
-      whereClause.collegeId = req.user.collegeId;
+      whereClause[Op.or] = [
+        { collegeId: req.user.collegeId },
+        { collegeId: null }
+      ];
     }
     const projects = await ProjectPosting.findAll({
       where: whereClause,
@@ -305,7 +308,7 @@ const getProjects = async (req, res) => {
           include: [{
             model: User,
             as: 'Invitee',
-            attributes: ['id', 'name', 'email', 'rollNo']
+            attributes: ['id', 'name', 'email', 'rollNo', 'course']
           }]
         }
       ],
@@ -334,11 +337,21 @@ const createProject = async (req, res) => {
     });
 
     const projectWithCreator = await ProjectPosting.findByPk(newProject.id, {
-      include: [{
-        model: User,
-        as: 'Creator',
-        attributes: ['id', 'name', 'email', 'course', 'rollNo']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'Creator',
+          attributes: ['id', 'name', 'email', 'course', 'rollNo']
+        },
+        {
+          model: ProjectInvite,
+          include: [{
+            model: User,
+            as: 'Invitee',
+            attributes: ['id', 'name', 'email', 'rollNo', 'course']
+          }]
+        }
+      ]
     });
 
     res.status(201).json(projectWithCreator);
@@ -347,10 +360,59 @@ const createProject = async (req, res) => {
   }
 };
 
+const applyToProject = async (req, res) => {
+  try {
+    const { message } = req.body;
+    const project = await ProjectPosting.findByPk(req.params.id, {
+      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email'] }]
+    });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    if (project.creatorId === req.user.id) {
+      return res.status(400).json({ message: 'You are the creator of this project' });
+    }
+
+    const existing = await ProjectInvite.findOne({
+      where: { projectPostingId: project.id, inviteeId: req.user.id }
+    });
+
+    if (existing) {
+      return res.status(200).json({
+        message: 'You have already applied or received an invite for this project',
+        invite: existing
+      });
+    }
+
+    const application = await ProjectInvite.create({
+      projectPostingId: project.id,
+      inviteeId: req.user.id,
+      status: 'pending',
+      type: 'application',
+      message: message || `Hi! I would like to join the team for "${project.title}".`
+    });
+
+    // Notify project creator
+    await Notification.create({
+      userId: project.creatorId,
+      title: '📩 New Project Team Application!',
+      message: `${req.user.name} applied to join your project: "${project.title}". Review their application in Study Buddies.`,
+      type: 'info'
+    }).catch(err => console.error('Notification error:', err));
+
+    res.status(201).json({
+      message: 'Application submitted successfully',
+      invite: application
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 const getProjectInvites = async (req, res) => {
   try {
-    const invites = await ProjectInvite.findAll({
-      where: { inviteeId: req.user.id, status: 'pending' },
+    // 1. Invites sent TO the user by project creators
+    const receivedInvites = await ProjectInvite.findAll({
+      where: { inviteeId: req.user.id, status: 'pending', type: 'invite' },
       include: [{
         model: ProjectPosting,
         required: true,
@@ -361,7 +423,43 @@ const getProjectInvites = async (req, res) => {
         }]
       }]
     });
-    res.status(200).json(invites);
+
+    // 2. Applications sent BY students to projects created by the user
+    const myProjects = await ProjectPosting.findAll({
+      where: { creatorId: req.user.id },
+      attributes: ['id']
+    });
+    const myProjectIds = myProjects.map(p => p.id);
+
+    let incomingApplications = [];
+    if (myProjectIds.length > 0) {
+      incomingApplications = await ProjectInvite.findAll({
+        where: {
+          projectPostingId: { [Op.in]: myProjectIds },
+          status: 'pending',
+          type: 'application'
+        },
+        include: [
+          {
+            model: ProjectPosting,
+            required: true,
+            include: [{
+              model: User,
+              as: 'Creator',
+              attributes: ['id', 'name', 'email']
+            }]
+          },
+          {
+            model: User,
+            as: 'Invitee',
+            attributes: ['id', 'name', 'email', 'rollNo', 'course']
+          }
+        ]
+      });
+    }
+
+    // Combine both so frontend gets all pending items
+    res.status(200).json([...receivedInvites, ...incomingApplications]);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -370,24 +468,37 @@ const getProjectInvites = async (req, res) => {
 const sendProjectInvite = async (req, res) => {
   try {
     const { inviteeId } = req.body;
+    const project = await ProjectPosting.findByPk(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    // ONLY the project creator can invite members
+    if (project.creatorId !== req.user.id) {
+      return res.status(403).json({ message: 'Only the project creator can invite peers to this project' });
+    }
+
+    if (inviteeId === project.creatorId) {
+      return res.status(400).json({ message: 'Cannot invite yourself to your own project' });
+    }
+
     const existing = await ProjectInvite.findOne({
       where: { projectPostingId: req.params.id, inviteeId }
     });
     if (existing) {
       return res.status(200).json(existing);
     }
+
     const invite = await ProjectInvite.create({
       projectPostingId: req.params.id,
       inviteeId,
-      status: 'pending'
+      status: 'pending',
+      type: 'invite'
     });
 
     // Create in-app notification for invitee
-    const project = await ProjectPosting.findByPk(req.params.id);
     await Notification.create({
       userId: inviteeId,
       title: '🚀 Project Team Invitation!',
-      message: `${req.user.name} invited you to join project: "${project?.title || 'Academic Project'}".`,
+      message: `${req.user.name} invited you to join project: "${project.title}".`,
       type: 'info'
     }).catch(() => {});
 
@@ -400,9 +511,40 @@ const sendProjectInvite = async (req, res) => {
 const respondToInvite = async (req, res) => {
   try {
     const { status } = req.body; // 'accepted' or 'rejected'
-    const invite = await ProjectInvite.findByPk(req.params.id);
+    const invite = await ProjectInvite.findByPk(req.params.id, {
+      include: [{ model: ProjectPosting }]
+    });
     if (!invite) throw new Error('Invite not found');
+
+    const project = invite.ProjectPosting;
+    // Authorization: must be invitee OR project creator
+    if (invite.inviteeId !== req.user.id && (!project || project.creatorId !== req.user.id)) {
+      return res.status(403).json({ message: 'Not authorized to respond to this invite' });
+    }
+
     await invite.update({ status });
+
+    // Notifications
+    if (status === 'accepted' && project) {
+      if (req.user.id === invite.inviteeId) {
+        // Invitee accepted invite -> notify creator
+        await Notification.create({
+          userId: project.creatorId,
+          title: '🎉 Peer Joined Your Project Team!',
+          message: `${req.user.name} accepted your invitation to join "${project.title}"!`,
+          type: 'info'
+        }).catch(() => {});
+      } else {
+        // Creator accepted application -> notify applicant student
+        await Notification.create({
+          userId: invite.inviteeId,
+          title: '🎉 Project Application Accepted!',
+          message: `Great news! ${req.user.name} accepted your application to join "${project.title}". You are now an active team member!`,
+          type: 'info'
+        }).catch(() => {});
+      }
+    }
+
     res.status(200).json(invite);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -414,18 +556,42 @@ const matchProjectPeers = async (req, res) => {
     const project = await ProjectPosting.findByPk(req.params.id);
     if (!project) throw new Error('Project not found');
 
+    // ONLY the project creator can run peer matching
+    if (project.creatorId !== req.user.id) {
+      return res.status(403).json({ message: 'Only the project creator can explore peer matches' });
+    }
+
+    // Exclude creator and any student already in ProjectInvite (pending or accepted)
+    const existingInvites = await ProjectInvite.findAll({
+      where: { projectPostingId: project.id },
+      attributes: ['inviteeId']
+    });
+    const excludeIds = new Set([project.creatorId, req.user.id]);
+    existingInvites.forEach(inv => excludeIds.add(inv.inviteeId));
+
     const whereClause = {
       role: 'student',
-      id: { [Op.ne]: req.user.id }
+      id: { [Op.notIn]: Array.from(excludeIds) }
     };
     if (req.user.collegeId) {
       whereClause.collegeId = req.user.collegeId;
     }
 
-    const students = await User.findAll({
+    let students = await User.findAll({
       where: whereClause,
       attributes: ['id', 'name', 'email', 'rollNo', 'course']
     });
+
+    if (students.length === 0 && req.user.collegeId) {
+      // Fallback across colleges if local cohort is small
+      students = await User.findAll({
+        where: {
+          role: 'student',
+          id: { [Op.notIn]: Array.from(excludeIds) }
+        },
+        attributes: ['id', 'name', 'email', 'rollNo', 'course']
+      });
+    }
 
     const skillsNeeded = project.requiredSkills
       .toLowerCase()
@@ -484,9 +650,21 @@ const autoAssembleTeam = async (req, res) => {
     });
     if (!project) throw new Error('Project not found');
 
+    // ONLY the project creator can auto-assemble the team
+    if (project.creatorId !== req.user.id) {
+      return res.status(403).json({ message: 'Only the project creator can auto-assemble the team' });
+    }
+
+    const existingInvites = await ProjectInvite.findAll({
+      where: { projectPostingId: project.id },
+      attributes: ['inviteeId']
+    });
+    const excludeIds = new Set([project.creatorId, req.user.id]);
+    existingInvites.forEach(inv => excludeIds.add(inv.inviteeId));
+
     const whereClause = {
       role: 'student',
-      id: { [Op.ne]: req.user.id }
+      id: { [Op.notIn]: Array.from(excludeIds) }
     };
 
     let students = await User.findAll({
@@ -535,11 +713,10 @@ const autoAssembleTeam = async (req, res) => {
     ];
 
     const assembledTeam = [];
-    const usedStudentIds = new Set([req.user.id]);
+    const usedStudentIds = new Set([req.user.id, project.creatorId]);
 
     rolesConfig.forEach((roleDef, idx) => {
-      // Find candidate student with best deterministic fit
-      const candidate = students.find(s => !usedStudentIds.has(s.id)) || students[idx % students.length];
+      const candidate = students.find(s => !usedStudentIds.has(s.id)) || students[idx % Math.max(students.length, 1)];
       if (candidate) {
         usedStudentIds.add(candidate.id);
         const matchPct = 90 + ((candidate.name.length * 3 + idx) % 9);
@@ -591,6 +768,83 @@ const checkProjectCompatibility = async (req, res) => {
       matchedSkills: matched.length > 0 ? matched : [skillsNeeded[0] || 'Software Engineering'],
       recommendedPitch: `Hi! I have active experience with ${matched.join(', ') || 'modern web development'} and would love to contribute to ${project.title}!`
     });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// --- Project Team Chat Controllers ---
+const getProjectMessages = async (req, res) => {
+  try {
+    const { id: projectPostingId } = req.params;
+    const project = await ProjectPosting.findByPk(projectPostingId, {
+      include: [
+        { model: User, as: 'Creator', attributes: ['id', 'name'] },
+        { model: ProjectInvite, attributes: ['inviteeId', 'status'] }
+      ]
+    });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const isCreator = project.creatorId === req.user.id;
+    const isAcceptedMember = project.ProjectInvites?.some(
+      inv => inv.inviteeId === req.user.id && inv.status === 'accepted'
+    );
+
+    if (!isCreator && !isAcceptedMember) {
+      return res.status(403).json({ message: 'Only accepted team members can access project chat' });
+    }
+
+    const messages = await ProjectMessage.findAll({
+      where: { projectPostingId },
+      include: [
+        { model: User, as: 'Sender', attributes: ['id', 'name', 'email', 'course', 'rollNo'] }
+      ],
+      order: [['createdAt', 'ASC']]
+    });
+
+    res.status(200).json(messages);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const sendProjectMessage = async (req, res) => {
+  try {
+    const { id: projectPostingId } = req.params;
+    const { content } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: 'Message content cannot be empty' });
+    }
+
+    const project = await ProjectPosting.findByPk(projectPostingId, {
+      include: [
+        { model: ProjectInvite, attributes: ['inviteeId', 'status'] }
+      ]
+    });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const isCreator = project.creatorId === req.user.id;
+    const isAcceptedMember = project.ProjectInvites?.some(
+      inv => inv.inviteeId === req.user.id && inv.status === 'accepted'
+    );
+
+    if (!isCreator && !isAcceptedMember) {
+      return res.status(403).json({ message: 'Only accepted team members can post to project chat' });
+    }
+
+    const message = await ProjectMessage.create({
+      projectPostingId,
+      senderId: req.user.id,
+      content: content.trim()
+    });
+
+    const populated = await ProjectMessage.findByPk(message.id, {
+      include: [
+        { model: User, as: 'Sender', attributes: ['id', 'name', 'email', 'course', 'rollNo'] }
+      ]
+    });
+
+    res.status(201).json(populated);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -734,6 +988,7 @@ module.exports = {
   saveWhiteboard, rateSession, updateStudyRequest,
   getProjects, createProject, getProjectInvites, sendProjectInvite, respondToInvite, matchProjectPeers,
   autoAssembleTeam, checkProjectCompatibility,
-  getStudyGuides, generateStudyGuide, deleteStudyGuide
+  getStudyGuides, generateStudyGuide, deleteStudyGuide,
+  applyToProject, getProjectMessages, sendProjectMessage
 };
 

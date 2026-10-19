@@ -7,7 +7,8 @@ const {
   saveWhiteboard, rateSession, updateStudyRequest,
   getProjects, createProject, getProjectInvites, sendProjectInvite, respondToInvite, matchProjectPeers,
   autoAssembleTeam, checkProjectCompatibility,
-  getStudyGuides, generateStudyGuide, deleteStudyGuide
+  getStudyGuides, generateStudyGuide, deleteStudyGuide,
+  applyToProject, getProjectMessages, sendProjectMessage
 } = require('../controllers/collaborationController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -42,11 +43,14 @@ router.put('/study/:id', updateStudyRequest);
 router.get('/projects', getProjects);
 router.post('/projects', createProject);
 router.get('/projects/invites', getProjectInvites);
+router.post('/projects/:id/apply', applyToProject);
 router.post('/projects/:id/invite', sendProjectInvite);
 router.put('/projects/invites/:id', respondToInvite);
 router.post('/projects/:id/match', matchProjectPeers);
 router.post('/projects/:id/auto-assemble', autoAssembleTeam);
 router.get('/projects/:id/compatibility', checkProjectCompatibility);
+router.get('/projects/:id/messages', getProjectMessages);
+router.post('/projects/:id/messages', sendProjectMessage);
 
 // AI Study Guides
 router.get('/study-guides', getStudyGuides);

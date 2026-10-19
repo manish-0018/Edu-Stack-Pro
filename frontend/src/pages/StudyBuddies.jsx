@@ -6,7 +6,8 @@ import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { 
   HeartHandshake, Users, MessageSquare, BookOpen, Clock, Star,
-  Search, Plus, Check, Play, MessageCircle, Radio, Lock, Brain, RefreshCw
+  Search, Plus, Check, Play, MessageCircle, Radio, Lock, Brain, RefreshCw,
+  Send, CheckCircle2, UserCheck
 } from 'lucide-react';
 
 const StudyBuddies = () => {
@@ -58,7 +59,14 @@ const StudyBuddies = () => {
   const [assembledTeamData, setAssembledTeamData] = useState(null);
   const [assemblingTeam, setAssemblingTeam] = useState(false);
   const [compatModal, setCompatModal] = useState(null);
-  const [requestingJoin, setRequestingJoin] = useState({});
+  const [applyingToProject, setApplyingToProject] = useState(false);
+
+  // Project Discussion / Chat States
+  const [activeChatProject, setActiveChatProject] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
 
   const fetchStudyGuides = async () => {
     try {
@@ -117,12 +125,46 @@ const StudyBuddies = () => {
     }
   };
 
-  const handleRequestToJoin = async (proj) => {
+  const handleApplyToProject = async (proj, pitch = '') => {
+    setApplyingToProject(true);
     try {
-      toast.success(`Application sent to ${proj.Creator?.name || 'Project Lead'}!`);
-      setRequestingJoin(prev => ({ ...prev, [proj.id]: true }));
+      const res = await axios.post(`/api/collaboration/projects/${proj.id}/apply`, { message: pitch });
+      toast.success(res.data.message || `Application sent to ${proj.Creator?.name || 'Project Lead'}!`);
+      fetchProjectsAndInvites();
     } catch (err) {
-      toast.error('Failed to send request');
+      toast.error(err.response?.data?.message || 'Failed to send application');
+    } finally {
+      setApplyingToProject(false);
+    }
+  };
+
+  const openProjectChat = async (proj) => {
+    setActiveChatProject(proj);
+    setLoadingChat(true);
+    try {
+      const res = await axios.get(`/api/collaboration/projects/${proj.id}/messages`);
+      setChatMessages(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load project discussion');
+    } finally {
+      setLoadingChat(false);
+    }
+  };
+
+  const handleSendProjectMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim() || !activeChatProject) return;
+    setSendingChat(true);
+    try {
+      const res = await axios.post(`/api/collaboration/projects/${activeChatProject.id}/messages`, {
+        content: chatInput.trim()
+      });
+      setChatMessages(prev => [...prev, res.data]);
+      setChatInput('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send message');
+    } finally {
+      setSendingChat(false);
     }
   };
 
@@ -788,37 +830,62 @@ const StudyBuddies = () => {
           <div className="space-y-8 text-left">
             {renderPremiumBadgeBanner("AI Team Builder", "Access classmate matching and automated recruiting suggestions for project teams and hackathons.")}
             
-            {/* Project invites section */}
+            {/* Project invites & applications banner */}
             {projectInvites.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-6 rounded-3xl">
                 <h3 className="text-lg font-black text-amber-800 dark:text-amber-400 mb-4 flex items-center gap-2">
-                  🚀 Project Team Invitations ({projectInvites.length})
+                  🚀 Project Team Action Items ({projectInvites.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {projectInvites.map(invite => (
-                    <div key={invite.id} className="bg-white dark:bg-dark-card p-5 rounded-2xl shadow-sm border flex flex-col justify-between">
-                      <div>
-                        <h4 className="font-bold text-base">{invite.ProjectPosting?.title}</h4>
-                        <p className="text-xs text-gray-500 mt-1">{invite.ProjectPosting?.description}</p>
-                        <p className="text-[10px] text-gray-400 mt-2 font-bold">Created by: {invite.ProjectPosting?.Creator?.name}</p>
-                        <p className="text-[10px] text-indigo-500 mt-1 font-bold">Skills Needed: {invite.ProjectPosting?.requiredSkills}</p>
+                  {projectInvites.map(invite => {
+                    const isApplication = invite.type === 'application';
+                    return (
+                      <div key={invite.id} className="bg-white dark:bg-dark-card p-5 rounded-2xl shadow-sm border flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                              isApplication 
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' 
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            }`}>
+                              {isApplication ? '📥 Inbound Application' : '📩 Outbound Invitation'}
+                            </span>
+                          </div>
+                          <h4 className="font-bold text-base text-gray-900 dark:text-white mt-1">{invite.ProjectPosting?.title}</h4>
+                          <p className="text-xs text-gray-500 mt-1">{invite.ProjectPosting?.description}</p>
+                          {isApplication ? (
+                            <div className="mt-2 text-[11px] bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border dark:border-slate-700">
+                              <p className="font-bold text-gray-700 dark:text-gray-300">
+                                Applicant: <span className="text-blue-600 dark:text-blue-400">{invite.Invitee?.name}</span> ({invite.Invitee?.course} • Roll: {invite.Invitee?.rollNo || 'N/A'})
+                              </p>
+                              {invite.message && (
+                                <p className="text-[10px] text-gray-500 mt-1 italic">"{invite.message}"</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-gray-400 mt-2 font-bold">
+                              Invited by Team Lead: <span className="text-blue-600">{invite.ProjectPosting?.Creator?.name}</span>
+                            </p>
+                          )}
+                          <p className="text-[10px] text-indigo-500 mt-1 font-bold">Skills Needed: {invite.ProjectPosting?.requiredSkills}</p>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <button
+                            onClick={() => handleRespondToInvite(invite.id, 'accepted')}
+                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                          >
+                            ✓ Accept
+                          </button>
+                          <button
+                            onClick={() => handleRespondToInvite(invite.id, 'rejected')}
+                            className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold transition-all"
+                          >
+                            ✕ Decline
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 mt-4">
-                        <button
-                          onClick={() => handleRespondToInvite(invite.id, 'accepted')}
-                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleRespondToInvite(invite.id, 'rejected')}
-                          className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -847,37 +914,131 @@ const StudyBuddies = () => {
               )}
               {projects.map(proj => {
                 const isMine = proj.creatorId === user?.id;
-                const isRequested = requestingJoin[proj.id];
+                const myInvite = proj.ProjectInvites?.find(inv => inv.inviteeId === user?.id);
+                const isApplied = myInvite?.status === 'pending';
+                const isAccepted = myInvite?.status === 'accepted';
+                const isTeamMember = isMine || isAccepted;
+
+                // Accepted squad members (excluding creator, who is lead)
+                const acceptedMembers = proj.ProjectInvites?.filter(inv => inv.status === 'accepted') || [];
+                // Pending applications submitted to this project (relevant for creator)
+                const pendingApplications = isMine ? (proj.ProjectInvites?.filter(inv => inv.status === 'pending' && inv.type === 'application') || []) : [];
+                const currentTeamCount = acceptedMembers.length + 1; // +1 for Creator
+                const isTeamFull = currentTeamCount >= (proj.maxTeamSize || 4);
+
                 return (
                   <div key={proj.id} className="bg-white dark:bg-dark-card p-6 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col justify-between hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
                     <div>
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-2 gap-2">
                         <h4 className="font-black text-base text-gray-900 dark:text-white leading-tight">{proj.title}</h4>
-                        <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full ${isMine ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800'}`}>
-                          {isMine ? 'My Project' : 'Open Vacancy'}
+                        <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
+                          isMine 
+                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800' 
+                            : isAccepted
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800'
+                              : isApplied
+                                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800'
+                                : 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800'
+                        }`}>
+                          {isMine ? '👑 My Project (Lead)' : isAccepted ? '🎉 Team Member' : isApplied ? '✓ Applied (Pending)' : 'Open Vacancy'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 line-clamp-3 mt-2 leading-relaxed">{proj.description}</p>
                       
-                      <div className="mt-4 space-y-2.5">
+                      <div className="mt-4 space-y-3">
                         <div>
                           <span className="text-[9px] text-gray-400 font-extrabold uppercase block tracking-wider">Required Skills</span>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {proj.requiredSkills.split(',').map((s, idx) => (
+                            {proj.requiredSkills?.split(',').map((s, idx) => (
                               <span key={idx} className="text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md font-bold border dark:border-slate-700">
                                 {s.trim()}
                               </span>
                             ))}
                           </div>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold pt-2.5 border-t dark:border-slate-800">
-                          <span>👥 Max Team Size: {proj.maxTeamSize}</span>
-                          <span className="text-slate-600 dark:text-slate-300">Posted by: <strong className="text-blue-600 dark:text-blue-400">{proj.Creator?.name || 'Classmate'}</strong></span>
+
+                        {/* Confirmed Team Squad Roster */}
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border dark:border-slate-800">
+                          <div className="flex justify-between items-center text-[10px] font-extrabold mb-1.5">
+                            <span className="text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              👥 Team Members ({currentTeamCount}/{proj.maxTeamSize || 4})
+                            </span>
+                            {isTeamFull && (
+                              <span className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded font-black text-[9px]">
+                                Team Full
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {/* Project Creator / Lead */}
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-blue-100/70 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded-lg font-bold border border-blue-200 dark:border-blue-800">
+                              👑 {proj.Creator?.name || 'Lead'} (Lead)
+                            </span>
+                            {/* Accepted Members */}
+                            {acceptedMembers.map(m => (
+                              <span key={m.id} className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-lg font-bold border border-emerald-200 dark:border-emerald-800">
+                                👤 {m.Invitee?.name || 'Member'}
+                              </span>
+                            ))}
+                            {acceptedMembers.length === 0 && (
+                              <span className="text-[10px] text-gray-400 italic">No members joined yet</span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Incoming Applications for Creator Review */}
+                        {isMine && pendingApplications.length > 0 && (
+                          <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border border-amber-200/80 dark:border-amber-900/60 space-y-2">
+                            <span className="text-[10px] font-extrabold text-amber-800 dark:text-amber-400 uppercase tracking-wider block">
+                              📥 Incoming Applications ({pendingApplications.length})
+                            </span>
+                            <div className="space-y-2 max-h-36 overflow-y-auto">
+                              {pendingApplications.map(app => (
+                                <div key={app.id} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-amber-100 dark:border-slate-800 text-xs">
+                                  <div className="flex justify-between items-start gap-1">
+                                    <div>
+                                      <strong className="text-gray-900 dark:text-white font-bold">{app.Invitee?.name}</strong>
+                                      <p className="text-[9px] text-gray-400">{app.Invitee?.course} • Roll: {app.Invitee?.rollNo || 'N/A'}</p>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                      <button
+                                        onClick={() => handleRespondToInvite(app.id, 'accepted')}
+                                        className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold"
+                                        title="Accept application"
+                                      >
+                                        ✓ Accept
+                                      </button>
+                                      <button
+                                        onClick={() => handleRespondToInvite(app.id, 'rejected')}
+                                        className="px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-md text-[10px] font-bold"
+                                        title="Decline application"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {app.message && (
+                                    <p className="text-[10px] text-gray-500 mt-1 italic line-clamp-2">"{app.message}"</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="mt-5 space-y-2">
+                      {/* Project Team Chat Button (for Creator + Accepted Members) */}
+                      {isTeamMember && (
+                        <button
+                          onClick={() => openProjectChat(proj)}
+                          className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-1.5"
+                        >
+                          💬 Project Team Discussion & Chat
+                        </button>
+                      )}
+
                       {isMine ? (
                         <>
                           <button
@@ -894,35 +1055,39 @@ const StudyBuddies = () => {
                             🤖 {assemblingTeam ? 'Assembling Squad...' : 'Auto-Assemble Dream Team'}
                           </button>
                         </>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={() => handleCheckCompatibility(proj)}
-                              className="py-2.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
-                            >
-                              ⚡ Check Match
-                            </button>
-                            <button
-                              onClick={() => handleRequestToJoin(proj)}
-                              disabled={isRequested}
-                              className={`py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-                                isRequested 
-                                  ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 border border-emerald-300' 
-                                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/10'
-                              }`}
-                            >
-                              {isRequested ? '✓ Applied' : '🤝 Join Team'}
-                            </button>
-                          </div>
+                      ) : !isAccepted ? (
+                        <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => handleRunAIMatch(proj)}
-                            className="w-full py-2 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5"
+                            onClick={() => handleCheckCompatibility(proj)}
+                            className="py-2.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
                           >
-                            🔍 Explore AI Candidate Matches
+                            ⚡ Check Match
                           </button>
-                        </>
-                      )}
+                          {isApplied ? (
+                            <button
+                              disabled
+                              className="py-2.5 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center justify-center gap-1 cursor-default opacity-90"
+                            >
+                              ✓ Applied
+                            </button>
+                          ) : isTeamFull ? (
+                            <button
+                              disabled
+                              className="py-2.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500 flex items-center justify-center gap-1 cursor-not-allowed"
+                            >
+                              Team Full
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleApplyToProject(proj)}
+                              disabled={applyingToProject}
+                              className="py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/10"
+                            >
+                              🤝 Join Team
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -1030,12 +1195,16 @@ const StudyBuddies = () => {
                           </p>
                           <p className="text-[10px] text-gray-400 font-bold mt-2 truncate">Skills: {peer.expertise}</p>
                         </div>
-                        <button
-                          onClick={() => handleSendProjectInvite(peer.id)}
-                          className="w-full mt-4 py-2 bg-gray-900 hover:bg-gray-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white rounded-lg text-xs font-bold"
-                        >
-                          Send Project Invite
-                        </button>
+                        {matchingProject.creatorId === user?.id ? (
+                          <button
+                            onClick={() => handleSendProjectInvite(peer.id)}
+                            className="w-full mt-4 py-2 bg-gray-900 hover:bg-gray-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                          >
+                            Send Project Invite
+                          </button>
+                        ) : (
+                          <p className="text-[10px] text-gray-400 italic text-center mt-3">Only project creator can send invites</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1074,10 +1243,10 @@ const StudyBuddies = () => {
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => {
-                  handleRequestToJoin(compatModal.project);
+                  handleApplyToProject(compatModal.project, compatModal.data?.recommendedPitch);
                   setCompatModal(null);
                 }}
-                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all"
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/10"
               >
                 🤝 Submit Application
               </button>
@@ -1377,6 +1546,120 @@ const StudyBuddies = () => {
                 </pre>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Team Discussion / Chat Modal */}
+      {activeChatProject && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl h-[620px] flex flex-col shadow-2xl overflow-hidden border border-gray-200 dark:border-slate-800 animate-in fade-in duration-200">
+            {/* Chat Modal Header */}
+            <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/70 dark:bg-slate-900/90">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">💬</span>
+                  <h3 className="text-lg font-black text-gray-900 dark:text-white leading-tight">
+                    {activeChatProject.title}
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Project Team Discussion & Collaboration</p>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveChatProject(null);
+                  setChatMessages([]);
+                }}
+                className="px-3.5 py-1.5 text-xs text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white font-bold bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Team Roster Strip */}
+            <div className="px-5 py-2.5 bg-slate-100/70 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto text-[11px] custom-scrollbar">
+              <span className="font-extrabold text-gray-400 uppercase tracking-wider text-[9px] shrink-0">Team:</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900 shrink-0">
+                👑 {activeChatProject.Creator?.name || 'Lead'} (Lead)
+              </span>
+              {activeChatProject.ProjectInvites?.filter(inv => inv.status === 'accepted').map(mem => (
+                <span key={mem.id} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 shrink-0">
+                  👤 {mem.Invitee?.name || 'Member'}
+                </span>
+              ))}
+            </div>
+
+            {/* Messages Scroll View */}
+            <div className="flex-1 p-5 overflow-y-auto space-y-3 bg-gray-50/40 dark:bg-slate-950/40 custom-scrollbar">
+              {loadingChat ? (
+                <div className="py-24 text-center text-xs text-gray-400 font-bold animate-pulse">
+                  Loading team discussion messages...
+                </div>
+              ) : chatMessages.length === 0 ? (
+                <div className="py-24 text-center text-gray-400">
+                  <div className="text-3xl mb-2">💬</div>
+                  <p className="font-bold text-sm text-gray-700 dark:text-gray-300">No discussion messages yet.</p>
+                  <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                    Say hello to your project teammates! Coordinate tech stacks, assign modules, and share progress updates.
+                  </p>
+                </div>
+              ) : (
+                chatMessages.map(msg => {
+                  const isMe = msg.senderId === user?.id;
+                  const isLead = msg.senderId === activeChatProject.creatorId;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1 px-1">
+                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                          {isMe ? 'You' : msg.Sender?.name || 'Teammate'}
+                        </span>
+                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                          isLead
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        }`}>
+                          {isLead ? 'Lead' : 'Member'}
+                        </span>
+                        <span className="text-[9px] text-gray-400">
+                          {msg.createdAt ? format(new Date(msg.createdAt), 'h:mm a') : ''}
+                        </span>
+                      </div>
+                      <div
+                        className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed break-words shadow-sm ${
+                          isMe
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-sm'
+                            : 'bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-100 dark:border-slate-700 rounded-bl-sm'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Chat Input Bar */}
+            <form onSubmit={handleSendProjectMessage} className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Talk about the project, share ideas, or post links... (Enter to send)"
+                className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-xs"
+              />
+              <button
+                type="submit"
+                disabled={sendingChat || !chatInput.trim()}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-md shadow-blue-500/20"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {sendingChat ? 'Sending...' : 'Send'}
+              </button>
+            </form>
           </div>
         </div>
       )}

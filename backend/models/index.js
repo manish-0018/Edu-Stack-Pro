@@ -46,6 +46,7 @@ const PrepHistory = require('./PrepHistory');
 const StudyGuide = require('./StudyGuide');
 const ProjectPosting = require('./ProjectPosting');
 const ProjectInvite = require('./ProjectInvite');
+const ProjectMessage = require('./ProjectMessage');
 const StudyRecommendation = require('./StudyRecommendation');
 const PeerMatch = require('./PeerMatch');
 const CourseRollConfig = require('./CourseRollConfig');
@@ -281,6 +282,12 @@ ProjectInvite.belongsTo(ProjectPosting, { foreignKey: 'projectPostingId' });
 User.hasMany(ProjectInvite, { foreignKey: 'inviteeId' });
 ProjectInvite.belongsTo(User, { as: 'Invitee', foreignKey: 'inviteeId' });
 
+// ProjectMessage associations
+ProjectPosting.hasMany(ProjectMessage, { foreignKey: 'projectPostingId', onDelete: 'CASCADE' });
+ProjectMessage.belongsTo(ProjectPosting, { foreignKey: 'projectPostingId' });
+User.hasMany(ProjectMessage, { foreignKey: 'senderId' });
+ProjectMessage.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
+
 // StudyRecommendation associations
 User.hasMany(StudyRecommendation, { foreignKey: 'studentId' });
 StudyRecommendation.belongsTo(User, { as: 'Student', foreignKey: 'studentId' });
@@ -350,6 +357,7 @@ module.exports = {
   StudyGuide,
   ProjectPosting,
   ProjectInvite,
+  ProjectMessage,
   StudyRecommendation,
   PeerMatch,
   CourseRollConfig,
