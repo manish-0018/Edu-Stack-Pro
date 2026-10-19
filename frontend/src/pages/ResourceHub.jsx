@@ -1,12 +1,10 @@
 import { useState, useRef } from 'react';
-import { FileText, Download, PenTool, Bot } from 'lucide-react';
+import { FileText, Download, PenTool } from 'lucide-react';
 import DrawingBoard from '../components/DrawingBoard';
-import AITutorPanel from '../components/AITutorPanel';
 
 const ResourceHub = () => {
   const [notes, setNotes] = useState('');
   const [activeMode, setActiveMode] = useState('notes'); // 'notes' or 'draw'
-  const [isAITutorOpen, setIsAITutorOpen] = useState(false);
   const canvasRef = useRef(null);
 
   const saveToComputer = () => {
@@ -60,15 +58,6 @@ const ResourceHub = () => {
           <button onClick={saveToComputer} className="w-full md:w-auto px-5 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
             <Download className="w-4 h-4" /> Save to PC
           </button>
-          
-          {/* AI Tutor Toggle */}
-          <button 
-            onClick={() => setIsAITutorOpen(!isAITutorOpen)} 
-            className="p-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl shadow-lg transition-transform transform hover:scale-105"
-            title="Ask AI Tutor"
-          >
-            <Bot className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
@@ -89,9 +78,6 @@ const ResourceHub = () => {
           <DrawingBoard canvasRef={canvasRef} />
         </div>
       </div>
-
-      {/* AI Tutor Panel */}
-      <AITutorPanel isOpen={isAITutorOpen} onClose={() => setIsAITutorOpen(false)} context={`User Scratchpad`} />
     </div>
   );
 };

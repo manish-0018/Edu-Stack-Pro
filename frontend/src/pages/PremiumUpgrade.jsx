@@ -212,6 +212,31 @@ const PremiumUpgrade = () => {
           ))}
         </div>
 
+        {/* Invigilator Testing Mode Box */}
+        <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
+          <div>
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              👑 Invigilator & Viva Testing Controls
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Toggle premium state on this account to test and demonstrate locked vs. unlocked views.</p>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                const res = await axios.put('/api/auth/toggle-premium');
+                updateCurrentUser({ isPremium: res.data.isPremium });
+                toast.success(res.data.message);
+                if (!res.data.isPremium) setSuccess(false);
+              } catch (err) {
+                toast.error('Failed to toggle premium');
+              }
+            }}
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shrink-0 shadow-sm"
+          >
+            Toggle Premium (Lock / Unlock)
+          </button>
+        </div>
+
         {/* Billing History Section */}
         {transactions.length > 0 && (
           <div className="mt-12 text-left border-t border-gray-100 dark:border-slate-800 pt-8">
@@ -498,6 +523,28 @@ const PremiumUpgrade = () => {
               className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-bold transition-all transform hover:-translate-y-0.5 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 text-sm mt-6"
             >
               {loading ? "Processing..." : <><ShieldCheck className="w-5 h-5" /> Buy Semester Pass</>}
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const res = await axios.put('/api/auth/toggle-premium');
+                  updateCurrentUser({ isPremium: true });
+                  toast.success("Account unlocked with Premium Pass for Viva Demo!");
+                  setSuccess(true);
+                  triggerConfetti();
+                  fetchTransactions();
+                } catch (err) {
+                  toast.error("Failed to activate demo premium");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="w-full py-2.5 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-2 mt-3"
+            >
+              👑 Instant Unlock (Invigilator & Viva Demo)
             </button>
           </form>
         </div>

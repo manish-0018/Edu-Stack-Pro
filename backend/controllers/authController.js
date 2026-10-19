@@ -107,6 +107,7 @@ if (parentEmail && user.role === 'student') {
         rollNo: fullUser.rollNo,
         collegeId: fullUser.collegeId,
         College: fullUser.College,
+        isPremium: fullUser.isPremium || false,
         token: generateToken(fullUser.id),
       });
     } else {
@@ -142,6 +143,7 @@ const login = async (req, res) => {
         rollNo: fullUser.rollNo,
         collegeId: fullUser.collegeId,
         College: fullUser.College,
+        isPremium: fullUser.isPremium || false,
         token: generateToken(fullUser.id),
       });
     } else {
@@ -372,6 +374,18 @@ const getTransactions = async (req, res) => {
   }
 };
 
+const togglePremium = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.isPremium = !user.isPremium;
+    await user.save();
+    res.status(200).json({ message: `Premium status is now ${user.isPremium ? 'Active' : 'Inactive'}`, isPremium: user.isPremium, user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -383,6 +397,7 @@ module.exports = {
   getPaymentConfig,
   updatePaymentConfig,
   upgradeUser,
-  getTransactions
+  getTransactions,
+  togglePremium
 };
 

@@ -4,9 +4,8 @@ import { io } from 'socket.io-client';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { ArrowLeft, Send, Save, MessageSquare, Star, FileText, PenTool, Bot } from 'lucide-react';
+import { ArrowLeft, Send, Save, MessageSquare, Star, FileText, PenTool } from 'lucide-react';
 import DrawingBoard from '../components/DrawingBoard';
-import AITutorPanel from '../components/AITutorPanel';
 import { format } from 'date-fns';
 
 const Workspace = () => {
@@ -29,7 +28,6 @@ const Workspace = () => {
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
-  const [isAITutorOpen, setIsAITutorOpen] = useState(false);
 
   const chatEndRef = useRef(null);
 
@@ -207,15 +205,6 @@ const Workspace = () => {
               End Session
             </button>
           )}
-
-          {/* AI Tutor Toggle */}
-          <button 
-            onClick={() => setIsAITutorOpen(!isAITutorOpen)} 
-            className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl shadow-lg transition-transform transform hover:scale-105"
-            title="Ask AI Tutor"
-          >
-            <Bot className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
@@ -310,9 +299,6 @@ const Workspace = () => {
           </div>
         </div>
       )}
-
-      {/* AI Tutor Panel */}
-      <AITutorPanel isOpen={isAITutorOpen} onClose={() => setIsAITutorOpen(false)} context={`Workspace Session ${id}`} />
     </div>
   );
 };

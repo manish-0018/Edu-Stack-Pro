@@ -155,7 +155,14 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
               <UserIcon className="w-4 h-4" />
             </div>
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+                {user?.isPremium && (
+                  <span className="text-[9px] bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black px-1.5 py-0.5 rounded shadow-sm uppercase tracking-wider">
+                    👑 PRO
+                  </span>
+                )}
+              </div>
               <p className="text-[10px] font-bold text-primary-500 uppercase">
                 {user?.role} {user?.course && `• ${user.course}`}
               </p>

@@ -11,7 +11,8 @@ const {
   getPaymentConfig,
   updatePaymentConfig,
   upgradeUser,
-  getTransactions
+  getTransactions,
+  togglePremium
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -28,6 +29,7 @@ router.route('/payment-config')
   .post(protect, updatePaymentConfig);
 
 router.put('/upgrade', protect, upgradeUser);
+router.put('/toggle-premium', protect, togglePremium);
 router.get('/transactions', protect, getTransactions);
 
 module.exports = router;

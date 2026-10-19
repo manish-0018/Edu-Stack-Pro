@@ -73,6 +73,10 @@ const User = sequelize.define('User', {
   collegeId: {
     type: DataTypes.UUID,
     allowNull: true
+  },
+  isPremium: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 }, {
   hooks: {

@@ -8,12 +8,11 @@ import {
   HeartHandshake, Users, MessageSquare, BookOpen, Clock, Star,
   Search, Plus, Check, Play, MessageCircle, Radio, Lock, Brain, RefreshCw
 } from 'lucide-react';
-import AdBanner from '../components/AdBanner';
 
 const StudyBuddies = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('1on1'); // 1on1, groups, forums
+  const [activeTab, setActiveTab] = useState('1on1'); // 1on1, groups, global-peers, study-guides, team-builder
   const [subjects, setSubjects] = useState([]);
   
   // Data States
@@ -26,8 +25,6 @@ const StudyBuddies = () => {
   const [globalMatches, setGlobalMatches] = useState([]);
   const [searchingPeers, setSearchingPeers] = useState(false);
   const [studyGuides, setStudyGuides] = useState([]);
-  const [aiMatches, setAiMatches] = useState([]);
-  const [matchingBuddies, setMatchingBuddies] = useState(false);
 
   // Modals / Forms
   const [loading, setLoading] = useState(false);
@@ -72,7 +69,6 @@ const StudyBuddies = () => {
     if (activeTab === 'global-peers') setGlobalMatches([]);
     if (activeTab === 'study-guides') fetchStudyGuides();
     if (activeTab === 'team-builder') fetchProjectsAndInvites();
-    if (activeTab === 'ai-matches') handleRunAIPeerMatch();
   }, [activeTab]);
 
   const fetchProjectsAndInvites = async () => {
@@ -266,19 +262,6 @@ const StudyBuddies = () => {
     }
   };
 
-  const handleRunAIPeerMatch = async () => {
-    setMatchingBuddies(true);
-    const toastId = toast.loading('Calculating classmate compatibility scores...');
-    try {
-      const res = await axios.get('/api/ai/matches');
-      setAiMatches(res.data);
-      toast.update(toastId, { render: `Found ${res.data.length} matches!`, type: 'success', isLoading: false, autoClose: 4000 });
-    } catch (err) {
-      toast.update(toastId, { render: 'Failed to calculate compatibility scores.', type: 'error', isLoading: false, autoClose: 4000 });
-    } finally {
-      setMatchingBuddies(false);
-    }
-  };
 
   const requestDirectBuddy = async (tutorId) => {
     try {
@@ -311,6 +294,23 @@ const StudyBuddies = () => {
     </div>
   );
 
+  const renderPremiumBadgeBanner = (title, description) => (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-transparent border border-amber-300 dark:border-amber-700/60 rounded-2xl mb-6 shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-black shadow uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+          👑 Premium Feature
+        </span>
+        <div>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{title}</h4>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">{description}</p>
+        </div>
+      </div>
+      <span className="self-start sm:self-center text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/50 uppercase tracking-wider flex items-center gap-1">
+        ✓ Unlocked on this Account
+      </span>
+    </div>
+  );
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Hero Header */}
@@ -321,9 +321,9 @@ const StudyBuddies = () => {
             <Users className="w-4 h-4 text-blue-200" />
             <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Collaboration Hub</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black mb-3">Study Buddies & Forums</h1>
+          <h1 className="text-3xl md:text-4xl font-black mb-3">Study Buddies</h1>
           <p className="text-blue-100 text-lg max-w-2xl">
-            Connect with peers, join group study sessions, or ask questions in subject-specific forums. 
+            Connect with peers, join group study sessions, or team up for academic success. 
             All paired with an interactive virtual whiteboard workspace.
           </p>
         </div>
@@ -333,7 +333,6 @@ const StudyBuddies = () => {
         {[
           { id: '1on1', label: '1-on-1 Tutoring', icon: <HeartHandshake className="w-4 h-4" />, premium: true },
           { id: 'groups', label: 'Group Study Rooms', icon: <Users className="w-4 h-4" /> },
-          { id: 'ai-matches', label: 'AI Study Matcher', icon: <Brain className="w-4 h-4" /> },
           { id: 'global-peers', label: 'Global Peer Finder', icon: <Search className="w-4 h-4" />, premium: true },
           { id: 'study-guides', label: 'AI Study Guides', icon: <BookOpen className="w-4 h-4" />, premium: true },
           { id: 'team-builder', label: 'AI Team Builder', icon: <Users className="w-4 h-4" />, premium: true }
@@ -350,8 +349,8 @@ const StudyBuddies = () => {
             {tab.icon} 
             <span>{tab.label}</span>
             {tab.premium && (
-              <span className="text-[8px] bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-0.5 shadow-sm">
-                👑 Plus
+              <span className="text-[9px] bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                👑 Premium
               </span>
             )}
           </button>
@@ -366,6 +365,7 @@ const StudyBuddies = () => {
           renderPremiumLock("1-on-1 Tutoring", "Directly match with top-scoring class mentors for personal learning support.")
         ) : (
           <div className="space-y-8">
+            {renderPremiumBadgeBanner("1-on-1 Tutoring", "Directly match with top-scoring class mentors for personal learning support.")}
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border p-6 max-w-xl">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Request a Tutor</h2>
             <div className="flex gap-3">
@@ -451,7 +451,6 @@ const StudyBuddies = () => {
       {/* ======================= */}
       {activeTab === 'groups' && (
         <div className="space-y-6">
-          <AdBanner />
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Upcoming Study Groups</h2>
             <button onClick={() => { fetchSubjects(); setShowGroupModal(true); }} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2">
@@ -550,6 +549,7 @@ const StudyBuddies = () => {
           renderPremiumLock("Global Peer Finder", "Find and match with verified topic experts from external partner universities.")
         ) : (
           <div className="space-y-6">
+            {renderPremiumBadgeBanner("Global Peer Finder", "Find and match with verified topic experts from external partner universities.")}
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border p-6 max-w-2xl">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Find Global Topic Masters</h2>
             <p className="text-sm text-gray-500 mb-4">Search across all colleges to find peers who have mastered specific topics (e.g. DSA, Python, ML).</p>
@@ -615,74 +615,13 @@ const StudyBuddies = () => {
       )
     )}
 
-      {activeTab === 'ai-matches' && (
-        <div className="space-y-6 text-left">
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white border border-indigo-900/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Brain className="w-6 h-6 text-indigo-400" /> AI Study Buddy Matcher
-              </h2>
-              <p className="text-xs text-indigo-200 mt-1 max-w-xl">
-                Our FastAPI intelligence engine matches you with classmates in your college based on complementary skills, course alignment, subject strengths, and study availability overlap.
-              </p>
-            </div>
-            <button
-              onClick={handleRunAIPeerMatch}
-              disabled={matchingBuddies}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 self-start md:self-center"
-            >
-              <RefreshCw className={`w-4 h-4 ${matchingBuddies ? 'animate-spin' : ''}`} />
-              {matchingBuddies ? 'Matching...' : 'Re-Run AI Matching'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {aiMatches.map(match => (
-              <div key={match.id} className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between hover:shadow-md transition-shadow">
-                <div>
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">{match.name}</h4>
-                      <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold px-2 py-0.5 rounded uppercase tracking-wider inline-block mt-1">
-                        {match.compatibility_score}% Compatibility
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-3 mb-6">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Overlap Factors</p>
-                    <div className="space-y-1.5 bg-slate-50 dark:bg-dark-bg/40 p-3 rounded-xl border border-slate-100 dark:border-dark-border/20">
-                      {match.reasons.map((reason, index) => (
-                        <div key={index} className="text-[11px] text-gray-600 dark:text-gray-300 flex items-start gap-1">
-                          <span className="text-indigo-500 shrink-0">•</span>
-                          <span>{reason}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => requestDirectBuddy(match.id)}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow"
-                >
-                  <HeartHandshake className="w-4 h-4" /> Connect Study Buddy
-                </button>
-              </div>
-            ))}
-            {aiMatches.length === 0 && !matchingBuddies && (
-              <div className="col-span-full py-16 text-center text-gray-400 bg-white dark:bg-dark-card rounded-2xl border border-dashed">
-                <Brain className="w-12 h-12 mx-auto mb-3 text-indigo-400" />
-                <p className="text-sm font-semibold">No high-compatibility study buddies found in your college yet.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {activeTab === 'study-guides' && (
         !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (
           renderPremiumLock("AI Study Guides", "Access automated summaries and chat logs generated from your recorded collaborative study sessions.")
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+          <div className="space-y-6">
+            {renderPremiumBadgeBanner("AI Study Guides", "Access automated summaries and chat logs generated from your recorded collaborative study sessions.")}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
             {studyGuides.length === 0 && (
               <div className="col-span-full py-16 text-center text-gray-400 bg-white dark:bg-dark-card rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm font-semibold">
                 📂 No AI study guides recorded yet. Join a workspace and start recording!
@@ -722,6 +661,7 @@ const StudyBuddies = () => {
               </div>
             ))}
           </div>
+        </div>
         )
       )}
 
@@ -730,6 +670,7 @@ const StudyBuddies = () => {
           renderPremiumLock("AI Team Builder", "Access classmate matching and automated recruiting suggestions for project teams and hackathons.")
         ) : (
           <div className="space-y-8 text-left">
+            {renderPremiumBadgeBanner("AI Team Builder", "Access classmate matching and automated recruiting suggestions for project teams and hackathons.")}
             {/* Project invites section */}
             {projectInvites.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-6 rounded-3xl">

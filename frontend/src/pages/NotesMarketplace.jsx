@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Store, Coins, Upload, Download, CheckCircle2, Search, Brain } from 'lucide-react';
+import { Store, Coins, Upload, Download, CheckCircle2, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const NotesMarketplace = () => {
@@ -37,30 +37,6 @@ const NotesMarketplace = () => {
   }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [useSemantic, setUseSemantic] = useState(true);
-  const [semanticResults, setSemanticResults] = useState(null);
-  const [searching, setSearching] = useState(false);
-
-  const handleSearch = async (e) => {
-    if (e) e.preventDefault();
-    if (!searchQuery.trim()) {
-      setSemanticResults(null);
-      return;
-    }
-
-    if (useSemantic) {
-      setSearching(true);
-      try {
-        const res = await axios.post('/api/ai/search', { query: searchQuery });
-        setSemanticResults(res.data);
-      } catch (err) {
-        toast.error('AI Semantic search failed. Falling back to local search.');
-        setSemanticResults(null);
-      } finally {
-        setSearching(false);
-      }
-    }
-  };
 
   const handleClaimTokens = async () => {
     setClaiming(true);
@@ -92,27 +68,12 @@ const NotesMarketplace = () => {
     }
   };
 
-  const displayedMaterials = (() => {
-    if (useSemantic && semanticResults !== null) {
-      return semanticResults.map(resItem => {
-        const mat = materials.find(m => m.id === resItem.id);
-        if (!mat) return null;
-        return {
-          ...mat,
-          similarityScore: resItem.similarity_score
-        };
-      }).filter(Boolean);
-    } else {
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        return materials.filter(m => 
-          m.title.toLowerCase().includes(query) || 
-          (m.description || '').toLowerCase().includes(query)
-        );
-      }
-      return materials;
-    }
-  })();
+  const displayedMaterials = searchQuery.trim()
+    ? materials.filter(m => 
+        m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (m.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : materials;
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -256,44 +217,19 @@ const NotesMarketplace = () => {
         </div>
 
         {/* Search Bar & AI Toggle */}
-        <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="flex bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-1 shadow-sm w-full sm:w-auto">
-            <input
-              type="text"
-              placeholder={useSemantic ? "Search topics semantically..." : "Search by keyword..."}
-              value={searchQuery}
-              onChange={e => {
-                setSearchQuery(e.target.value);
-                if (!e.target.value.trim()) setSemanticResults(null);
-              }}
-              className="flex-1 px-3 py-2 bg-transparent text-sm outline-none w-full sm:w-64 dark:text-white"
-            />
-            <button
-              type="submit"
-              disabled={searching}
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow"
-            >
-              {searching ? 'AI Matching...' : <><Search className="w-3.5 h-3.5" /> Search</>}
-            </button>
+        {/* Search Bar */}
+        <div className="flex bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-1 shadow-sm w-full sm:w-auto items-center">
+          <input
+            type="text"
+            placeholder="Search items by keyword..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="flex-1 px-3 py-2 bg-transparent text-sm outline-none w-full sm:w-64 dark:text-white"
+          />
+          <div className="px-3 py-2 text-gray-400 flex items-center">
+            <Search className="w-4 h-4" />
           </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              const newMode = !useSemantic;
-              setUseSemantic(newMode);
-              setSemanticResults(null);
-              toast.info(newMode ? 'AI Semantic Search Enabled' : 'Standard Keyword Search Enabled');
-            }}
-            className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border transition-all ${
-              useSemantic 
-                ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20 dark:border-indigo-850 dark:text-indigo-400' 
-                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50 dark:bg-dark-card dark:border-dark-border dark:text-gray-400'
-            }`}
-          >
-            <Brain className="w-3.5 h-3.5" /> AI Semantic {useSemantic ? 'ON' : 'OFF'}
-          </button>
-        </form>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 text-left">

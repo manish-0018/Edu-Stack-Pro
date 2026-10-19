@@ -75,7 +75,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Assignments', icon: <ClipboardList />, path: '/assignments', roles: ['teacher', 'student'] },
     { name: 'Quizzes', icon: <Brain />, path: '/quizzes', roles: ['teacher', 'student'] },
     { name: 'Announcements', icon: <Megaphone />, path: '/announcements', roles: ['admin', 'teacher', 'student'] },
-    { name: 'Subject Forums', icon: <MessageSquare />, path: '/forums', roles: ['student', 'teacher'] },
     { name: 'Placements', icon: <Briefcase />, path: '/placements', roles: ['admin', 'teacher', 'student'] },
     { name: 'Mentorship', icon: <Users2 />, path: '/mentorship', roles: ['admin', 'student'] },
     { name: 'Mentor Advising', icon: <Users />, path: '/advising', roles: ['student'] },
@@ -84,7 +83,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Opportunities', icon: <Compass />, path: '/opportunities', roles: ['admin', 'student'] },
     { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher'] },
     { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian'] },
-    { name: 'Upgrade to Plus', icon: <Sparkles className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student', 'teacher', 'admin'] }
+    { name: user?.isPremium ? '👑 Premium Active' : 'Upgrade to Plus', icon: <Sparkles className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student', 'teacher', 'admin'] }
   ];
 
   return (
