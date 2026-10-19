@@ -996,17 +996,10 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">🎓 Student</span>
-                  <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                    (stats.theoryPercentage || 0) >= 75
-                      ? 'bg-emerald-500/30 text-emerald-200'
-                      : 'bg-amber-500/30 text-amber-200'
-                  }`}>
-                    {(stats.theoryPercentage || 0) >= 75 ? '✓ On Track for Exams' : '🌱 Needs Catch-Up'}
-                  </span>
                 </div>
                 <h1 className="text-2xl font-bold">{getTimeBasedGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
                 <p className="text-primary-200 text-sm mt-1">
-                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • Showing up today makes tomorrow easier.
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {user?.College?.name && (
@@ -1023,24 +1016,6 @@ const Dashboard = () => {
                     <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
                       🆔 Roll No: {user.rollNo}
                     </span>
-                  )}
-                 
-                </div>
-
-
-                
-                {/* Gamified Badges */}
-                <div className="flex gap-2 mt-4">
-                  {(stats.attendancePercentage || 0) >= 90 && (
-                    <div className="flex items-center gap-1 bg-yellow-400/20 text-yellow-200 px-2 py-1 rounded-md text-xs font-bold border border-yellow-400/30" title="Attendance Star: >= 90% Attendance">
-                      👑 Attendance Star
-                    </div>
-                  )}
-
-                  {(stats.attendancePercentage || 0) === 100 && (
-                    <div className="flex items-center gap-1 bg-purple-400/20 text-purple-200 px-2 py-1 rounded-md text-xs font-bold border border-purple-400/30" title="Flawless: 100% Attendance">
-                      💎 100% Perfect
-                    </div>
                   )}
                 </div>
               </div>
