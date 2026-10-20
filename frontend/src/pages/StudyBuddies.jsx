@@ -7,7 +7,8 @@ import { format } from 'date-fns';
 import { 
   HeartHandshake, Users, MessageSquare, BookOpen, Clock, Star,
   Search, Plus, Check, Play, MessageCircle, Radio, Lock, Brain, RefreshCw,
-  Send, CheckCircle2, UserCheck, LogOut, UserMinus, ExternalLink, Award, CheckSquare, Square
+  Send, CheckCircle2, UserCheck, LogOut, UserMinus, ExternalLink, Award, CheckSquare, Square,
+  AlertTriangle
 } from 'lucide-react';
 
 const StudyBuddies = () => {
@@ -63,6 +64,7 @@ const StudyBuddies = () => {
 
   // Application Modal with Verified Skills & Portfolio State
   const [applyModalProject, setApplyModalProject] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [applyForm, setApplyForm] = useState({
     selectedSkills: [],
     additionalSkills: '',
@@ -185,30 +187,42 @@ const StudyBuddies = () => {
     }
   };
 
-  const handleLeaveProject = async (projectId) => {
-    if (!window.confirm('Are you sure you want to leave this project team? Your spot will reopen for other students in your college.')) {
-      return;
-    }
-    try {
-      const res = await axios.post(`/api/collaboration/projects/${projectId}/leave`);
-      toast.success(res.data.message || 'You have left the project team.');
-      fetchProjectsAndInvites();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to leave project');
-    }
+  const handleLeaveProject = (projectId) => {
+    setConfirmDialog({
+      title: 'Leave Project Squad?',
+      message: 'Are you sure you want to leave this project team? Your spot will reopen for other students in your college.',
+      variant: 'danger',
+      confirmText: 'Leave Project',
+      icon: <LogOut className="w-7 h-7" />,
+      onConfirm: async () => {
+        try {
+          const res = await axios.post(`/api/collaboration/projects/${projectId}/leave`);
+          toast.success(res.data.message || 'You have left the project team.');
+          fetchProjectsAndInvites();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to leave project');
+        }
+      }
+    });
   };
 
-  const handleRemoveMember = async (projectId, memberId, memberName) => {
-    if (!window.confirm(`Are you sure you want to remove ${memberName} from your project team?`)) {
-      return;
-    }
-    try {
-      const res = await axios.delete(`/api/collaboration/projects/${projectId}/members/${memberId}`);
-      toast.success(res.data.message || `${memberName} removed from project team.`);
-      fetchProjectsAndInvites();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to remove member');
-    }
+  const handleRemoveMember = (projectId, memberId, memberName) => {
+    setConfirmDialog({
+      title: 'Remove Team Member?',
+      message: `Are you sure you want to remove ${memberName} from your project team? Their vacancy slot will reopen for other students.`,
+      variant: 'danger',
+      confirmText: 'Remove Member',
+      icon: <UserMinus className="w-7 h-7" />,
+      onConfirm: async () => {
+        try {
+          const res = await axios.delete(`/api/collaboration/projects/${projectId}/members/${memberId}`);
+          toast.success(res.data.message || `${memberName} removed from project team.`);
+          fetchProjectsAndInvites();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to remove member');
+        }
+      }
+    });
   };
 
   const handleApplyToProject = (proj, pitch = '') => {
@@ -1978,6 +1992,55 @@ const StudyBuddies = () => {
                 {sendingChat ? 'Sending...' : 'Send'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sleek Modern Confirmation Modal (replaces boring browser alerts) */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto border ${
+              confirmDialog.variant === 'danger'
+                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/50'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/50'
+            }`}>
+              {confirmDialog.icon || <AlertTriangle className="w-7 h-7" />}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                {confirmDialog.title}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed font-medium">
+                {confirmDialog.message}
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const action = confirmDialog.onConfirm;
+                  setConfirmDialog(null);
+                  if (action) await action();
+                }}
+                className={`flex-1 py-2.5 px-4 text-white font-bold rounded-xl transition-all text-xs shadow-md ${
+                  confirmDialog.variant === 'danger'
+                    ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 shadow-rose-500/20'
+                    : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-500/20'
+                }`}
+              >
+                {confirmDialog.confirmText || 'Confirm'}
+              </button>
+            </div>
           </div>
         </div>
       )}

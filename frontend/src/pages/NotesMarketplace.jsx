@@ -16,6 +16,7 @@ const NotesMarketplace = () => {
   const [file, setFile] = useState(null);
   const [activeMarketplaceCoupon, setActiveMarketplaceCoupon] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [confirmPurchase, setConfirmPurchase] = useState(null);
 
   const fetchMaterialsAndSubjects = async () => {
     try {
@@ -52,20 +53,26 @@ const NotesMarketplace = () => {
     }
   };
 
-  const handlePurchase = async (materialId, purchaseType = 'lifetime') => {
+  const handlePurchase = (materialId, purchaseType = 'lifetime') => {
     const costText = purchaseType === 'rental' ? 'rent this note for 3 days' : 'unlock this note permanently';
-    if (!window.confirm(`Are you sure you want to spend tokens to ${costText}?`)) return;
-    try {
-      const res = await axios.post(`/api/economy/purchase/${materialId}`, {
-        couponCode: appliedCoupon,
-        purchaseType
-      });
-      toast.success(purchaseType === 'rental' ? 'Lease started successfully!' : 'Notes unlocked permanently!');
-      setTokenBalance(res.data.tokens);
-      fetchMaterialsAndSubjects();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Purchase failed');
-    }
+    setConfirmPurchase({
+      materialId,
+      purchaseType,
+      costText,
+      onConfirm: async () => {
+        try {
+          const res = await axios.post(`/api/economy/purchase/${materialId}`, {
+            couponCode: appliedCoupon,
+            purchaseType
+          });
+          toast.success(purchaseType === 'rental' ? 'Lease started successfully!' : 'Notes unlocked permanently!');
+          setTokenBalance(res.data.tokens);
+          fetchMaterialsAndSubjects();
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Purchase failed');
+        }
+      }
+    });
   };
 
   const displayedMaterials = searchQuery.trim()
@@ -312,6 +319,46 @@ const NotesMarketplace = () => {
           );
         })}
       </div>
+      {/* Sleek Modern Confirmation Modal */}
+      {confirmPurchase && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto border bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/50">
+              <Coins className="w-7 h-7" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                Confirm Note Access
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed font-medium">
+                Are you sure you want to spend tokens to {confirmPurchase.costText}?
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmPurchase(null)}
+                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const action = confirmPurchase.onConfirm;
+                  setConfirmPurchase(null);
+                  if (action) await action();
+                }}
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl transition-all text-xs shadow-md shadow-amber-500/20"
+              >
+                Unlock Access
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
