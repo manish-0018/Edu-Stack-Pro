@@ -12,7 +12,7 @@ const NotesMarketplace = () => {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
-  const [newNote, setNewNote] = useState({ title: '', description: '', price: 10, subjectId: '' });
+  const [newNote, setNewNote] = useState({ title: '', description: '', price: 40, subjectId: '' });
   const [file, setFile] = useState(null);
   const [activeMarketplaceCoupon, setActiveMarketplaceCoupon] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
@@ -53,19 +53,25 @@ const NotesMarketplace = () => {
     }
   };
 
-  const handlePurchase = (materialId, purchaseType = 'lifetime') => {
-    const costText = purchaseType === 'rental' ? 'rent this note for 3 days' : 'unlock this note permanently';
+  const handlePurchase = (material, purchaseType = 'lifetime') => {
+    const hasDiscount = appliedCoupon === 'KIWISTUDY20' || appliedCoupon === 'CAFEFREE10';
+    const discountPct = appliedCoupon === 'KIWISTUDY20' ? 0.8 : appliedCoupon === 'CAFEFREE10' ? 0.9 : 1.0;
+    const basePrice = hasDiscount ? Math.ceil(material.price * discountPct) : material.price;
+    const tokenCost = purchaseType === 'rental' ? Math.max(15, Math.ceil(basePrice * 0.4)) : basePrice;
+    const actionLabel = purchaseType === 'rental' ? '3-day lease' : 'lifetime unlock';
+
     setConfirmPurchase({
-      materialId,
+      materialId: material.id,
       purchaseType,
-      costText,
+      tokenCost,
+      costText: `${actionLabel} of "${material.title}" for ${tokenCost} tokens`,
       onConfirm: async () => {
         try {
-          const res = await axios.post(`/api/economy/purchase/${materialId}`, {
+          const res = await axios.post(`/api/economy/purchase/${material.id}`, {
             couponCode: appliedCoupon,
             purchaseType
           });
-          toast.success(purchaseType === 'rental' ? 'Lease started successfully!' : 'Notes unlocked permanently!');
+          toast.success(res.data.message || (purchaseType === 'rental' ? 'Lease started successfully!' : 'Notes unlocked permanently!'));
           setTokenBalance(res.data.tokens);
           fetchMaterialsAndSubjects();
         } catch (err) {
@@ -118,7 +124,7 @@ const NotesMarketplace = () => {
             Edu Stack Pro Marketplace
           </h1>
           <p className="text-yellow-100 max-w-lg">
-            Maintain over 85% attendance to earn tokens every week. Spend your tokens here to unlock premium handwritten notes and PYQs uploaded by your seniors.
+            Maintain greater than 75% attendance in that week to claim 10 tokens. Note prices reflect academic dedication—attend classes regularly to earn tokens and unlock study resources!
           </p>
         </div>
         
@@ -160,7 +166,7 @@ const NotesMarketplace = () => {
                 disabled={claiming}
                 className="w-full bg-white text-yellow-600 hover:bg-yellow-50 disabled:opacity-50 px-4 py-2 rounded-xl text-xs font-bold shadow transition-all hover:scale-[1.02]"
               >
-                {claiming ? 'Claiming...' : 'Claim Attendance Tokens'}
+                {claiming ? 'Verifying Weekly Attendance...' : 'Claim 10 Weekly Tokens (>75%)'}
               </button>
             </div>
           ) : (
@@ -249,7 +255,7 @@ const NotesMarketplace = () => {
           const hasDiscount = appliedCoupon === 'KIWISTUDY20' || appliedCoupon === 'CAFEFREE10';
           const discountPct = appliedCoupon === 'KIWISTUDY20' ? 0.8 : appliedCoupon === 'CAFEFREE10' ? 0.9 : 1.0;
           const finalPrice = hasDiscount ? Math.ceil(mat.price * discountPct) : mat.price;
-          const rentalPrice = Math.ceil(finalPrice * 0.3);
+          const rentalPrice = Math.max(15, Math.ceil(finalPrice * 0.4));
 
           return (
             <div key={mat.id} className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden flex flex-col relative group">
@@ -301,16 +307,16 @@ const NotesMarketplace = () => {
                 ) : (
                   <div className="flex flex-col gap-2">
                     <button 
-                      onClick={() => handlePurchase(mat.id, 'lifetime')}
+                      onClick={() => handlePurchase(mat, 'lifetime')}
                       className="w-full flex justify-center items-center gap-1.5 bg-gray-900 hover:bg-gray-800 dark:bg-primary-600 dark:hover:bg-primary-700 text-white py-2 rounded-xl font-bold transition-colors text-xs"
                     >
-                      <Store className="w-3.5 h-3.5" /> Lifetime for {finalPrice}
+                      <Store className="w-3.5 h-3.5" /> Lifetime for {finalPrice} Tokens
                     </button>
                     <button 
-                      onClick={() => handlePurchase(mat.id, 'rental')}
+                      onClick={() => handlePurchase(mat, 'rental')}
                       className="w-full flex justify-center items-center gap-1.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-800 py-2 rounded-xl font-bold transition-colors border border-yellow-200 text-xs"
                     >
-                      ⏱ Rent 3 Days for {rentalPrice}
+                      ⏱ Rent 3 Days for {rentalPrice} Tokens
                     </button>
                   </div>
                 )}
@@ -332,8 +338,11 @@ const NotesMarketplace = () => {
                 Confirm Note Access
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed font-medium">
-                Are you sure you want to spend tokens to {confirmPurchase.costText}?
+                Are you sure you want to spend tokens for {confirmPurchase.costText}?
               </p>
+              <div className="mt-2.5 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-800 dark:text-amber-300">
+                💡 Maintain &gt;75% attendance each week to claim 10 tokens regularly!
+              </div>
             </div>
 
             <div className="flex gap-2.5 pt-2">

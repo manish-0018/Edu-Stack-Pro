@@ -22,7 +22,7 @@ const seedMaterials = async () => {
       {
         title: 'Complete Core Java Handwritten Notes',
         contentUrl: 'https://media.geeksforgeeks.org/wp-content/cdn-uploads/20210101201653/Java-Collections-Framework-PDF.pdf',
-        price: 20,
+        price: 60,
         description: 'Comprehensive handwritten notes covering OOPs, Collections, and Multithreading.',
         subjectId: javaSubject ? javaSubject.id : anySubject.id,
         uploaderId: uploader.id,
@@ -31,7 +31,7 @@ const seedMaterials = async () => {
       {
         title: 'Data Structures & Algorithms Cheatsheet',
         contentUrl: 'https://www.cs.princeton.edu/~rs/AlgsDS07/01Fundamentals.pdf',
-        price: 15,
+        price: 40,
         description: 'Quick revision notes for trees, graphs, DP, and sorting algorithms.',
         subjectId: dsaSubject ? dsaSubject.id : anySubject.id,
         uploaderId: uploader.id,
@@ -40,7 +40,7 @@ const seedMaterials = async () => {
       {
         title: 'Machine Learning Andrew Ng Summary',
         contentUrl: 'https://cs229.stanford.edu/notes2020-spring/cs229-notes1.pdf',
-        price: 30,
+        price: 80,
         description: 'Detailed summary of the famous Stanford Machine Learning course.',
         subjectId: anySubject.id,
         uploaderId: uploader.id,
@@ -49,7 +49,7 @@ const seedMaterials = async () => {
       {
         title: 'Python for Data Science Master Guide',
         contentUrl: 'https://wesmckinney.com/book/',
-        price: 25,
+        price: 70,
         description: 'Pandas, NumPy, and Matplotlib code snippets and explanations.',
         subjectId: anySubject.id,
         uploaderId: uploader.id,
