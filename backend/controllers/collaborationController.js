@@ -289,26 +289,29 @@ const updateStudyRequest = async (req, res) => {
 const getProjects = async (req, res) => {
   try {
     const whereClause = {};
-    if (req.user.collegeId) {
-      whereClause[Op.or] = [
-        { collegeId: req.user.collegeId },
-        { collegeId: null }
-      ];
+    // Strict multi-tenant college boundary:
+    // Students and teachers ONLY see projects from their own college
+    if (req.user.role !== 'admin') {
+      if (!req.user.collegeId) {
+        return res.status(200).json([]);
+      }
+      whereClause.collegeId = req.user.collegeId;
     }
+
     const projects = await ProjectPosting.findAll({
       where: whereClause,
       include: [
         {
           model: User,
           as: 'Creator',
-          attributes: ['id', 'name', 'email', 'course', 'rollNo']
+          attributes: ['id', 'name', 'email', 'course', 'rollNo', 'collegeId']
         },
         {
           model: ProjectInvite,
           include: [{
             model: User,
             as: 'Invitee',
-            attributes: ['id', 'name', 'email', 'rollNo', 'course']
+            attributes: ['id', 'name', 'email', 'rollNo', 'course', 'collegeId']
           }]
         }
       ],
@@ -341,14 +344,14 @@ const createProject = async (req, res) => {
         {
           model: User,
           as: 'Creator',
-          attributes: ['id', 'name', 'email', 'course', 'rollNo']
+          attributes: ['id', 'name', 'email', 'course', 'rollNo', 'collegeId']
         },
         {
           model: ProjectInvite,
           include: [{
             model: User,
             as: 'Invitee',
-            attributes: ['id', 'name', 'email', 'rollNo', 'course']
+            attributes: ['id', 'name', 'email', 'rollNo', 'course', 'collegeId']
           }]
         }
       ]
@@ -362,11 +365,18 @@ const createProject = async (req, res) => {
 
 const applyToProject = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, skills, experienceLevel, portfolioUrl, skillMatchScore } = req.body;
     const project = await ProjectPosting.findByPk(req.params.id, {
-      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email'] }]
+      include: [{ model: User, as: 'Creator', attributes: ['id', 'name', 'email', 'collegeId'] }]
     });
     if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    // Strict multi-tenant college boundary check
+    if (project.collegeId && req.user.collegeId && project.collegeId !== req.user.collegeId) {
+      return res.status(403).json({
+        message: 'Campus Boundary Restriction: You cannot apply to projects from another college. Only students within the host college can join.'
+      });
+    }
 
     if (project.creatorId === req.user.id) {
       return res.status(400).json({ message: 'You are the creator of this project' });
@@ -383,24 +393,38 @@ const applyToProject = async (req, res) => {
       });
     }
 
+    // Calculate match score if not provided
+    let calculatedScore = skillMatchScore;
+    if (!calculatedScore && project.requiredSkills) {
+      const required = project.requiredSkills.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+      const userProvided = (skills ? (typeof skills === 'string' ? skills.toLowerCase().split(',') : skills) : []);
+      const matched = required.filter(r => userProvided.some(u => u.includes(r) || r.includes(u)));
+      calculatedScore = required.length > 0 ? Math.round((matched.length / required.length) * 100) : 75;
+    }
+
     const application = await ProjectInvite.create({
       projectPostingId: project.id,
       inviteeId: req.user.id,
       status: 'pending',
       type: 'application',
-      message: message || `Hi! I would like to join the team for "${project.title}".`
+      message: message || `Hi! I would like to join the team for "${project.title}".`,
+      skills: Array.isArray(skills) ? skills.join(', ') : (skills || null),
+      experienceLevel: experienceLevel || 'Intermediate',
+      portfolioUrl: portfolioUrl || null,
+      skillMatchScore: Math.min(100, Math.max(0, calculatedScore || 80))
     });
 
-    // Notify project creator
+    // Notify project creator with applicant skills and synergy score
+    const skillHighlight = skills ? `with skills in: ${Array.isArray(skills) ? skills.join(', ') : skills}` : '';
     await Notification.create({
       userId: project.creatorId,
       title: '📩 New Project Team Application!',
-      message: `${req.user.name} applied to join your project: "${project.title}". Review their application in Study Buddies.`,
+      message: `${req.user.name} applied to "${project.title}" ${skillHighlight} (${application.skillMatchScore}% Synergy). Review their application in Study Buddies.`,
       type: 'info'
     }).catch(err => console.error('Notification error:', err));
 
     res.status(201).json({
-      message: 'Application submitted successfully',
+      message: 'Application submitted successfully with verified skills and portfolio!',
       invite: application
     });
   } catch (error) {
@@ -419,7 +443,7 @@ const getProjectInvites = async (req, res) => {
         include: [{
           model: User,
           as: 'Creator',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'name', 'email', 'collegeId']
         }]
       }]
     });
@@ -446,20 +470,23 @@ const getProjectInvites = async (req, res) => {
             include: [{
               model: User,
               as: 'Creator',
-              attributes: ['id', 'name', 'email']
+              attributes: ['id', 'name', 'email', 'collegeId']
             }]
           },
           {
             model: User,
             as: 'Invitee',
-            attributes: ['id', 'name', 'email', 'rollNo', 'course']
+            attributes: ['id', 'name', 'email', 'rollNo', 'course', 'collegeId']
           }
         ]
       });
     }
 
-    // Combine both so frontend gets all pending items
-    res.status(200).json([...receivedInvites, ...incomingApplications]);
+    // Filter by user's college boundary for safety
+    const filteredInvites = receivedInvites.filter(inv => !req.user.collegeId || inv.ProjectPosting?.collegeId === req.user.collegeId);
+    const filteredApps = incomingApplications.filter(app => !req.user.collegeId || app.Invitee?.collegeId === req.user.collegeId);
+
+    res.status(200).json([...filteredInvites, ...filteredApps]);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -478,6 +505,13 @@ const sendProjectInvite = async (req, res) => {
 
     if (inviteeId === project.creatorId) {
       return res.status(400).json({ message: 'Cannot invite yourself to your own project' });
+    }
+
+    // Strict multi-tenant college boundary check
+    const invitee = await User.findByPk(inviteeId);
+    if (!invitee) return res.status(404).json({ message: 'Student not found' });
+    if (invitee.collegeId && req.user.collegeId && invitee.collegeId !== req.user.collegeId) {
+      return res.status(403).json({ message: 'Campus Boundary Restriction: You can only invite students enrolled in your own college.' });
     }
 
     const existing = await ProjectInvite.findOne({
@@ -551,6 +585,88 @@ const respondToInvite = async (req, res) => {
   }
 };
 
+// Leave Project (Member chooses to leave)
+const leaveProject = async (req, res) => {
+  try {
+    const project = await ProjectPosting.findByPk(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    if (project.creatorId === req.user.id) {
+      return res.status(400).json({ message: 'Project leader cannot leave the project. You may delete the vacancy listing instead.' });
+    }
+
+    const invite = await ProjectInvite.findOne({
+      where: {
+        projectPostingId: project.id,
+        inviteeId: req.user.id,
+        status: 'accepted'
+      }
+    });
+
+    if (!invite) {
+      return res.status(400).json({ message: 'You are not an active member of this project team' });
+    }
+
+    await invite.destroy();
+
+    // Notify project leader
+    await Notification.create({
+      userId: project.creatorId,
+      title: '🚪 Teammate Left Project',
+      message: `${req.user.name} has voluntarily left your project team: "${project.title}". A vacancy slot has reopened.`,
+      type: 'info'
+    }).catch(() => {});
+
+    res.status(200).json({ message: 'You have left the project team successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Remove Team Member (Leader removes an inactive or uncommitted member)
+const removeTeamMember = async (req, res) => {
+  try {
+    const { id: projectPostingId, memberId } = req.params;
+    const project = await ProjectPosting.findByPk(projectPostingId);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    // ONLY the project leader can remove members
+    if (project.creatorId !== req.user.id) {
+      return res.status(403).json({ message: 'Only the project leader has authority to remove team members' });
+    }
+
+    if (memberId === req.user.id) {
+      return res.status(400).json({ message: 'Leader cannot remove themselves from the project' });
+    }
+
+    const invite = await ProjectInvite.findOne({
+      where: {
+        projectPostingId,
+        inviteeId: memberId,
+        status: 'accepted'
+      }
+    });
+
+    if (!invite) {
+      return res.status(404).json({ message: 'Team member record not found' });
+    }
+
+    await invite.destroy();
+
+    // Notify the removed student
+    await Notification.create({
+      userId: memberId,
+      title: '⚠️ Removed from Project Team',
+      message: `You were removed from project team: "${project.title}" by project leader ${req.user.name}.`,
+      type: 'info'
+    }).catch(() => {});
+
+    res.status(200).json({ message: 'Member removed from team squad successfully' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 const matchProjectPeers = async (req, res) => {
   try {
     const project = await ProjectPosting.findByPk(req.params.id);
@@ -573,25 +689,15 @@ const matchProjectPeers = async (req, res) => {
       role: 'student',
       id: { [Op.notIn]: Array.from(excludeIds) }
     };
+    // Strictly isolate candidates to the same college
     if (req.user.collegeId) {
       whereClause.collegeId = req.user.collegeId;
     }
 
-    let students = await User.findAll({
+    const students = await User.findAll({
       where: whereClause,
       attributes: ['id', 'name', 'email', 'rollNo', 'course']
     });
-
-    if (students.length === 0 && req.user.collegeId) {
-      // Fallback across colleges if local cohort is small
-      students = await User.findAll({
-        where: {
-          role: 'student',
-          id: { [Op.notIn]: Array.from(excludeIds) }
-        },
-        attributes: ['id', 'name', 'email', 'rollNo', 'course']
-      });
-    }
 
     const skillsNeeded = project.requiredSkills
       .toLowerCase()
@@ -666,28 +772,15 @@ const autoAssembleTeam = async (req, res) => {
       role: 'student',
       id: { [Op.notIn]: Array.from(excludeIds) }
     };
+    // Strictly isolate candidates to the same college
+    if (req.user.collegeId) {
+      whereClause.collegeId = req.user.collegeId;
+    }
 
-    let students = await User.findAll({
-      where: {
-        ...whereClause,
-        ...(req.user.collegeId ? { collegeId: req.user.collegeId } : {})
-      },
+    const students = await User.findAll({
+      where: whereClause,
       attributes: ['id', 'name', 'email', 'rollNo', 'course']
     });
-
-    if (students.length < 4) {
-      const globalStudents = await User.findAll({
-        where: whereClause,
-        attributes: ['id', 'name', 'email', 'rollNo', 'course']
-      });
-      const existingIds = new Set(students.map(s => s.id));
-      globalStudents.forEach(gs => {
-        if (!existingIds.has(gs.id)) {
-          students.push(gs);
-          existingIds.add(gs.id);
-        }
-      });
-    }
 
     const rolesConfig = [
       {
@@ -989,6 +1082,7 @@ module.exports = {
   getProjects, createProject, getProjectInvites, sendProjectInvite, respondToInvite, matchProjectPeers,
   autoAssembleTeam, checkProjectCompatibility,
   getStudyGuides, generateStudyGuide, deleteStudyGuide,
-  applyToProject, getProjectMessages, sendProjectMessage
+  applyToProject, getProjectMessages, sendProjectMessage,
+  leaveProject, removeTeamMember
 };
 

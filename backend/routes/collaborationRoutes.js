@@ -8,7 +8,8 @@ const {
   getProjects, createProject, getProjectInvites, sendProjectInvite, respondToInvite, matchProjectPeers,
   autoAssembleTeam, checkProjectCompatibility,
   getStudyGuides, generateStudyGuide, deleteStudyGuide,
-  applyToProject, getProjectMessages, sendProjectMessage
+  applyToProject, getProjectMessages, sendProjectMessage,
+  leaveProject, removeTeamMember
 } = require('../controllers/collaborationController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -51,6 +52,8 @@ router.post('/projects/:id/auto-assemble', autoAssembleTeam);
 router.get('/projects/:id/compatibility', checkProjectCompatibility);
 router.get('/projects/:id/messages', getProjectMessages);
 router.post('/projects/:id/messages', sendProjectMessage);
+router.post('/projects/:id/leave', leaveProject);
+router.delete('/projects/:id/members/:memberId', removeTeamMember);
 
 // AI Study Guides
 router.get('/study-guides', getStudyGuides);

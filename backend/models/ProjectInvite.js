@@ -26,6 +26,22 @@ const ProjectInvite = sequelize.define('ProjectInvite', {
   message: {
     type: DataTypes.TEXT,
     allowNull: true,
+  },
+  skills: {
+    type: DataTypes.TEXT, // comma-separated or JSON list of skills applicant knows
+    allowNull: true,
+  },
+  experienceLevel: {
+    type: DataTypes.STRING, // 'Beginner', 'Intermediate', 'Advanced'
+    defaultValue: 'Intermediate',
+  },
+  portfolioUrl: {
+    type: DataTypes.STRING, // GitHub or portfolio profile/repo URL
+    allowNull: true,
+  },
+  skillMatchScore: {
+    type: DataTypes.INTEGER, // calculated synergy match percentage
+    defaultValue: 0,
   }
 });
 
