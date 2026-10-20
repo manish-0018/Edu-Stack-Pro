@@ -83,7 +83,7 @@ function App() {
           <Route path="portfolio" element={<ProtectedRoute allowedRoles={['student']}><Portfolio /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'mentor']}><Announcements /></ProtectedRoute>} />
           <Route path="advising" element={<ProtectedRoute allowedRoles={['student']}><StudentAdvising /></ProtectedRoute>} />
-          <Route path="upgrade" element={<ProtectedRoute><PremiumUpgrade /></ProtectedRoute>} />
+          <Route path="upgrade" element={<Navigate to="/buddies" replace />} />
         </Route>
       </Routes>
     </Router>

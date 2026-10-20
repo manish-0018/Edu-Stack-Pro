@@ -76,7 +76,7 @@ const User = sequelize.define('User', {
   },
   isPremium: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
+    defaultValue: true
   }
 }, {
   hooks: {

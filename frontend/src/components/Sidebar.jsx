@@ -82,8 +82,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Resource Hub', icon: <PenTool />, path: '/resources', roles: ['admin', 'student', 'teacher'] },
     { name: 'Opportunities', icon: <Compass />, path: '/opportunities', roles: ['admin', 'student'] },
     { name: 'Campus Marketplace', icon: <Store />, path: '/store', roles: ['admin', 'student', 'teacher'] },
-    { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian'] },
-    { name: user?.isPremium ? '👑 Premium Active' : 'Upgrade to Plus', icon: <Sparkles className="text-amber-500 animate-pulse" />, path: '/upgrade', roles: ['student', 'teacher', 'admin'] }
+    { name: 'Smart Library', icon: <LibraryIcon />, path: '/library', roles: ['admin', 'student', 'teacher', 'guardian'] }
   ];
 
   return (

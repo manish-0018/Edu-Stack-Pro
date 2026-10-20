@@ -478,42 +478,7 @@ const StudyBuddies = () => {
     }
   };
 
-  const renderPremiumLock = (featureName, description) => (
-    <div className="py-16 px-6 text-center bg-white dark:bg-dark-card rounded-3xl border border-gray-100 dark:border-dark-border shadow-xl max-w-xl mx-auto my-8">
-      <div className="w-16 h-16 bg-amber-50 dark:bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-100 dark:border-amber-500/20">
-        <Lock className="w-8 h-8 text-amber-500 animate-pulse" />
-      </div>
-      <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-        {featureName} is Premium!
-      </h2>
-      <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium text-sm">
-        {description} Unlock this and other premium features with a One-Time Semester Pass!
-      </p>
-      <button
-        onClick={() => navigate('/upgrade')}
-        className="mt-6 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-xl transition-all shadow-md shadow-orange-500/20"
-      >
-        Unlock with Semester Pass
-      </button>
-    </div>
-  );
-
-  const renderPremiumBadgeBanner = (title, description) => (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-transparent border border-amber-300 dark:border-amber-700/60 rounded-2xl mb-6 shadow-sm">
-      <div className="flex items-center gap-3">
-        <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-black shadow uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-          👑 Premium Feature
-        </span>
-        <div>
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{title}</h4>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">{description}</p>
-        </div>
-      </div>
-      <span className="self-start sm:self-center text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/50 uppercase tracking-wider flex items-center gap-1">
-        ✓ Unlocked on this Account
-      </span>
-    </div>
-  );
+  // Premium removed - all features free
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -535,11 +500,11 @@ const StudyBuddies = () => {
 
       <div className="flex flex-wrap gap-3 border-b border-gray-200 dark:border-dark-border pb-4">
         {[
-          { id: '1on1', label: '1-on-1 Tutoring', icon: <HeartHandshake className="w-4 h-4" />, premium: true },
+          { id: '1on1', label: '1-on-1 Tutoring', icon: <HeartHandshake className="w-4 h-4" /> },
           { id: 'groups', label: 'Group Study Rooms', icon: <Users className="w-4 h-4" /> },
-          { id: 'global-peers', label: 'Global Peer Finder', icon: <Search className="w-4 h-4" />, premium: true },
-          { id: 'study-guides', label: 'AI Study Guides', icon: <BookOpen className="w-4 h-4" />, premium: true },
-          { id: 'team-builder', label: 'AI Team Builder', icon: <Users className="w-4 h-4" />, premium: true }
+          { id: 'global-peers', label: 'Global Peer Finder', icon: <Search className="w-4 h-4" /> },
+          { id: 'study-guides', label: 'AI Study Guides', icon: <BookOpen className="w-4 h-4" /> },
+          { id: 'team-builder', label: 'AI Team Builder', icon: <Users className="w-4 h-4" /> }
         ].map(tab => (
           <button
             key={tab.id}
@@ -552,11 +517,6 @@ const StudyBuddies = () => {
           >
             {tab.icon} 
             <span>{tab.label}</span>
-            {tab.premium && (
-              <span className="text-[9px] bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                👑 Premium
-              </span>
-            )}
           </button>
         ))}
       </div>
@@ -565,11 +525,7 @@ const StudyBuddies = () => {
       {/* 1-on-1 TAB              */}
       {/* ======================= */}
       {activeTab === '1on1' && (
-        !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (
-          renderPremiumLock("1-on-1 Tutoring", "Directly match with top-scoring class mentors for personal learning support.")
-        ) : (
-          <div className="space-y-8">
-            {renderPremiumBadgeBanner("1-on-1 Tutoring", "Directly match with top-scoring class mentors for personal learning support.")}
+        <div className="space-y-8">
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border p-6 max-w-xl">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Request a Tutor</h2>
             <div className="flex gap-3">
@@ -647,8 +603,7 @@ const StudyBuddies = () => {
             </div>
           </div>
         </div>
-      )
-    )}
+      )}
 
       {/* ======================= */}
       {/* GROUPS TAB                */}
@@ -749,11 +704,7 @@ const StudyBuddies = () => {
       {/* GLOBAL PEER FINDER TAB  */}
       {/* ======================= */}
       {activeTab === 'global-peers' && (
-        !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (
-          renderPremiumLock("Global Peer Finder", "Find and match with verified topic experts from external partner universities.")
-        ) : (
-          <div className="space-y-6">
-            {renderPremiumBadgeBanner("Global Peer Finder", "Find and match with verified topic experts from external partner universities.")}
+        <div className="space-y-6">
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border p-6 max-w-2xl">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Find Global Topic Masters</h2>
             <p className="text-sm text-gray-500 mb-4">Search across all colleges to find peers who have mastered specific topics (e.g. DSA, Python, ML).</p>
@@ -816,15 +767,10 @@ const StudyBuddies = () => {
             )}
           </div>
         </div>
-      )
-    )}
+      )}
 
       {activeTab === 'study-guides' && (
-        !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (
-          renderPremiumLock("AI Study Guides", "Access automated summaries and chat logs generated from your recorded collaborative study sessions.")
-        ) : (
-          <div className="space-y-6 text-left">
-            {renderPremiumBadgeBanner("AI Study Guides", "Access automated summaries and chat logs generated from your recorded collaborative study sessions.")}
+        <div className="space-y-6 text-left">
             
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900/40 dark:to-indigo-950/20 p-6 rounded-3xl border border-blue-100 dark:border-slate-800">
               <div>
@@ -911,15 +857,10 @@ const StudyBuddies = () => {
               ))}
             </div>
           </div>
-        )
-      )}
+        )}
 
       {activeTab === 'team-builder' && (
-        !(user?.isPremium || user?.role === 'teacher' || user?.role === 'admin') ? (
-          renderPremiumLock("AI Team Builder", "Access classmate matching and automated recruiting suggestions for project teams and hackathons.")
-        ) : (
-          <div className="space-y-8 text-left">
-            {renderPremiumBadgeBanner("AI Team Builder", "Access classmate matching and automated recruiting suggestions for project teams and hackathons.")}
+        <div className="space-y-8 text-left">
             
             {/* Project invites & applications banner */}
             {projectInvites.length > 0 && (
@@ -1363,8 +1304,7 @@ const StudyBuddies = () => {
               </div>
             )}
           </div>
-        )
-      )}
+        )}
 
       {/* Compatibility Modal */}
       {compatModal && (
