@@ -112,8 +112,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                   EduStack Pro
                 </span>
                 {user?.College?.name && (
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user.College.name}>
-                    {user.College.name}
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user.College.name?.replace(/\s*test\b/gi, '').trim()}>
+                    {user.College.name?.replace(/\s*test\b/gi, '').trim()}
                   </span>
                 )}
               </div>

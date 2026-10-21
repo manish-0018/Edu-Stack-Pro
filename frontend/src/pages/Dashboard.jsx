@@ -640,7 +640,7 @@ const Dashboard = () => {
                   </span>
                   {user?.College?.name && (
                     <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">
-                      🏢 {user?.College?.name}
+                      🏢 {user?.College?.name?.replace(/\s*test\b/gi, '').trim()}
                     </span>
                   )}
                 </div>
@@ -1004,7 +1004,7 @@ const Dashboard = () => {
                 <div className="flex flex-wrap gap-2 mt-2">
                   {user?.College?.name && (
                     <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
-                      🏢 {user?.College?.name}
+                      🏢 {user?.College?.name?.replace(/\s*test\b/gi, '').trim()}
                     </span>
                   )}
                   {user?.course && (
@@ -1065,14 +1065,7 @@ const Dashboard = () => {
                   Your current attendance is <strong className="text-gray-900 dark:text-white">{stats.attendancePercentage || 0}%</strong> (eligibility: 60% for Mid-Sem, 75% for End-Sem).
                   Don't stress—you can get back on track! Attend upcoming lectures consistently, submit any pending Medical or Duty Leave slips to your mentor, or speak with your class coordinator to ensure you qualify for hall tickets.
                 </p>
-                <div className="flex gap-4 mt-3">
-                  <Link to="/leaves" className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
-                    Submit Leave / Medical Slip →
-                  </Link>
-                  <Link to="/mentorship" className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
-                    Connect with Mentor →
-                  </Link>
-                </div>
+
               </div>
             </div>
           )}

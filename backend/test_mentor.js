@@ -8,7 +8,7 @@ const { connectDB, sequelize } = require('./config/db');
 
     // 1. Create/Find Test College
     const [college] = await College.findOrCreate({
-      where: { name: 'KIIT University Test' },
+      where: { name: 'KIIT University' },
       defaults: { secretKey: 'KIIT-TEST-KEY', plan: 'pro' }
     });
     console.log('Test College created/resolved:', college.id);
