@@ -7,6 +7,10 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
       colors: {
         primary: {
           50: 'var(--color-primary-50)',
@@ -21,11 +25,21 @@ export default {
           900: 'var(--color-primary-900)',
         },
         dark: {
-          bg: '#0f172a',
-          card: '#1e293b',
-          text: '#f8fafc',
-          border: '#334155'
+          bg: '#090D16',
+          card: '#111726',
+          'card-hover': '#161F33',
+          surface: '#151C2C',
+          text: '#F8FAFC',
+          muted: '#94A3B8',
+          border: 'rgba(255, 255, 255, 0.08)'
         }
+      },
+      boxShadow: {
+        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'glass-sm': '0 4px 16px 0 rgba(0, 0, 0, 0.25)',
+        'glow-indigo': '0 0 25px -5px rgba(99, 102, 241, 0.35)',
+        'glow-violet': '0 0 25px -5px rgba(139, 92, 246, 0.35)',
+        'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.35)',
       }
     },
   },

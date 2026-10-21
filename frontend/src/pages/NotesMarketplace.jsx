@@ -117,7 +117,7 @@ const NotesMarketplace = () => {
   return (
     <div className="space-y-6">
       {/* Economy Header */}
-      <div className="bg-gradient-to-r from-yellow-500 to-amber-600 rounded-3xl p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-lg">
+      <div className="bg-gradient-to-br from-slate-900/90 via-amber-950/50 to-slate-900/90 border border-amber-500/30 rounded-3xl p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl backdrop-blur-2xl relative overflow-hidden">
         <div className="mb-6 md:mb-0">
           <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
             <Store className="w-8 h-8" />
@@ -258,7 +258,7 @@ const NotesMarketplace = () => {
           const rentalPrice = Math.max(15, Math.ceil(finalPrice * 0.4));
 
           return (
-            <div key={mat.id} className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border overflow-hidden flex flex-col relative group">
+            <div key={mat.id} className="glass-card bento-hover rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08] overflow-hidden flex flex-col relative group">
               
               <div className="absolute top-3 right-3 bg-yellow-100 text-yellow-800 font-bold px-3 py-1 rounded-full flex items-center gap-1 text-sm shadow-sm z-10">
                 <Coins className="w-4 h-4" /> 

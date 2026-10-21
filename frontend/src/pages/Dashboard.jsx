@@ -41,14 +41,15 @@ const getTimeBasedGreeting = () => {
 
 const StatCard = ({ title, value, subtitle, icon, color, to }) => {
   const content = (
-    <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex items-center gap-4 hover:shadow-md transition-all duration-200 cursor-pointer h-full border-b-2 hover:border-b-primary-500">
-      <div className={`p-4 rounded-xl ${color}`}>
+    <div className="glass-card bento-hover p-5 rounded-2xl flex items-center gap-4 hover:shadow-lg transition-all duration-300 cursor-pointer h-full border border-slate-200/80 dark:border-white/[0.08] relative group overflow-hidden">
+      <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/[0.05] dark:bg-indigo-500/[0.1] rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
+      <div className={`p-3.5 rounded-xl ${color} shadow-sm ring-1 ring-black/5 dark:ring-white/10 shrink-0`}>
         {icon}
       </div>
-      <div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
-        {subtitle && <p className="text-[10px] text-gray-400 mt-0.5">{subtitle}</p>}
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{title}</p>
+        <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">{value}</h3>
+        {subtitle && <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>}
       </div>
     </div>
   );
@@ -628,11 +629,10 @@ const Dashboard = () => {
       {user.role !== 'student' ? (
         <>
           {/* ── Dashboard Header ─────────────────────────────────────── */}
-          <div className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden mb-6">
-            {/* Decorative circles */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
-            <div className="absolute bottom-0 left-1/2 w-40 h-40 bg-white/5 rounded-full translate-y-1/2" />
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-br from-slate-900/90 via-indigo-950/80 to-purple-950/70 border border-slate-200/80 dark:border-white/[0.1] rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden backdrop-blur-2xl mb-6">
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">
@@ -759,7 +759,7 @@ const Dashboard = () => {
 
           {/* ── Campus Location Lock Panel ──────────────────── */}
           {user.role === 'teacher' && (
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+            <div className="glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08] mt-6">
               <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                 📍 Campus Location Lock
               </h3>
@@ -813,7 +813,7 @@ const Dashboard = () => {
 
           {/* ── Admin Exam Release Console ──────────────────────────── */}
           {user.role === 'admin' && (
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+            <div className="glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08] mt-6">
               <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                 📅 Exam Scheduling & Hall Ticket Release Console
               </h3>
@@ -823,7 +823,7 @@ const Dashboard = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Mid Sem Section */}
-                <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border space-y-4">
+                <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-slate-200/80 dark:border-white/[0.08] space-y-4">
                   <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b pb-2 flex items-center justify-between">
                     <span>Mid-Semester Exams</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${examSettings.isMidSemAdmitCardEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
@@ -867,7 +867,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* End Sem Section */}
-                <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border space-y-4">
+                <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-slate-200/80 dark:border-white/[0.08] space-y-4">
                   <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b pb-2 flex items-center justify-between">
                     <span>End-Semester Exams</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${examSettings.isEndSemAdmitCardEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
@@ -927,7 +927,7 @@ const Dashboard = () => {
           {/* ── Charts Section ───────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
             {/* Bar Chart — wider */}
-            <div className="lg:col-span-3 bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+            <div className="lg:col-span-3 glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08]">
               <div className="flex items-start justify-between mb-5">
                 <div>
                   <h3 className="text-base font-bold text-gray-900 dark:text-white">Attendance Health Distribution</h3>
@@ -956,7 +956,7 @@ const Dashboard = () => {
             </div>
 
             {/* Pie Chart — narrower */}
-            <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col">
+            <div className="lg:col-span-2 glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08] flex flex-col">
               <div className="mb-5">
                 <h3 className="text-base font-bold text-gray-900 dark:text-white">Defaulter Breakdown</h3>
                 <p className="text-xs text-gray-400 mt-0.5">By type of attendance violation</p>
@@ -989,52 +989,52 @@ const Dashboard = () => {
         // STUDENT DASHBOARD LAYOUT
         <div className="space-y-6">
           {/* ── Student Hero Header ───────────────────────────────── */}
-          <div className="bg-gradient-to-br from-primary-600 via-violet-700 to-purple-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
-            <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-br from-slate-900/90 via-indigo-950/80 to-purple-950/70 border border-slate-200/80 dark:border-white/[0.1] rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden backdrop-blur-2xl">
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-bold rounded-full uppercase tracking-widest">🎓 Student</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold rounded-full uppercase tracking-wider">🎓 Student</span>
                 </div>
-                <h1 className="text-2xl font-bold">{getTimeBasedGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
-                <p className="text-primary-200 text-sm mt-1">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{getTimeBasedGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
+                <p className="text-slate-300 text-xs sm:text-sm mt-1">
                   {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-3">
                   {user?.College?.name && (
-                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
-                      🏢 {user?.College?.name?.replace(/\s*test\b/gi, '').trim()}
+                    <span className="text-slate-200 text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/10 px-2.5 py-1 rounded-xl">
+                      🏛️ {user?.College?.name?.replace(/\s*test\b/gi, '').trim()}
                     </span>
                   )}
                   {user?.course && (
-                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
+                    <span className="text-slate-200 text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/10 px-2.5 py-1 rounded-xl">
                       🎓 {user.course}
                     </span>
                   )}
                   {user?.rollNo && (
-                    <span className="text-primary-100 text-xs font-bold uppercase tracking-wider bg-white/10 px-2 py-1 rounded">
+                    <span className="text-slate-200 text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/10 px-2.5 py-1 rounded-xl">
                       🆔 Roll No: {user.rollNo}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex gap-3 flex-wrap">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+              <div className="flex gap-2.5 flex-wrap">
+                <div className="glass-card px-4 py-3 rounded-2xl text-center min-w-[85px] border border-white/15 backdrop-blur-md">
                   <div className={`text-2xl font-black ${
-                    (stats.theoryPercentage || 0) >= 75 ? 'text-green-300' : 'text-amber-300'
+                    (stats.theoryPercentage || 0) >= 75 ? 'text-emerald-400' : 'text-amber-400'
                   }`}>{stats.theoryPercentage || 0}%</div>
-                  <div className="text-[10px] text-primary-200 font-semibold uppercase">Theory</div>
+                  <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mt-0.5">Theory</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                <div className="glass-card px-4 py-3 rounded-2xl text-center min-w-[85px] border border-white/15 backdrop-blur-md">
                   <div className={`text-2xl font-black ${
-                    (stats.labPercentage || 0) >= 60 ? 'text-green-300' : 'text-amber-300'
+                    (stats.labPercentage || 0) >= 60 ? 'text-emerald-400' : 'text-amber-400'
                   }`}>{stats.labPercentage || 0}%</div>
-                  <div className="text-[10px] text-primary-200 font-semibold uppercase">Lab</div>
+                  <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mt-0.5">Lab</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                <div className="glass-card px-4 py-3 rounded-2xl text-center min-w-[85px] border border-emerald-500/30 backdrop-blur-md">
                   <div className="text-2xl font-black text-white">{stats.attendancePercentage || 0}%</div>
-                  <div className="text-[10px] text-primary-200 font-semibold uppercase">Overall</div>
+                  <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mt-0.5">Overall</div>
                 </div>
               </div>
             </div>
@@ -1042,7 +1042,7 @@ const Dashboard = () => {
 
           {/* Supportive Attendance Recovery & Exam Eligibility Notice */}
           {((stats.attendancePercentage || 0) < 70) && (
-            <div className={`p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm border-l-8 ${
+            <div className={`p-6 rounded-3xl flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm border border-l-8 backdrop-blur-xl ${
               (stats.attendancePercentage || 0) < 50
                 ? 'bg-rose-500/10 border-rose-500 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
                 : (stats.attendancePercentage || 0) < 60
@@ -1118,7 +1118,7 @@ const Dashboard = () => {
 
           {/* ── AI Attendance Predictor ───────────────────────── */}
           {stats.aiPredictor && (
-            <div className="bg-gradient-to-r from-blue-50 to-primary-50 dark:from-blue-900/10 dark:to-primary-900/10 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+            <div className="glass-card bento-hover border border-indigo-500/20 dark:border-indigo-500/20 rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden backdrop-blur-xl flex flex-col md:flex-row gap-6 items-center">
               <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900/40 rounded-2xl flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-blue-400 opacity-20 animate-pulse"></div>
                 <Brain className="w-8 h-8 text-blue-600 dark:text-blue-400 relative z-10" />
@@ -1133,7 +1133,7 @@ const Dashboard = () => {
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                  <div className="glass-card p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08]">
                     <div className="text-xs font-bold text-gray-400 uppercase mb-1">Theory Safe Misses</div>
                     <div className="flex items-end gap-2">
                       <span className={`text-2xl font-black ${stats.aiPredictor.theorySafeMisses > 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -1144,7 +1144,7 @@ const Dashboard = () => {
                     <p className="text-[10px] text-gray-400 mt-1">If you miss {stats.aiPredictor.theorySafeMisses + 1} more class, you drop below 75%.</p>
                   </div>
                   
-                  <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
+                  <div className="glass-card p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08]">
                     <div className="text-xs font-bold text-gray-400 uppercase mb-1">What if I miss next 3?</div>
                     <div className="flex items-end gap-2">
                       <span className="text-2xl font-black text-primary-500">
@@ -1166,7 +1166,7 @@ const Dashboard = () => {
           {/* Exam Registration Lock & Hall Ticket (Feature E) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Mid-Sem Exam Card */}
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between gap-4">
+            <div className="glass-card bento-hover p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] shadow-md flex flex-col justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className={`p-3 rounded-xl ${
                   !stats.college?.isMidSemAdmitCardEnabled
@@ -1224,7 +1224,7 @@ const Dashboard = () => {
             </div>
 
             {/* End-Sem Exam Card */}
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border flex flex-col justify-between gap-4">
+            <div className="glass-card bento-hover p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] shadow-md flex flex-col justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className={`p-3 rounded-xl ${
                   !stats.college?.isEndSemAdmitCardEnabled
@@ -1284,12 +1284,12 @@ const Dashboard = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Bunk Calculator (Option A) */}
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+            <div className="glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08]">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Subject-wise Attendance & Bunk Predictor</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-dark-border text-xs">
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-slate-200/80 dark:border-white/[0.08] text-xs">
                       <th className="p-3 font-semibold text-gray-600 dark:text-gray-400">Subject</th>
                       <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Ratio</th>
                       <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Percentage</th>
@@ -1331,12 +1331,12 @@ const Dashboard = () => {
             </div>
 
             {/* Internal Marks (Feature G) */}
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+            <div className="glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08]">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Continuous Internal Evaluation Scores</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-dark-border text-xs">
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-slate-200/80 dark:border-white/[0.08] text-xs">
                       <th className="p-3 font-semibold text-gray-600 dark:text-gray-400">Subject</th>
                       <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Mid-Sem</th>
                       <th className="p-3 font-semibold text-gray-600 dark:text-gray-400 text-center">Quiz</th>
@@ -1392,7 +1392,7 @@ const Dashboard = () => {
 
         {/* My Teachers Section */}
           {stats.myTeachers && stats.myTeachers.length > 0 && (
-            <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+            <div className="glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08] mt-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">My Faculty & Instructors</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Teachers and class mentor assigned for this semester:
@@ -1401,7 +1401,7 @@ const Dashboard = () => {
                 {stats.myTeachers.map((t, idx) => {
                   const isMentor = t.role === 'mentor';
                   const isAdmin = t.role === 'admin';
-                  let cardClass = "bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border";
+                  let cardClass = "bg-gray-50 dark:bg-dark-bg border-slate-200/80 dark:border-white/[0.08]";
                   let avatarClass = "bg-gradient-to-br from-primary-500 to-indigo-600";
                   let badgeClass = "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/40 border-primary-100 dark:border-primary-900/30";
                   let avatarIcon = t.name ? t.name.charAt(0).toUpperCase() : '?';
@@ -1438,7 +1438,7 @@ const Dashboard = () => {
           )}
 
           {/* SGPA Estimator Console */}
-          <div className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border mt-6">
+          <div className="glass-card bento-hover p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-white/[0.08] mt-6">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">SGPA Estimator Console</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Enter your expected End-Sem exam scores to estimate your Semester Grade Point Average (SGPA). Internal marks shown are synced from the database.
@@ -1462,7 +1462,7 @@ const Dashboard = () => {
                   <div key={m.id} className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-xl border ${
                     isLab 
                       ? 'bg-purple-50/50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/20' 
-                      : 'bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border'
+                      : 'bg-gray-50 dark:bg-dark-bg border-slate-200/80 dark:border-white/[0.08]'
                   }`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -1613,7 +1613,7 @@ const Dashboard = () => {
       {/* Student Detailed Attendance Modal (Admin/Teacher view) */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-dark-card p-6 rounded-2xl w-full max-w-2xl border border-gray-100 dark:border-dark-border shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <div className="glass-card bento-hover p-6 rounded-2xl w-full max-w-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detailed Attendance Report</h2>
@@ -1631,7 +1631,7 @@ const Dashboard = () => {
 
             {/* Attendance overview stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border text-center">
+              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-center">
                 <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Theory Attendance</span>
                 <span className={`text-xl font-bold ${selectedStudent.theoryPercentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
                   {selectedStudent.theoryPercentage}%
@@ -1641,7 +1641,7 @@ const Dashboard = () => {
                 </span>
               </div>
               
-              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border text-center">
+              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-center">
                 <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Lab Attendance</span>
                 <span className={`text-xl font-bold ${selectedStudent.labPercentage >= 60 ? 'text-green-600' : 'text-red-600'}`}>
                   {selectedStudent.labPercentage}%
@@ -1651,7 +1651,7 @@ const Dashboard = () => {
                 </span>
               </div>
 
-              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-gray-100 dark:border-dark-border text-center">
+              <div className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-center">
                 <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Overall Attendance</span>
                 <span className="text-xl font-bold text-gray-800 dark:text-gray-200">
                   {selectedStudent.attendancePercentage}%
@@ -1714,10 +1714,10 @@ const Dashboard = () => {
       {/* ── Custom Professional Email Warning Modal ── */}
       {defaulterToEmail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-dark-card w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-gray-100 dark:border-dark-border flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="glass-card bento-hover w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 dark:border-white/[0.08] flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
             
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border bg-red-50/50 dark:bg-red-950/10">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] bg-red-50/50 dark:bg-red-950/10">
               <h3 className="font-bold text-red-600 dark:text-red-400 flex items-center gap-2 text-sm">
                 <AlertTriangle className="w-5 h-5 text-red-500" />
                 Dispatch Academic Warning
@@ -1735,7 +1735,7 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                 Are you sure you want to dispatch an official academic warning notice to the parent of <strong className="text-gray-900 dark:text-white">"{defaulterToEmail.name}"</strong>?
               </p>
-              <div className="bg-gray-50 dark:bg-dark-bg p-3.5 rounded-2xl border border-gray-100 dark:border-dark-border text-xs text-gray-500 dark:text-gray-400 space-y-1">
+              <div className="bg-gray-50 dark:bg-dark-bg p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] text-xs text-gray-500 dark:text-gray-400 space-y-1">
                 <p>📧 This email will detail their current attendance deficit and alert them to the risk of semester exam debarment.</p>
                 {defaulterToEmail.gracePeriodEnds && new Date(defaulterToEmail.gracePeriodEnds) > new Date() && (
                   <p className="text-amber-600 dark:text-amber-400 font-bold mt-2 flex items-center gap-1">
@@ -1746,7 +1746,7 @@ const Dashboard = () => {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 dark:border-dark-border flex gap-2 justify-end bg-gray-50/30 dark:bg-dark-card">
+            <div className="px-6 py-4 border-t border-slate-200/80 dark:border-white/[0.08] flex gap-2 justify-end bg-gray-50/30 dark:bg-dark-card">
               <button
                 type="button"
                 onClick={() => setDefaulterToEmail(null)}

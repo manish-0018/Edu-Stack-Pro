@@ -43,7 +43,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between w-full px-4 py-4 bg-white dark:bg-dark-card shadow-sm border-b border-gray-200 dark:border-dark-border transition-colors duration-200">
+    <header className="sticky top-0 z-30 flex items-center justify-between w-full px-4 sm:px-6 py-3.5 bg-white/75 dark:bg-[#090D16]/80 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/[0.08] transition-colors duration-200">
       <div className="flex items-center gap-4">
         <button
           className="p-2 text-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden"
@@ -73,7 +73,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 w-80 py-2 mt-2 bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-xl shadow-xl z-50">
+            <div className="absolute right-0 w-80 py-2 mt-2 bg-white/95 dark:bg-[#111726]/95 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.1] rounded-2xl shadow-2xl z-50">
               <div className="flex items-center justify-between px-4 pb-2 border-b border-gray-100 dark:border-dark-border">
                 <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
                 {unreadCount > 0 && (
