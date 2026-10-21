@@ -57,6 +57,190 @@ const StatCard = ({ title, value, subtitle, icon, color, to }) => {
   return to ? <Link to={to} className="block">{content}</Link> : content;
 };
 
+
+// ── Apple-Style Dynamic Island Campus HUD ─────────────────────────────
+const DynamicIslandHUD = ({ activeClass, attendancePercentage, onCheckInClick }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="flex justify-center w-full mb-3">
+      <div 
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+        className={`transition-all duration-300 ease-out backdrop-blur-2xl border cursor-pointer select-none ${
+          expanded 
+            ? 'w-full max-w-xl rounded-3xl p-4 bg-slate-900/95 border-indigo-500/40 shadow-2xl shadow-indigo-500/20 ring-1 ring-indigo-500/30' 
+            : 'rounded-full px-5 py-2 bg-slate-900/80 hover:bg-slate-900/95 border-white/[0.12] shadow-xl flex items-center gap-3 hover:scale-[1.02]'
+        }`}
+      >
+        {!expanded ? (
+          <div className="flex items-center gap-3 text-xs font-bold text-white tracking-wide">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-slate-300">
+              {activeClass ? `Live: ${activeClass.name}` : 'Campus System Active'}
+            </span>
+            <span className="text-slate-600 dark:text-slate-600">•</span>
+            <span className="text-emerald-400 flex items-center gap-1 font-extrabold">
+              🔥 14-Day Streak
+            </span>
+            <span className="text-slate-600 dark:text-slate-600">•</span>
+            <span className="text-indigo-400 flex items-center gap-1">
+              Safe Margin: +8
+            </span>
+            <span className="text-[10px] bg-white/10 px-2.5 py-0.5 rounded-full text-slate-300 border border-white/10 ml-1">
+              Hover for HUD ▾
+            </span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-wider text-white">Dynamic Campus HUD</span>
+              </div>
+              <span className="text-[11px] font-bold text-indigo-400">Term 5 • Computer Science</span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="glass-card p-2 rounded-xl">
+                <div className="text-[10px] text-slate-400 uppercase font-semibold">Live Buffer</div>
+                <div className="text-sm font-extrabold text-emerald-400">+8 Classes</div>
+              </div>
+              <div className="glass-card p-2 rounded-xl">
+                <div className="text-[10px] text-slate-400 uppercase font-semibold">Weekly Tokens</div>
+                <div className="text-sm font-extrabold text-amber-400">10 Ready (&gt;75%)</div>
+              </div>
+              <div className="glass-card p-2 rounded-xl">
+                <div className="text-[10px] text-slate-400 uppercase font-semibold">Hall Ticket</div>
+                <div className="text-sm font-extrabold text-indigo-300">Cleared ✅</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              {activeClass ? (
+                <button
+                  type="button"
+                  onClick={onCheckInClick}
+                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black rounded-xl text-xs transition shadow-md"
+                >
+                  📍 1-Tap Check-In Now
+                </button>
+              ) : (
+                <Link
+                  to="/attendance/view"
+                  className="flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs text-center transition"
+                >
+                  View Attendance Breakdown →
+                </Link>
+              )}
+              <Link
+                to="/marketplace"
+                className="py-1.5 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition"
+              >
+                🪙 Claim Tokens
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── GitHub-Style Attendance Activity Heatmap & Streaks ────────────────
+const AttendanceActivityHeatmap = () => {
+  const weeks = 14;
+  const daysPerWeek = 5;
+
+  const getActivityLevel = (week, day) => {
+    const val = (week * 7 + day * 13) % 10;
+    if (val === 0) return 0;
+    if (val < 3) return 1;
+    if (val < 7) return 2;
+    return 3;
+  };
+
+  const getTileColor = (level) => {
+    switch (level) {
+      case 0: return 'bg-rose-500/20 border-rose-500/30';
+      case 1: return 'bg-emerald-500/30 border-emerald-500/40';
+      case 2: return 'bg-emerald-500/60 border-emerald-400/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]';
+      case 3: return 'bg-emerald-400 border-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.5)]';
+      default: return 'bg-slate-800 border-white/5';
+    }
+  };
+
+  return (
+    <div className="glass-card bento-hover p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] shadow-md relative overflow-hidden backdrop-blur-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              🔥 Academic Attendance Matrix & Streaks
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              14-Day Streak Active
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Visual activity tracking across all lectures, lab practicals, and tutorial sessions.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4 bg-slate-900/50 p-2 rounded-2xl border border-white/[0.08]">
+          <div className="text-center px-3">
+            <div className="text-xs text-slate-400 font-semibold uppercase">Level</div>
+            <div className="text-sm font-black text-amber-300">Level 4 Scholar</div>
+          </div>
+          <div className="h-6 w-[1px] bg-white/10" />
+          <div className="text-center px-3">
+            <div className="text-xs text-slate-400 font-semibold uppercase">Total XP</div>
+            <div className="text-sm font-black text-indigo-300">1,240 XP</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Heatmap Grid */}
+      <div className="overflow-x-auto pb-2">
+        <div className="inline-flex gap-1.5 min-w-[550px]">
+          {Array.from({ length: weeks }).map((_, wIdx) => (
+            <div key={wIdx} className="flex flex-col gap-1.5">
+              {Array.from({ length: daysPerWeek }).map((_, dIdx) => {
+                const level = getActivityLevel(wIdx, dIdx);
+                return (
+                  <div 
+                    key={dIdx}
+                    className={`w-4 h-4 rounded-md border transition-all duration-200 hover:scale-125 cursor-pointer ${getTileColor(level)}`}
+                    title={`Week ${wIdx + 1}, Day ${dIdx + 1}: ${level === 0 ? '1 Missed Lecture' : level === 3 ? '100% Attended (4/4 Classes)' : 'Attended'}`}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Legend & Summary */}
+      <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-white/[0.06] flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-2">
+        <div className="flex items-center gap-2">
+          <span>Less active</span>
+          <span className="w-3 h-3 rounded bg-rose-500/30 border border-rose-500/40 inline-block" />
+          <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/40 inline-block" />
+          <span className="w-3 h-3 rounded bg-emerald-500/60 border border-emerald-400 inline-block" />
+          <span className="w-3 h-3 rounded bg-emerald-400 inline-block shadow-[0_0_6px_#34d399]" />
+          <span>Full attendance</span>
+        </div>
+        <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+          💡 Next weekly token bonus unlocked in 3 days with &gt;75% attendance!
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { user, updateCurrentUser } = useAuth();
   const [showCheckinModal, setShowCheckinModal] = useState(false);
@@ -988,6 +1172,7 @@ const Dashboard = () => {
       ) : (
         // STUDENT DASHBOARD LAYOUT
         <div className="space-y-6">
+          <DynamicIslandHUD activeClass={stats.activeClass} attendancePercentage={stats.attendancePercentage} onCheckInClick={() => setShowCheckinModal(true)} />
           {/* ── Student Hero Header ───────────────────────────────── */}
           <div className="bg-gradient-to-br from-slate-900/90 via-indigo-950/80 to-purple-950/70 border border-slate-200/80 dark:border-white/[0.1] rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden backdrop-blur-2xl">
             <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -1115,6 +1300,8 @@ const Dashboard = () => {
             <StatCard title="Overall Attendance" value={`${stats.attendancePercentage || 0}%`} subtitle="Theory + lab combined" icon={<Percent className="text-blue-600" />} color="bg-blue-100 dark:bg-blue-900/30" to="/attendance/view" />
             <StatCard title="Total Sessions Held" value={(stats.theoryTotal || 0) + (stats.labTotal || 0)} subtitle="Across all registered subjects" icon={<BookOpen className="text-orange-600" />} color="bg-orange-100 dark:bg-orange-900/30" to="/attendance/view" />
           </div>
+
+          <AttendanceActivityHeatmap />
 
           {/* ── AI Attendance Predictor ───────────────────────── */}
           {stats.aiPredictor && (
