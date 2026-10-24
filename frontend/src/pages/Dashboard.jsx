@@ -157,13 +157,6 @@ const DynamicIslandHUD = ({ activeClass, attendancePercentage, safeMargin = 8, o
                 View Attendance Breakdown →
               </Link>
             )}
-            <Link
-              to="/marketplace"
-              onClick={() => setOpen(false)}
-              className="py-2 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition"
-            >
-              🪙 Claim Tokens
-            </Link>
           </div>
         </div>
       )}
@@ -171,7 +164,7 @@ const DynamicIslandHUD = ({ activeClass, attendancePercentage, safeMargin = 8, o
   );
 };
 
-// ── GitHub-Style Attendance Activity Heatmap & Streaks ────────────────
+// ── GitHub-Style Attendance Activity Heatmap ────────────────
 const AttendanceActivityHeatmap = () => {
   const weeks = 14;
   const daysPerWeek = 5;
@@ -196,32 +189,13 @@ const AttendanceActivityHeatmap = () => {
 
   return (
     <div className="glass-card bento-hover p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] shadow-md relative overflow-hidden backdrop-blur-2xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-              🔥 Academic Attendance Matrix & Streaks
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              14-Day Streak Active
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Visual activity tracking across all lectures, lab practicals, and tutorial sessions.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4 bg-slate-900/50 p-2 rounded-2xl border border-white/[0.08]">
-          <div className="text-center px-3">
-            <div className="text-xs text-slate-400 font-semibold uppercase">Level</div>
-            <div className="text-sm font-black text-amber-300">Level 4 Scholar</div>
-          </div>
-          <div className="h-6 w-[1px] bg-white/10" />
-          <div className="text-center px-3">
-            <div className="text-xs text-slate-400 font-semibold uppercase">Total XP</div>
-            <div className="text-sm font-black text-indigo-300">1,240 XP</div>
-          </div>
-        </div>
+      <div className="mb-4">
+        <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+          Academic Attendance Matrix
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Visual activity tracking across all lectures, lab practicals, and tutorial sessions throughout the semester.
+        </p>
       </div>
 
       {/* Heatmap Grid */}
@@ -244,18 +218,29 @@ const AttendanceActivityHeatmap = () => {
         </div>
       </div>
 
-      {/* Legend & Summary */}
-      <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-white/[0.06] flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-2">
-        <div className="flex items-center gap-2">
-          <span>Less active</span>
-          <span className="w-3 h-3 rounded bg-rose-500/30 border border-rose-500/40 inline-block" />
-          <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/40 inline-block" />
-          <span className="w-3 h-3 rounded bg-emerald-500/60 border border-emerald-400 inline-block" />
-          <span className="w-3 h-3 rounded bg-emerald-400 inline-block shadow-[0_0_6px_#34d399]" />
-          <span>Full attendance</span>
+      {/* Color Representation Legend */}
+      <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-white/[0.06] flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Color Guide:</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-rose-500/20 border border-rose-500/40 inline-block" />
+            <span className="text-slate-300">Missed / Absent</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-emerald-500/30 border border-emerald-500/40 inline-block" />
+            <span className="text-slate-300">Partial (1-2 Classes)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-emerald-500/60 border border-emerald-400/60 inline-block shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+            <span className="text-slate-300">Good (3 Classes)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-emerald-400 border border-emerald-300 inline-block shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+            <span className="text-slate-300 font-semibold">100% Present (All 4 Classes)</span>
+          </div>
         </div>
-        <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-          💡 Next weekly token bonus unlocked in 3 days with &gt;75% attendance!
+        <div className="font-semibold text-emerald-400 text-xs">
+          💡 Minimum 75% attendance required for exam eligibility
         </div>
       </div>
     </div>
@@ -502,6 +487,27 @@ const Dashboard = () => {
         status: 'critical',
         message: `Critical! Attend the next ${classesNeeded} classes consecutively.`
       };
+    }
+  };
+
+  // Claim weekly attendance tokens
+  const handleClaimTokens = async () => {
+    try {
+      const res = await axios.post('/api/economy/claim');
+      toast.success(res.data.message || 'Successfully claimed 10 weekly tokens!');
+      fetchStats();
+    } catch (err) {
+      toast.info(err.response?.data?.message || 'Unable to claim tokens right now');
+    }
+  };
+
+  // Scroll to Exam Hall Ticket section smoothly
+  const scrollToExamTickets = () => {
+    const el = document.getElementById('exam-hall-ticket-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      generateAdmitCard('theory');
     }
   };
 
@@ -1202,7 +1208,7 @@ const Dashboard = () => {
           {/* ── Top Category Ribbon (Travel-Style Module Nav) ──────────────── */}
           <div className="bg-[#111726]/90 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-2 flex items-center justify-between overflow-x-auto gap-2 shadow-2xl mb-4">
             <button 
-              onClick={() => {}}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 relative text-orange-400 bg-orange-500/10 border border-orange-500/30 shadow-md shadow-orange-500/10"
             >
               <CheckSquare className="w-5 h-5 mb-1 text-orange-500" />
@@ -1210,28 +1216,28 @@ const Dashboard = () => {
               <div className="absolute -bottom-2 w-10 h-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full shadow-[0_0_12px_#f97316]" />
             </button>
             <button 
-              onClick={() => setSelectedExamModal('theory')}
+              onClick={scrollToExamTickets}
               className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
             >
               <Award className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
               <span>Exam Hall Tickets</span>
             </button>
             <Link 
-              to="/marketplace"
+              to="/store"
               className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
             >
               <Store className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
               <span>Notes & Tokens</span>
             </Link>
             <Link 
-              to="/study-buddies"
+              to="/buddies"
               className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
             >
               <Users2 className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
               <span>Study Buddies</span>
             </Link>
             <Link 
-              to="/leaves"
+              to="/leave"
               className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
             >
               <CalendarClock className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
@@ -1247,7 +1253,7 @@ const Dashboard = () => {
           </div>
 
           {/* ── Consolidated Grand Campus Flight-Deck Card (Travel-Style) ── */}
-          <div className="bg-[#111726]/95 backdrop-blur-2xl border border-white/[0.1] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden pb-14">
+          <div className="bg-[#111726]/95 backdrop-blur-2xl border border-white/[0.1] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden pb-6 sm:pb-8">
             
             {/* Header with Greeting & Action Pills */}
             <div className="text-center mb-6">
@@ -1267,14 +1273,14 @@ const Dashboard = () => {
                 >
                   📍 Web Check-In
                 </button>
-                <Link 
-                  to="/marketplace"
+                <button 
+                  onClick={handleClaimTokens}
                   className="px-4 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-amber-500/50 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1.5 transition shadow-sm"
                 >
                   🪙 Claim 10 Weekly Tokens
-                </Link>
+                </button>
                 <button 
-                  onClick={() => setSelectedExamModal('theory')}
+                  onClick={scrollToExamTickets}
                   className="px-4 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-indigo-500/50 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1.5 transition shadow-sm"
                 >
                   🎫 Exam Hall Ticket Status
@@ -1381,20 +1387,9 @@ const Dashboard = () => {
                 <ShieldCheck className="w-4 h-4 text-orange-400" />
                 <span><strong>Academic Attendance Shield Active:</strong> Maintain &gt;75% weekly attendance to claim 10 tokens regularly.</span>
               </div>
-              <Link to="/marketplace" className="text-xs font-bold text-orange-400 hover:text-orange-300 hover:underline shrink-0">
+              <Link to="/store" className="text-xs font-bold text-orange-400 hover:text-orange-300 hover:underline shrink-0">
                 Marketplace Policy →
               </Link>
-            </div>
-
-            {/* Big Punchy TravelIndia-Style SEARCH / CHECK-IN Button */}
-            <div className="flex justify-center -mb-14 mt-6 relative z-20">
-              <button
-                onClick={() => setShowCheckinModal(true)}
-                className="px-14 py-4 rounded-full bg-gradient-to-r from-[#FF5722] via-[#FF6D00] to-[#FFA000] text-white font-black text-base sm:text-lg tracking-widest uppercase shadow-2xl shadow-orange-500/50 hover:shadow-orange-500/80 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 border border-orange-400/40"
-              >
-                <span>CHECK IN TO LIVE CLASS</span>
-                <span className="text-xl">📍</span>
-              </button>
             </div>
 
           </div>
@@ -1525,7 +1520,7 @@ const Dashboard = () => {
           )}
 
           {/* Exam Registration Lock & Hall Ticket (Feature E) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div id="exam-hall-ticket-section" className="grid grid-cols-1 md:grid-cols-2 gap-6 scroll-mt-24">
             {/* Mid-Sem Exam Card */}
             <div className="glass-card bento-hover p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] shadow-md flex flex-col justify-between gap-4">
               <div className="flex items-start gap-4">

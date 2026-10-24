@@ -44,7 +44,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSelectRole = (role) => {
@@ -57,7 +57,14 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password);
+      const userData = await login(email, password, selectedRole.id);
+      if (userData && userData.role !== selectedRole.id) {
+        logout();
+        const roleLabels = { student: 'Student', teacher: 'Faculty', admin: 'Admin', mentor: 'Mentor' };
+        const actual = roleLabels[userData.role] || userData.role;
+        toast.error(`Access Denied: This account is registered as ${actual}. Please select the ${actual} tab.`);
+        return;
+      }
       toast.success('Signed in successfully!');
       navigate('/dashboard');
     } catch (err) {

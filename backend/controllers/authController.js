@@ -124,12 +124,26 @@ if (parentEmail && user.role === 'student') {
 // @access  Public
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Check for user email
     const user = await User.findOne({ where: { email } });
 
     if (user && (await user.matchPassword(password))) {
+      // Role enforcement: ensure user is signing in under their designated tab
+      if (role && user.role !== role) {
+        const roleLabels = {
+          student: 'Student',
+          teacher: 'Faculty',
+          admin: 'Admin',
+          mentor: 'Mentor'
+        };
+        const actualRoleName = roleLabels[user.role] || user.role;
+        return res.status(403).json({
+          message: `Access Denied: This account is registered as ${actualRoleName}. Please select the ${actualRoleName} tab to sign in.`
+        });
+      }
+
       const fullUser = await User.findByPk(user.id, {
         include: [{ model: College, as: 'College', attributes: ['name', 'latitude', 'longitude'] }]
       });
