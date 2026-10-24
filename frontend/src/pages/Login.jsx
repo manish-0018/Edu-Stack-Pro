@@ -7,17 +7,51 @@ import {
   Lock, 
   Eye, 
   EyeOff, 
-  ArrowRight
+  ArrowRight,
+  GraduationCap,
+  Briefcase,
+  KeyRound
 } from 'lucide-react';
 
+const ROLES = [
+  {
+    id: 'student',
+    label: 'Student',
+    email: 'cheeku@gmail.com',
+    password: 'password123',
+    icon: GraduationCap
+  },
+  {
+    id: 'teacher',
+    label: 'Faculty',
+    email: 'krishnasingh@gmail.com',
+    password: 'password123',
+    icon: Briefcase
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    email: 'admin@test.com',
+    password: 'password123',
+    icon: KeyRound
+  }
+];
+
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState(ROLES[0]);
+  const [email, setEmail] = useState(ROLES[0].email);
+  const [password, setPassword] = useState(ROLES[0].password);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleSelectRole = (role) => {
+    setSelectedRole(role);
+    setEmail(role.email);
+    setPassword(role.password);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,7 +78,7 @@ const Login = () => {
       <div className="w-full max-w-md bg-[#111726] border border-white/[0.08] rounded-3xl p-8 shadow-2xl relative z-10">
         
         {/* Brand Header */}
-        <div className="text-center mb-7">
+        <div className="text-center mb-6">
           <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-500/25 ring-1 ring-white/20 mb-3">
             E
           </div>
@@ -54,6 +88,34 @@ const Login = () => {
           <p className="text-xs text-slate-400 mt-1">
             KIIT University Smart Campus Portal
           </p>
+        </div>
+
+        {/* Role Switcher */}
+        <div className="mb-6">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+            Sign In As
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-900/90 rounded-2xl border border-white/[0.08]">
+            {ROLES.map((role) => {
+              const Icon = role.icon;
+              const isSelected = selectedRole.id === role.id;
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => handleSelectRole(role)}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{role.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Login Form */}
@@ -117,7 +179,7 @@ const Login = () => {
               disabled={loading}
               className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span>{loading ? 'Signing in...' : 'Sign In'}</span>
+              <span>{loading ? 'Signing in...' : `Sign In as ${selectedRole.label}`}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
