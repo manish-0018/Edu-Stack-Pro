@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, FileText, CheckSquare, Mail, Award, CheckCircle, XCircle, Brain, Download, X } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, FileText, CheckSquare, Mail, Award, CheckCircle, XCircle, Brain, Download, X, Store, Users2, CalendarClock, Briefcase, ShieldCheck } from 'lucide-react';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
 import AiIntelligenceWatchlist from '../components/AiIntelligenceWatchlist';
