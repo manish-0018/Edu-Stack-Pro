@@ -14,7 +14,9 @@ const Layout = () => {
     <div 
       className={`flex h-screen overflow-hidden text-slate-900 dark:text-dark-text relative selection:bg-orange-500 selection:text-white bg-slate-50 dark:bg-[#090D16]`}
       style={{
-        backgroundImage: darkMode ? "linear-gradient(to bottom, rgba(9, 13, 22, 0.78) 0%, rgba(9, 13, 22, 0.92) 50%, rgba(9, 13, 22, 0.98) 100%), url('/campus_hero_bg.jpg')" : undefined,
+        backgroundImage: darkMode 
+          ? "linear-gradient(to bottom, rgba(9, 13, 22, 0.78) 0%, rgba(9, 13, 22, 0.92) 50%, rgba(9, 13, 22, 0.98) 100%), url('/campus_hero_bg.jpg')" 
+          : "linear-gradient(to bottom, rgba(255, 255, 255, 0.65) 0%, rgba(248, 250, 252, 0.82) 45%, rgba(241, 245, 249, 0.94) 100%), url('/campus_hero_bg.jpg')",
         backgroundSize: 'cover',
         backgroundPosition: 'top center',
         backgroundAttachment: 'fixed'
