@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, FileText, CheckSquare, Mail, Award, CheckCircle, XCircle, Brain, Download, X, Store, Users2, CalendarClock, Briefcase, ShieldCheck } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Percent, AlertTriangle, AlertCircle, FileText, CheckSquare, Mail, Award, CheckCircle, XCircle, Brain, Download, X, Store, Users2, CalendarClock, Briefcase, ShieldCheck, ChevronDown } from 'lucide-react';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import PredictiveAnalytics from '../components/PredictiveAnalytics';
 import AiIntelligenceWatchlist from '../components/AiIntelligenceWatchlist';
@@ -58,94 +58,115 @@ const StatCard = ({ title, value, subtitle, icon, color, to }) => {
 };
 
 
-// ── Apple-Style Dynamic Island Campus HUD ─────────────────────────────
-const DynamicIslandHUD = ({ activeClass, attendancePercentage, onCheckInClick }) => {
-  const [expanded, setExpanded] = useState(false);
+// ── Campus Live Status Bar & Floating HUD Popover ────────────────────────
+const DynamicIslandHUD = ({ activeClass, attendancePercentage, safeMargin = 8, onCheckInClick }) => {
+  const [open, setOpen] = useState(false);
+  const hudRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (hudRef.current && !hudRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
-    <div className="flex justify-center w-full mb-3">
-      <div 
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
-        className={`transition-all duration-300 ease-out backdrop-blur-2xl border cursor-pointer select-none ${
-          expanded 
-            ? 'w-full max-w-xl rounded-3xl p-4 bg-slate-900/95 border-indigo-500/40 shadow-2xl shadow-indigo-500/20 ring-1 ring-indigo-500/30' 
-            : 'rounded-full px-5 py-2 bg-slate-900/80 hover:bg-slate-900/95 border-white/[0.12] shadow-xl flex items-center gap-3 hover:scale-[1.02]'
-        }`}
+    <div ref={hudRef} className="relative flex justify-center w-full mb-3 z-30">
+      {/* Stable, Non-Morphing Status Pill */}
+      <button 
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        className="rounded-full px-5 py-2 bg-slate-900/90 hover:bg-slate-900 border border-white/[0.12] hover:border-orange-500/40 shadow-xl flex items-center gap-3 cursor-pointer select-none transition-all duration-200 group"
       >
-        {!expanded ? (
-          <div className="flex items-center gap-3 text-xs font-bold text-white tracking-wide">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-slate-300">
-              {activeClass ? `Live: ${activeClass.name}` : 'Campus System Active'}
-            </span>
-            <span className="text-slate-600 dark:text-slate-600">•</span>
-            <span className="text-emerald-400 flex items-center gap-1 font-extrabold">
-              🔥 14-Day Streak
-            </span>
-            <span className="text-slate-600 dark:text-slate-600">•</span>
-            <span className="text-indigo-400 flex items-center gap-1">
-              Safe Margin: +8
-            </span>
-            <span className="text-[10px] bg-white/10 px-2.5 py-0.5 rounded-full text-slate-300 border border-white/10 ml-1">
-              Hover for HUD ▾
-            </span>
+        <span className="flex h-2 w-2 relative">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        
+        <span className="text-slate-200 text-xs font-bold tracking-wide">
+          {activeClass ? `Live: ${activeClass.name}` : 'Campus System Active'}
+        </span>
+        
+        <span className="text-slate-600">•</span>
+        
+        <span className="text-orange-400 text-xs font-bold flex items-center gap-1">
+          Safe Margin: <span className="font-extrabold text-white">+{safeMargin}</span>
+        </span>
+
+        <span className="text-[11px] bg-white/[0.08] group-hover:bg-orange-500/20 group-hover:text-orange-300 group-hover:border-orange-500/30 px-2.5 py-0.5 rounded-full text-slate-300 border border-white/10 flex items-center gap-1 transition-all ml-1">
+          <span>HUD</span>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180 text-orange-400' : ''}`} />
+        </span>
+      </button>
+
+      {/* Floating Popover Dropdown Card (Absolute - No Layout Jitter or Distortion) */}
+      {open && (
+        <div className="absolute top-full mt-2 w-full max-w-lg bg-[#0e1626]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 shadow-2xl z-50 text-left animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-black uppercase tracking-wider text-white">Campus Live HUD</span>
+            </div>
+            <span className="text-[11px] font-bold text-orange-400">Term 5 • Computer Science</span>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-black uppercase tracking-wider text-white">Dynamic Campus HUD</span>
-              </div>
-              <span className="text-[11px] font-bold text-indigo-400">Term 5 • Computer Science</span>
-            </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="glass-card p-2 rounded-xl">
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">Live Buffer</div>
-                <div className="text-sm font-extrabold text-emerald-400">+8 Classes</div>
-              </div>
-              <div className="glass-card p-2 rounded-xl">
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">Weekly Tokens</div>
-                <div className="text-sm font-extrabold text-amber-400">10 Ready (&gt;75%)</div>
-              </div>
-              <div className="glass-card p-2 rounded-xl">
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">Hall Ticket</div>
-                <div className="text-sm font-extrabold text-indigo-300">Cleared ✅</div>
-              </div>
+          {/* Safe Margin Explainer Card */}
+          <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/25 mb-3">
+            <div className="text-xs font-bold text-orange-300 flex items-center gap-1.5">
+              <span>🛡️ Safe Margin (+{safeMargin} Classes)</span>
             </div>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              You can safely miss up to <strong>{safeMargin} more classes</strong> and your attendance will still remain safely at or above the mandatory <strong>75% cutoff</strong>.
+            </p>
+          </div>
 
-            <div className="flex gap-2 pt-1">
-              {activeClass ? (
-                <button
-                  type="button"
-                  onClick={onCheckInClick}
-                  className="flex-1 py-1.5 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black rounded-xl text-xs transition shadow-md"
-                >
-                  📍 1-Tap Check-In Now
-                </button>
-              ) : (
-                <Link
-                  to="/attendance/view"
-                  className="flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs text-center transition"
-                >
-                  View Attendance Breakdown →
-                </Link>
-              )}
-              <Link
-                to="/marketplace"
-                className="py-1.5 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition"
+          {/* Metric Tiles */}
+          <div className="grid grid-cols-3 gap-2 text-center mb-3">
+            <div className="bg-slate-900/80 border border-white/5 p-2.5 rounded-xl">
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">Live Buffer</div>
+              <div className="text-sm font-extrabold text-emerald-400">+{safeMargin} Classes</div>
+            </div>
+            <div className="bg-slate-900/80 border border-white/5 p-2.5 rounded-xl">
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">Weekly Tokens</div>
+              <div className="text-sm font-extrabold text-amber-400">10 Ready (&gt;75%)</div>
+            </div>
+            <div className="bg-slate-900/80 border border-white/5 p-2.5 rounded-xl">
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">Hall Ticket</div>
+              <div className="text-sm font-extrabold text-indigo-300">Cleared ✅</div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            {activeClass ? (
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onCheckInClick(); }}
+                className="flex-1 py-2 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black rounded-xl text-xs transition shadow-md"
               >
-                🪙 Claim Tokens
+                📍 1-Tap Check-In Now
+              </button>
+            ) : (
+              <Link
+                to="/attendance/view"
+                onClick={() => setOpen(false)}
+                className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs text-center transition border border-white/10"
+              >
+                View Attendance Breakdown →
               </Link>
-            </div>
+            )}
+            <Link
+              to="/marketplace"
+              onClick={() => setOpen(false)}
+              className="py-2 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition"
+            >
+              🪙 Claim Tokens
+            </Link>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1172,7 +1193,12 @@ const Dashboard = () => {
       ) : (
         // STUDENT DASHBOARD LAYOUT
         <div className="space-y-6">
-          <DynamicIslandHUD activeClass={stats.activeClass} attendancePercentage={stats.attendancePercentage} onCheckInClick={() => setShowCheckinModal(true)} />
+          <DynamicIslandHUD 
+            activeClass={stats.activeClass} 
+            attendancePercentage={stats.attendancePercentage} 
+            safeMargin={stats.aiPredictor?.theorySafeMisses ?? 8}
+            onCheckInClick={() => setShowCheckinModal(true)} 
+          />
           {/* ── Top Category Ribbon (Travel-Style Module Nav) ──────────────── */}
           <div className="bg-[#111726]/90 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-2 flex items-center justify-between overflow-x-auto gap-2 shadow-2xl mb-4">
             <button 
