@@ -1173,56 +1173,204 @@ const Dashboard = () => {
         // STUDENT DASHBOARD LAYOUT
         <div className="space-y-6">
           <DynamicIslandHUD activeClass={stats.activeClass} attendancePercentage={stats.attendancePercentage} onCheckInClick={() => setShowCheckinModal(true)} />
-          {/* ── Student Hero Header ───────────────────────────────── */}
-          <div className="bg-gradient-to-br from-slate-900/90 via-indigo-950/80 to-purple-950/70 border border-slate-200/80 dark:border-white/[0.1] rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden backdrop-blur-2xl">
-            <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold rounded-full uppercase tracking-wider">🎓 Student</span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{getTimeBasedGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
-                <p className="text-slate-300 text-xs sm:text-sm mt-1">
-                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {user?.College?.name && (
-                    <span className="text-slate-200 text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/10 px-2.5 py-1 rounded-xl">
-                      🏛️ {user?.College?.name?.replace(/\s*test\b/gi, '').trim()}
-                    </span>
-                  )}
-                  {user?.course && (
-                    <span className="text-slate-200 text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/10 px-2.5 py-1 rounded-xl">
-                      🎓 {user.course}
-                    </span>
-                  )}
-                  {user?.rollNo && (
-                    <span className="text-slate-200 text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/10 px-2.5 py-1 rounded-xl">
-                      🆔 Roll No: {user.rollNo}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2.5 flex-wrap">
-                <div className="glass-card px-4 py-3 rounded-2xl text-center min-w-[85px] border border-white/15 backdrop-blur-md">
-                  <div className={`text-2xl font-black ${
-                    (stats.theoryPercentage || 0) >= 75 ? 'text-emerald-400' : 'text-amber-400'
-                  }`}>{stats.theoryPercentage || 0}%</div>
-                  <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mt-0.5">Theory</div>
-                </div>
-                <div className="glass-card px-4 py-3 rounded-2xl text-center min-w-[85px] border border-white/15 backdrop-blur-md">
-                  <div className={`text-2xl font-black ${
-                    (stats.labPercentage || 0) >= 60 ? 'text-emerald-400' : 'text-amber-400'
-                  }`}>{stats.labPercentage || 0}%</div>
-                  <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mt-0.5">Lab</div>
-                </div>
-                <div className="glass-card px-4 py-3 rounded-2xl text-center min-w-[85px] border border-emerald-500/30 backdrop-blur-md">
-                  <div className="text-2xl font-black text-white">{stats.attendancePercentage || 0}%</div>
-                  <div className="text-[10px] text-slate-300 font-bold uppercase tracking-wider mt-0.5">Overall</div>
-                </div>
+          {/* ── Top Category Ribbon (Travel-Style Module Nav) ──────────────── */}
+          <div className="bg-[#111726]/90 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-2 flex items-center justify-between overflow-x-auto gap-2 shadow-2xl mb-4">
+            <button 
+              onClick={() => {}}
+              className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 relative text-orange-400 bg-orange-500/10 border border-orange-500/30 shadow-md shadow-orange-500/10"
+            >
+              <CheckSquare className="w-5 h-5 mb-1 text-orange-500" />
+              <span>Attendance Hub</span>
+              <div className="absolute -bottom-2 w-10 h-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full shadow-[0_0_12px_#f97316]" />
+            </button>
+            <button 
+              onClick={() => setSelectedExamModal('theory')}
+              className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            >
+              <Award className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
+              <span>Exam Hall Tickets</span>
+            </button>
+            <Link 
+              to="/marketplace"
+              className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            >
+              <Store className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
+              <span>Notes & Tokens</span>
+            </Link>
+            <Link 
+              to="/study-buddies"
+              className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            >
+              <Users2 className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
+              <span>Study Buddies</span>
+            </Link>
+            <Link 
+              to="/leaves"
+              className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            >
+              <CalendarClock className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
+              <span>Duty / Medical Leaves</span>
+            </Link>
+            <Link 
+              to="/placements"
+              className="flex flex-col items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+            >
+              <Briefcase className="w-5 h-5 mb-1 text-slate-400 hover:text-white" />
+              <span>Placements & Internships</span>
+            </Link>
+          </div>
+
+          {/* ── Consolidated Grand Campus Flight-Deck Card (Travel-Style) ── */}
+          <div className="bg-[#111726]/95 backdrop-blur-2xl border border-white/[0.1] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden pb-14">
+            
+            {/* Header with Greeting & Action Pills */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center justify-center gap-2">
+                <span>Good Evening, {user?.name?.split(' ')[0] || 'Scholar'}!</span>
+                <span className="text-2xl">👋</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">
+                Where are we advancing today at KIIT University?
+              </p>
+
+              {/* Action Pills */}
+              <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4">
+                <button 
+                  onClick={() => setShowCheckinModal(true)}
+                  className="px-4 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-orange-500/50 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1.5 transition shadow-sm"
+                >
+                  📍 Web Check-In
+                </button>
+                <Link 
+                  to="/marketplace"
+                  className="px-4 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-amber-500/50 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1.5 transition shadow-sm"
+                >
+                  🪙 Claim 10 Weekly Tokens
+                </Link>
+                <button 
+                  onClick={() => setSelectedExamModal('theory')}
+                  className="px-4 py-1.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-indigo-500/50 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1.5 transition shadow-sm"
+                >
+                  🎫 Exam Hall Ticket Status
+                </button>
               </div>
             </div>
+
+            {/* Radio / Scope Selector Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/[0.08] text-xs font-bold">
+              <div className="flex items-center gap-5">
+                <label className="flex items-center gap-2 text-white cursor-pointer">
+                  <input type="radio" name="campusScope" defaultChecked className="accent-orange-500 text-orange-500 focus:ring-orange-500 w-4 h-4" />
+                  <span>All Campus Classes</span>
+                </label>
+                <label className="flex items-center gap-2 text-slate-400 hover:text-white cursor-pointer">
+                  <input type="radio" name="campusScope" className="accent-orange-500 text-orange-500 focus:ring-orange-500 w-4 h-4" />
+                  <span>Theory Sessions</span>
+                </label>
+                <label className="flex items-center gap-2 text-slate-400 hover:text-white cursor-pointer">
+                  <input type="radio" name="campusScope" className="accent-orange-500 text-orange-500 focus:ring-orange-500 w-4 h-4" />
+                  <span>Laboratory Practicals</span>
+                </label>
+              </div>
+              <div className="text-slate-400 text-xs font-semibold">
+                KIIT University • Term 5 Computer Science
+              </div>
+            </div>
+
+            {/* 4 Big Data Columns (Like From, To, Departure, Return) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-0 my-5 bg-slate-900/70 rounded-2xl border border-white/[0.08] divide-y md:divide-y-0 md:divide-x divide-white/[0.08] overflow-hidden">
+              
+              {/* Column 1: Theory */}
+              <div className="p-4 sm:p-5 relative group hover:bg-white/[0.02] transition">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Theory Lectures</div>
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
+                  <span>{stats.theoryPercentage || 0}%</span>
+                  <span className="text-xs font-extrabold text-emerald-400">Attended</span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1 truncate">
+                  {stats.theoryAttended || 0} of {stats.theoryTotal || 0} Sessions • Room 304
+                </div>
+              </div>
+
+              {/* Column 2: Lab */}
+              <div className="p-4 sm:p-5 relative group hover:bg-white/[0.02] transition">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Lab Practicals</div>
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
+                  <span>{stats.labPercentage || 0}%</span>
+                  <span className="text-xs font-extrabold text-emerald-400">100% Practical</span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1 truncate">
+                  {stats.labAttended || 0} of {stats.labTotal || 0} Sessions • 0 Missed
+                </div>
+              </div>
+
+              {/* Column 3: Hall Ticket Clearance */}
+              <div className="p-4 sm:p-5 relative group hover:bg-white/[0.02] transition">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Admit Card Status</div>
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
+                  <span>Eligible</span>
+                  <span className="text-xs font-extrabold text-emerald-400">✅</span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1 truncate">
+                  Mid-Sem & End-Sem Clearance Granted
+                </div>
+              </div>
+
+              {/* Column 4: Safe Margin Buffer */}
+              <div className="p-4 sm:p-5 relative group hover:bg-white/[0.02] transition">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Safe Misses Buffer</div>
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
+                  <span>+{stats.aiPredictor?.theorySafeMisses || 8}</span>
+                  <span className="text-xs font-bold text-slate-400">Classes</span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1 truncate">
+                  Safe buffer above 75% cutoff threshold
+                </div>
+              </div>
+
+            </div>
+
+            {/* Special Academic Badges (Like Special Fares in TravelIndia!) */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
+                SPECIAL STATUS
+              </span>
+              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-orange-500/15 border border-orange-500/40 text-orange-300">
+                Regular Scholar
+              </span>
+              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/[0.04] border border-white/[0.1] text-slate-300">
+                Attendance &gt;75% (10 Weekly Tokens Claimable)
+              </span>
+              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/[0.04] border border-white/[0.1] text-slate-300">
+                Zero Defaulter Warnings
+              </span>
+              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/[0.04] border border-white/[0.1] text-slate-300">
+                Mentor: Arya Kumari
+              </span>
+            </div>
+
+            {/* Policy Shield Bar (like Add Price Drop Protection in TravelIndia!) */}
+            <div className="mt-4 p-3 rounded-xl bg-slate-900/70 border border-white/[0.08] flex items-center justify-between text-xs text-slate-300">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-orange-400" />
+                <span><strong>Academic Attendance Shield Active:</strong> Maintain &gt;75% weekly attendance to claim 10 tokens regularly.</span>
+              </div>
+              <Link to="/marketplace" className="text-xs font-bold text-orange-400 hover:text-orange-300 hover:underline shrink-0">
+                Marketplace Policy →
+              </Link>
+            </div>
+
+            {/* Big Punchy TravelIndia-Style SEARCH / CHECK-IN Button */}
+            <div className="flex justify-center -mb-14 mt-6 relative z-20">
+              <button
+                onClick={() => setShowCheckinModal(true)}
+                className="px-14 py-4 rounded-full bg-gradient-to-r from-[#FF5722] via-[#FF6D00] to-[#FFA000] text-white font-black text-base sm:text-lg tracking-widest uppercase shadow-2xl shadow-orange-500/50 hover:shadow-orange-500/80 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 border border-orange-400/40"
+              >
+                <span>CHECK IN TO LIVE CLASS</span>
+                <span className="text-xl">📍</span>
+              </button>
+            </div>
+
           </div>
 
           {/* Supportive Attendance Recovery & Exam Eligibility Notice */}

@@ -11,7 +11,15 @@ const Layout = () => {
   const { darkMode } = useTheme();
 
   return (
-    <div className={`flex h-screen overflow-hidden bg-slate-50 dark:bg-dark-bg text-slate-900 dark:text-dark-text relative selection:bg-indigo-500 selection:text-white`}>
+    <div 
+      className={`flex h-screen overflow-hidden text-slate-900 dark:text-dark-text relative selection:bg-orange-500 selection:text-white bg-slate-50 dark:bg-[#090D16]`}
+      style={{
+        backgroundImage: darkMode ? "linear-gradient(to bottom, rgba(9, 13, 22, 0.78) 0%, rgba(9, 13, 22, 0.92) 50%, rgba(9, 13, 22, 0.98) 100%), url('/campus_hero_bg.jpg')" : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'top center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {/* Ambient background glow accents for modern glassmorphism depth */}
       <div className="fixed top-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/[0.04] dark:bg-indigo-600/[0.07] rounded-full blur-3xl pointer-events-none -z-0" />
       <div className="fixed bottom-10 left-1/3 w-[450px] h-[450px] bg-purple-500/[0.03] dark:bg-purple-600/[0.06] rounded-full blur-3xl pointer-events-none -z-0" />

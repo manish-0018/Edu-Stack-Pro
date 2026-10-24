@@ -149,19 +149,14 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-orange-500/25 transition-all hover:scale-105 active:scale-95"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-md">
-              <UserIcon className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white">
+              <UserIcon className="w-3.5 h-3.5" />
             </div>
-            <div className="hidden sm:block text-left">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-
-              </div>
-              <p className="text-[10px] font-bold text-primary-500 uppercase">
-                {user?.role} {user?.course && `• ${user.course}`}
-              </p>
+            <div className="text-left font-extrabold flex items-center gap-1.5">
+              <span>{user?.name?.split(' ')[0] || 'User'}</span>
+              <span className="text-[10px] opacity-80 uppercase">({user?.role})</span>
             </div>
           </button>
 
