@@ -86,11 +86,12 @@ const Login = () => {
         
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-500/25 ring-1 ring-white/20 mb-3">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF5722] via-[#FF7A00] to-[#FFA000] flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-orange-500/30 ring-1 ring-white/20 mb-3">
             E
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">
-            Sign in to EduStack Pro
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center justify-center gap-2 font-brand">
+            <span>Sign in to Edu<span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF5722] via-[#FF7A00] to-[#FFA000]">Stack</span></span>
+            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-gradient-to-r from-[#FF5722] to-[#FFA000] text-white shadow-sm shadow-orange-500/30">PRO</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             KIIT University Smart Campus Portal

@@ -51,8 +51,13 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
         >
           <Menu className="w-6 h-6" />
         </button>
-        <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-600 lg:hidden">
-          EduStack Pro
+        <div className="flex items-center gap-1.5 lg:hidden leading-none">
+          <span className="font-brand font-black text-xl tracking-tight text-slate-900 dark:text-white">
+            Edu<span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF5722] via-[#FF7A00] to-[#FFA000]">Stack</span>
+          </span>
+          <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-gradient-to-r from-[#FF5722] to-[#FFA000] text-white shadow-sm shadow-orange-500/30">
+            PRO
+          </span>
         </div>
       </div>
 

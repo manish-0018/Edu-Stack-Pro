@@ -104,13 +104,18 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex flex-col border-b border-slate-200/80 dark:border-white/[0.08]">
           <div className="flex items-center justify-between px-6 py-5">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-indigo-500/30 ring-1 ring-white/20">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5722] via-[#FF7A00] to-[#FFA000] flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-500/30 ring-1 ring-white/20 shrink-0">
                 E
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-600 dark:from-primary-400 dark:to-primary-400 leading-none">
-                  EduStack Pro
-                </span>
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="font-brand font-black text-xl tracking-tight text-slate-900 dark:text-white">
+                    Edu<span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF5722] via-[#FF7A00] to-[#FFA000]">Stack</span>
+                  </span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-gradient-to-r from-[#FF5722] to-[#FFA000] text-white shadow-sm shadow-orange-500/30">
+                    PRO
+                  </span>
+                </div>
                 {user?.College?.name && (
                   <span className="text-[10px] text-gray-400 dark:text-gray-500 font-black mt-1 truncate max-w-[140px]" title={user.College.name?.replace(/\s*test\b/gi, '').trim()}>
                     {user.College.name?.replace(/\s*test\b/gi, '').trim()}
