@@ -10,7 +10,12 @@ export default {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         brand: ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
+        urbanist: ['Urbanist', 'sans-serif'],
+        sora: ['Sora', 'sans-serif'],
         display: ['"Space Grotesk"', 'sans-serif'],
+        rajdhani: ['Rajdhani', 'sans-serif'],
+        bebas: ['"Bebas Neue"', 'sans-serif'],
+        editorial: ['"DM Serif Display"', 'serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
