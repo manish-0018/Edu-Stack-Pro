@@ -151,11 +151,12 @@ const Register = () => {
         
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-500/25 ring-1 ring-white/20 mb-3">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 flex items-center justify-center text-white font-rajdhani font-black text-3xl shadow-lg shadow-sky-500/30 ring-1 ring-sky-400/40 mb-3">
             E
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">
-            Create Account
+          <h1 className="text-2xl font-black text-white tracking-wider flex items-center justify-center gap-2 font-rajdhani uppercase">
+            <span>Join Edu<span className="text-sky-400">Stack</span></span>
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-widest rounded bg-sky-500 text-slate-950 shadow-[0_0_10px_#0ea5e9]">PRO</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Join EduStack Pro • KIIT University Smart Campus

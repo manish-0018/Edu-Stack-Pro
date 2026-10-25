@@ -86,12 +86,12 @@ const Login = () => {
         
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF5722] via-[#FF7A00] to-[#FFA000] flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-orange-500/30 ring-1 ring-white/20 mb-3">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 flex items-center justify-center text-white font-rajdhani font-black text-3xl shadow-lg shadow-sky-500/30 ring-1 ring-sky-400/40 mb-3">
             E
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center justify-center gap-2 font-brand">
-            <span>Sign in to Edu<span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF5722] via-[#FF7A00] to-[#FFA000]">Stack</span></span>
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-gradient-to-r from-[#FF5722] to-[#FFA000] text-white shadow-sm shadow-orange-500/30">PRO</span>
+          <h1 className="text-2xl font-black text-white tracking-wider flex items-center justify-center gap-2 font-rajdhani uppercase">
+            <span>Sign in to Edu<span className="text-sky-400">Stack</span></span>
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-widest rounded bg-sky-500 text-slate-950 shadow-[0_0_10px_#0ea5e9]">PRO</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             KIIT University Smart Campus Portal

@@ -104,15 +104,15 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex flex-col border-b border-slate-200/80 dark:border-white/[0.08]">
           <div className="flex items-center justify-between px-6 py-5">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5722] via-[#FF7A00] to-[#FFA000] flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-500/30 ring-1 ring-white/20 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 flex items-center justify-center text-white font-rajdhani font-black text-2xl shadow-lg shadow-sky-500/30 ring-1 ring-sky-400/40 shrink-0">
                 E
               </div>
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 leading-none">
-                  <span className="font-brand font-black text-xl tracking-tight text-slate-900 dark:text-white">
-                    Edu<span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF5722] via-[#FF7A00] to-[#FFA000]">Stack</span>
+                <div className="flex items-center gap-2 leading-none">
+                  <span className="font-rajdhani font-black text-2xl uppercase tracking-wider text-slate-900 dark:text-white">
+                    Edu<span className="text-sky-500 dark:text-sky-400">Stack</span>
                   </span>
-                  <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-gradient-to-r from-[#FF5722] to-[#FFA000] text-white shadow-sm shadow-orange-500/30">
+                  <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-widest rounded bg-sky-500 text-slate-950 shadow-[0_0_10px_#0ea5e9]">
                     PRO
                   </span>
                 </div>

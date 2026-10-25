@@ -51,11 +51,11 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
         >
           <Menu className="w-6 h-6" />
         </button>
-        <div className="flex items-center gap-1.5 lg:hidden leading-none">
-          <span className="font-brand font-black text-xl tracking-tight text-slate-900 dark:text-white">
-            Edu<span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FF5722] via-[#FF7A00] to-[#FFA000]">Stack</span>
+        <div className="flex items-center gap-2 lg:hidden leading-none">
+          <span className="font-rajdhani font-black text-2xl uppercase tracking-wider text-slate-900 dark:text-white">
+            Edu<span className="text-sky-500 dark:text-sky-400">Stack</span>
           </span>
-          <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-gradient-to-r from-[#FF5722] to-[#FFA000] text-white shadow-sm shadow-orange-500/30">
+          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-widest rounded bg-sky-500 text-slate-950 shadow-[0_0_10px_#0ea5e9]">
             PRO
           </span>
         </div>
